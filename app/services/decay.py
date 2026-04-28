@@ -59,7 +59,7 @@ async def _run_decay_postgres():
                 )
 
             await _process_purpose_pg(conn, player_id, needs_dict, needs_cfg, interval_minutes, is_online)
-            await _check_automatic_moodlets_pg(conn, player_id, needs_dict, needs_cfg)
+            await _check_automatic_vibes_pg(conn, player_id, needs_dict, needs_cfg)
 
     finally:
         await conn.close()
@@ -95,23 +95,23 @@ async def _process_purpose_pg(conn, player_id, needs_dict, needs_cfg, interval_m
     )
 
 
-async def _check_automatic_moodlets_pg(conn, player_id, needs_dict, needs_cfg):
+async def _check_automatic_vibes_pg(conn, player_id, needs_dict, needs_cfg):
     cfg = get_config()
-    moodlets_cfg = cfg["moodlets"]
+    vibes_cfg = cfg["vibes"]
 
     hygiene = needs_dict.get("hygiene", 100.0)
-    stinky_threshold = moodlets_cfg.get("stinky", {}).get("trigger_threshold", 20)
+    stinky_threshold = vibes_cfg.get("stinky", {}).get("trigger_threshold", 20)
 
     if hygiene < stinky_threshold:
         await conn.execute(
-            """INSERT INTO moodlets (player_id, moodlet_key, is_negative, expires_at)
+            """INSERT INTO vibes (player_id, vibe_key, is_negative, expires_at)
                VALUES ($1, 'stinky', 1, NULL)
-               ON CONFLICT (player_id, moodlet_key) DO NOTHING""",
+               ON CONFLICT (player_id, vibe_key) DO NOTHING""",
             player_id
         )
     else:
         await conn.execute(
-            "DELETE FROM moodlets WHERE player_id = $1 AND moodlet_key = 'stinky'",
+            "DELETE FROM vibes WHERE player_id = $1 AND vibe_key = 'stinky'",
             player_id
         )
 
@@ -119,18 +119,18 @@ async def _check_automatic_moodlets_pg(conn, player_id, needs_dict, needs_cfg):
         1 for need_key, value in needs_dict.items()
         if value < needs_cfg.get(need_key, {}).get("crit_threshold", 20)
     )
-    drained_threshold = moodlets_cfg.get("drained", {}).get("trigger_critical_count", 2)
+    drained_threshold = vibes_cfg.get("drained", {}).get("trigger_critical_count", 2)
 
     if critical_count >= drained_threshold:
         await conn.execute(
-            """INSERT INTO moodlets (player_id, moodlet_key, is_negative, expires_at)
+            """INSERT INTO vibes (player_id, vibe_key, is_negative, expires_at)
                VALUES ($1, 'drained', 1, NULL)
-               ON CONFLICT (player_id, moodlet_key) DO NOTHING""",
+               ON CONFLICT (player_id, vibe_key) DO NOTHING""",
             player_id
         )
     else:
         await conn.execute(
-            "DELETE FROM moodlets WHERE player_id = $1 AND moodlet_key = 'drained'",
+            "DELETE FROM vibes WHERE player_id = $1 AND vibe_key = 'drained'",
             player_id
         )
 
@@ -180,7 +180,7 @@ async def _run_decay_sqlite():
                 )
 
             await _process_purpose_sqlite(db, player_id, needs_dict, needs_cfg, interval_minutes, is_online)
-            await _check_automatic_moodlets_sqlite(db, player_id, needs_dict, needs_cfg)
+            await _check_automatic_vibes_sqlite(db, player_id, needs_dict, needs_cfg)
 
         await db.commit()
 
@@ -215,22 +215,22 @@ async def _process_purpose_sqlite(db, player_id, needs_dict, needs_cfg, interval
     )
 
 
-async def _check_automatic_moodlets_sqlite(db, player_id, needs_dict, needs_cfg):
+async def _check_automatic_vibes_sqlite(db, player_id, needs_dict, needs_cfg):
     cfg = get_config()
-    moodlets_cfg = cfg["moodlets"]
+    vibes_cfg = cfg["vibes"]
 
     hygiene = needs_dict.get("hygiene", 100.0)
-    stinky_threshold = moodlets_cfg.get("stinky", {}).get("trigger_threshold", 20)
+    stinky_threshold = vibes_cfg.get("stinky", {}).get("trigger_threshold", 20)
 
     if hygiene < stinky_threshold:
         await db.execute(
-            """INSERT OR IGNORE INTO moodlets (player_id, moodlet_key, is_negative, expires_at)
+            """INSERT OR IGNORE INTO vibes (player_id, vibe_key, is_negative, expires_at)
                VALUES (?, 'stinky', 1, NULL)""",
             (player_id,)
         )
     else:
         await db.execute(
-            "DELETE FROM moodlets WHERE player_id = ? AND moodlet_key = 'stinky'",
+            "DELETE FROM vibes WHERE player_id = ? AND vibe_key = 'stinky'",
             (player_id,)
         )
 
@@ -238,16 +238,16 @@ async def _check_automatic_moodlets_sqlite(db, player_id, needs_dict, needs_cfg)
         1 for need_key, value in needs_dict.items()
         if value < needs_cfg.get(need_key, {}).get("crit_threshold", 20)
     )
-    drained_threshold = moodlets_cfg.get("drained", {}).get("trigger_critical_count", 2)
+    drained_threshold = vibes_cfg.get("drained", {}).get("trigger_critical_count", 2)
 
     if critical_count >= drained_threshold:
         await db.execute(
-            """INSERT OR IGNORE INTO moodlets (player_id, moodlet_key, is_negative, expires_at)
+            """INSERT OR IGNORE INTO vibes (player_id, vibe_key, is_negative, expires_at)
                VALUES (?, 'drained', 1, NULL)""",
             (player_id,)
         )
     else:
         await db.execute(
-            "DELETE FROM moodlets WHERE player_id = ? AND moodlet_key = 'drained'",
+            "DELETE FROM vibes WHERE player_id = ? AND vibe_key = 'drained'",
             (player_id,)
         )

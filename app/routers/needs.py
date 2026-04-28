@@ -34,32 +34,32 @@ async def get_needs(player: dict = Depends(get_current_player), db=Depends(get_d
     }
 
 
-@router.get("/moodlets/active")
-async def get_active_moodlets(player: dict = Depends(get_current_player), db=Depends(get_db)):
+@router.get("/vibes/active")
+async def get_active_vibes(player: dict = Depends(get_current_player), db=Depends(get_db)):
     cfg = get_config()
-    moodlets_cfg = cfg["moodlets"]
+    vibes_cfg = cfg["vibes"]
     player_id = player["id"]
 
     if is_postgres():
         rows = await db.fetch(
-            "SELECT moodlet_key, applied_at, expires_at, is_negative FROM moodlets WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text) ORDER BY applied_at DESC",
+            "SELECT vibe_key, applied_at, expires_at, is_negative FROM vibes WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text) ORDER BY applied_at DESC",
             player_id
         )
     else:
         async with db.execute(
-            "SELECT moodlet_key, applied_at, expires_at, is_negative FROM moodlets WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY applied_at DESC",
+            "SELECT vibe_key, applied_at, expires_at, is_negative FROM vibes WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY applied_at DESC",
             (player_id,)
         ) as cursor:
             rows = await cursor.fetchall()
 
     return {
         "player_id": player_id,
-        "moodlets": [
+        "vibes": [
             {
-                "moodlet_key": r["moodlet_key"],
-                "display_name": moodlets_cfg.get(r["moodlet_key"], {}).get("display_name", r["moodlet_key"]),
-                "icon": moodlets_cfg.get(r["moodlet_key"], {}).get("icon", ""),
-                "description": moodlets_cfg.get(r["moodlet_key"], {}).get("description", ""),
+                "vibe_key": r["vibe_key"],
+                "display_name": vibes_cfg.get(r["vibe_key"], {}).get("display_name", r["vibe_key"]),
+                "icon": vibes_cfg.get(r["vibe_key"], {}).get("icon", ""),
+                "description": vibes_cfg.get(r["vibe_key"], {}).get("description", ""),
                 "is_negative": bool(r["is_negative"]),
                 "applied_at": r["applied_at"],
                 "expires_at": r["expires_at"]

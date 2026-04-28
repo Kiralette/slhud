@@ -36,7 +36,7 @@ async def perform_action(body: ActionRequest, player: dict = Depends(get_current
         success=True,
         needs=[NeedState(need_key=n["need_key"], value=round(n["value"], 1), zone=get_zone(n["value"], needs_cfg[n["need_key"]])) for n in all_needs if n["need_key"] in needs_cfg],
         log_entries=[LogEntry(action_text=e["action_text"], delta=e["delta"], need_key=e.get("need_key"), timestamp=e["timestamp"]) for e in result["log_entries"]],
-        moodlets_applied=result.get("moodlets_applied", []),
+        vibes_applied=result.get("vibes_applied", []),
         message=result["message"]
     )
 
@@ -62,6 +62,6 @@ async def sync(player: dict = Depends(get_current_player), db=Depends(get_db)):
         success=True,
         needs=[NeedState(need_key=n["need_key"], value=round(n["value"], 1), zone=get_zone(n["value"], needs_cfg[n["need_key"]])) for n in all_needs if n["need_key"] in needs_cfg],
         log_entries=[LogEntry(action_text=r["action_text"], delta=r["delta"], need_key=r["need_key"], timestamp=r["timestamp"]) for r in rows],
-        moodlets_applied=[],
+        vibes_applied=[],
         message=f"Synced {player['display_name']}"
     )

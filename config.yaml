@@ -9,7 +9,7 @@ server:
   port: 8000
   debug: false
   # Change this to a long random string in production
-  admin_secret: "i_like_to_eat_apples_and_bananas"
+  admin_secret: "change_me_before_deploy"
   # How often the decay engine ticks (seconds)
   decay_interval_seconds: 60
 
@@ -127,7 +127,7 @@ needs:
 #    gain_per_minute — points per minute while using (time-based)
 #    quality_bonus   — extra points per quality tier (0–3)
 #    cooldown_seconds — how long before same object can be used again
-#    grants_moodlet  — moodlet key to apply after use (optional)
+#    grants_vibe  — vibe key to apply after use (optional)
 #    min_duration    — minimum seconds of use to count at all
 # ============================================================
 
@@ -138,7 +138,7 @@ objects:
     needs_affected:
       hunger: { base_gain: 15, quality_bonus: 5 }
     cooldown_seconds: 300
-    grants_moodlet: null
+    grants_vibe: null
 
   meal_basic:
     display_name: "Basic meal"
@@ -147,7 +147,7 @@ objects:
       thirst: { base_gain: 5, quality_bonus: 0 }
     min_duration: 60
     cooldown_seconds: 600
-    grants_moodlet: "well_fed"
+    grants_vibe: "well_fed"
 
   meal_cooked:
     display_name: "Home-cooked meal"
@@ -156,7 +156,7 @@ objects:
       thirst: { base_gain: 8, quality_bonus: 0 }
     min_duration: 120
     cooldown_seconds: 600
-    grants_moodlet: "well_fed"
+    grants_vibe: "well_fed"
 
   # --- THIRST ---
   glass_of_water:
@@ -164,7 +164,7 @@ objects:
     needs_affected:
       thirst: { base_gain: 20, quality_bonus: 0 }
     cooldown_seconds: 120
-    grants_moodlet: null
+    grants_vibe: null
 
   coffee:
     display_name: "Coffee / specialty drink"
@@ -172,7 +172,7 @@ objects:
       thirst: { base_gain: 30, quality_bonus: 5 }
     min_duration: 60
     cooldown_seconds: 300
-    grants_moodlet: "caffeinated"
+    grants_vibe: "caffeinated"
 
   # --- ENERGY ---
   lounge_chair:
@@ -195,9 +195,9 @@ objects:
       energy: { gain_per_minute: 10 }
     min_duration: 300
     cooldown_seconds: 0
-    grants_moodlet: "well_rested"
+    grants_vibe: "well_rested"
     # well_rested only granted if energy ends above this threshold
-    moodlet_min_energy: 90
+    vibe_min_energy: 90
 
   # --- HYGIENE ---
   restroom:
@@ -220,7 +220,7 @@ objects:
       hygiene: { base_gain: 80 }
     min_duration: 300
     cooldown_seconds: 7200
-    grants_moodlet: "relaxed"
+    grants_vibe: "relaxed"
 
   # --- FUN ---
   arcade_game:
@@ -298,7 +298,7 @@ objects:
 
 # ============================================================
 #  MOODLETS
-#  duration_minutes — how long the moodlet lasts (0 = until fixed)
+#  duration_minutes — how long the vibe lasts (0 = until fixed)
 #  modifiers        — what it changes while active
 #    skill_xp_mult  — multiply all skill XP gain
 #    decay_mult     — multiply all need decay rates
@@ -307,7 +307,7 @@ objects:
 #    energy_freeze  — pause energy decay entirely
 # ============================================================
 
-moodlets:
+vibes:
   well_fed:
     display_name: "Well Fed"
     icon: "🍽️"
@@ -417,7 +417,7 @@ skills:
     level_unlocks:
       1: "Basic meal objects usable."
       3: "Meals grant +10 extra Hunger."
-      5: "Can mentor others. Well Fed moodlet extended by 30 min."
+      5: "Can mentor others. Well Fed vibe extended by 30 min."
       8: "Quality tier 3 meals available."
       10: "Meals grant Hunger and Thirst simultaneously."
 
@@ -443,7 +443,7 @@ skills:
     xp_per_level: [100, 200, 350, 500, 700, 900, 1150, 1400, 1700, 2000]
     level_unlocks:
       1: "Social gain +10% from talking."
-      5: "Can trigger Social Buzz moodlet in nearby players."
+      5: "Can trigger Social Buzz vibe in nearby players."
       10: "Conversations fill both your Social and theirs."
 
   fitness:
@@ -518,3 +518,490 @@ consequences:
   broadcast_on_zero: true
   # Channel to broadcast on in SL (negative = local say, 0 = open chat)
   broadcast_channel: 0
+
+# ============================================================
+#  ECONOMY
+# ============================================================
+
+economy:
+  starting_lumens: 500
+  currency_symbol: "✦"
+  currency_name: "Lumens"
+
+  lumen_topup_rates:
+    - { lindens: 250,  lumens: 50   }
+    - { lindens: 500,  lumens: 150  }
+    - { lindens: 1000, lumens: 350  }
+    - { lindens: 2500, lumens: 1000 }
+
+  robbery:
+    base_chance_daily: 0.005
+    wealth_multiplier_divisor: 500
+    max_multiplier: 4.0
+    zone_modifiers:
+      grey_area: 2.0
+      home: 0.0
+      event: 1.5
+      working: 0.5
+    stolen_percent_min: 0.15
+    stolen_percent_max: 0.30
+    stolen_min_lumens: 10
+    stolen_max_lumens: 200
+
+  odd_jobs:
+    daily_limit: 2
+    reset_time: "midnight_slt"
+    jobs:
+      help_a_neighbor:
+        display_name: "Help a Neighbor"
+        pay: 40
+        min_duration_minutes: 15
+        how: "Scripted interaction with nearby player"
+      public_busking:
+        display_name: "Public Busking"
+        pay: 35
+        min_duration_minutes: 15
+        how: "Perform at designated busking zone"
+      freelance_gig:
+        display_name: "Freelance Gig"
+        pay: 55
+        min_duration_minutes: 30
+        how: "Pick up from task board"
+
+# ============================================================
+#  SHOP ITEMS
+# ============================================================
+
+shop_items:
+  # Free items
+  water:
+    display_name: "Glass of Water"
+    category: "drinks_free"
+    lumen_cost: 0
+    need_effects:
+      thirst: 25
+    vibe_granted: null
+
+  # Food — snacks
+  basic_snack:
+    display_name: "Basic Snack"
+    category: "food_snacks"
+    lumen_cost: 5
+    need_effects:
+      hunger: 15
+    vibe_granted: null
+
+  # Food — meals
+  basic_meal:
+    display_name: "Basic Meal"
+    category: "food_meals"
+    lumen_cost: 15
+    need_effects:
+      hunger: 40
+    vibe_granted: null
+
+  good_meal:
+    display_name: "Good Meal"
+    category: "food_meals"
+    lumen_cost: 25
+    need_effects:
+      hunger: 65
+    vibe_granted: "well_fed"
+
+  nice_meal:
+    display_name: "Nice Restaurant Meal"
+    category: "food_meals"
+    lumen_cost: 35
+    need_effects:
+      hunger: 85
+      purpose: 5
+    vibe_granted: "well_fed"
+
+  # Drinks — paid
+  coffee:
+    display_name: "Coffee"
+    category: "drinks_paid"
+    lumen_cost: 8
+    need_effects:
+      thirst: 20
+    vibe_granted: "caffeinated"
+
+  juice:
+    display_name: "Fresh Juice"
+    category: "drinks_paid"
+    lumen_cost: 6
+    need_effects:
+      thirst: 30
+    vibe_granted: null
+
+  energy_drink:
+    display_name: "Energy Drink"
+    category: "drinks_paid"
+    lumen_cost: 10
+    need_effects:
+      thirst: 15
+      energy: 10
+    vibe_granted: "caffeinated"
+
+  specialty_drink:
+    display_name: "Specialty Drink"
+    category: "drinks_paid"
+    lumen_cost: 15
+    need_effects:
+      thirst: 35
+      fun: 5
+    vibe_granted: "caffeinated"
+
+# ============================================================
+#  SUBSCRIPTIONS
+# ============================================================
+
+subscriptions:
+  wavelength_premium:
+    display_name: "Wavelength Premium"
+    icon: "🎵"
+    lumen_cost_weekly: 25
+    description: "All 12 radio stations. No interruptions. 2× Music XP."
+    effects:
+      music_xp_mult: 2.0
+      stations_unlocked: "all"
+
+  gym_membership:
+    display_name: "Gym Membership"
+    icon: "💪"
+    lumen_cost_weekly: 30
+    description: "+15% Fitness XP all week."
+    effects:
+      fitness_xp_mult: 1.15
+
+  flare_verified:
+    display_name: "Flare Verified"
+    icon: "✅"
+    lumen_cost_weekly: 20
+    description: "+10% Social gains all week. Verified badge on Canvas."
+    effects:
+      social_gain_mult: 1.10
+      verified_badge: true
+
+# ============================================================
+#  CAREERS
+# ============================================================
+
+careers:
+  shift_max_hours: 4
+  shift_warning_minutes: 30
+  heartbeat_interval_seconds: 60
+  heartbeat_grace_misses: 2
+  reset_time: "midnight_slt"
+
+  paths:
+    culinary_arts:
+      display_name: "Culinary Arts"
+      icon: "🍳"
+      skill_xp_grant: "cooking"
+      location_required: true
+      is_grey_area: false
+      tiers:
+        1: { title: "Dishwasher",   daily_pay: 50,  skill_req: null,                  days_required: 7  }
+        2: { title: "Kitchen Hand", daily_pay: 60,  skill_req: {cooking: 2},          days_required: 10 }
+        3: { title: "Line Cook",    daily_pay: 75,  skill_req: {cooking: 4},          days_required: 14 }
+        4: { title: "Sous Chef",    daily_pay: 90,  skill_req: {cooking: 7},          days_required: 21 }
+        5: { title: "Head Chef",    daily_pay: 110, skill_req: {cooking: 9},          days_required: null }
+
+    cafe_hospitality:
+      display_name: "Café & Hospitality"
+      icon: "☕"
+      skill_xp_grant: "charisma"
+      location_required: true
+      is_grey_area: false
+      tiers:
+        1: { title: "Barista",           daily_pay: 60,  skill_req: null,             days_required: 7  }
+        2: { title: "Senior Barista",    daily_pay: 70,  skill_req: {charisma: 2},    days_required: 10 }
+        3: { title: "Shift Lead",        daily_pay: 85,  skill_req: {charisma: 4},    days_required: 14 }
+        4: { title: "Assistant Manager", daily_pay: 100, skill_req: {charisma: 6},    days_required: 21 }
+        5: { title: "Café Manager",      daily_pay: 120, skill_req: {charisma: 8},    days_required: null }
+
+    marine_biology:
+      display_name: "Marine Biology"
+      icon: "🐠"
+      skill_xp_grant: "knowledge"
+      location_required: false
+      is_grey_area: false
+      tiers:
+        1: { title: "Lab Assistant",     daily_pay: 55,  skill_req: null,             days_required: 7,  location_required: true  }
+        2: { title: "Research Assistant",daily_pay: 65,  skill_req: {knowledge: 2},   days_required: 10, location_required: true  }
+        3: { title: "Field Researcher",  daily_pay: 80,  skill_req: {knowledge: 4},   days_required: 14, location_required: false }
+        4: { title: "Marine Biologist",  daily_pay: 95,  skill_req: {knowledge: 7},   days_required: 21, location_required: true  }
+        5: { title: "Lead Scientist",    daily_pay: 115, skill_req: {knowledge: 9},   days_required: null, location_required: true }
+
+    medicine:
+      display_name: "Medicine"
+      icon: "💊"
+      skill_xp_grant: "knowledge"
+      location_required: true
+      is_grey_area: false
+      tiers:
+        1: { title: "Orderly",             daily_pay: 55,  skill_req: null,            days_required: 7  }
+        2: { title: "Medical Assistant",   daily_pay: 65,  skill_req: {knowledge: 3},  days_required: 10 }
+        3: { title: "Nurse",               daily_pay: 80,  skill_req: {knowledge: 5},  days_required: 14 }
+        4: { title: "Resident Doctor",     daily_pay: 95,  skill_req: {knowledge: 8},  days_required: 21 }
+        5: { title: "Attending Physician", daily_pay: 115, skill_req: {knowledge: 10}, days_required: null }
+
+    visual_arts:
+      display_name: "Visual Arts"
+      icon: "🎨"
+      skill_xp_grant: "creativity"
+      location_required: false
+      is_grey_area: false
+      tiers:
+        1: { title: "Street Artist",     daily_pay: 50,  skill_req: null,              days_required: 7  }
+        2: { title: "Freelance Designer",daily_pay: 60,  skill_req: {creativity: 2},   days_required: 10 }
+        3: { title: "Graphic Designer",  daily_pay: 75,  skill_req: {creativity: 4},   days_required: 14 }
+        4: { title: "Art Director",      daily_pay: 90,  skill_req: {creativity: 7},   days_required: 21 }
+        5: { title: "Creative Director", daily_pay: 110, skill_req: {creativity: 9},   days_required: null }
+
+    music_career:
+      display_name: "Music"
+      icon: "🎵"
+      skill_xp_grant: "music"
+      location_required: false
+      is_grey_area: false
+      tiers:
+        1: { title: "Busker",                daily_pay: 50,  skill_req: null,          days_required: 7,  location_required: true  }
+        2: { title: "Session Musician",      daily_pay: 60,  skill_req: {music: 2},    days_required: 10, location_required: true  }
+        3: { title: "Band Member",           daily_pay: 75,  skill_req: {music: 4},    days_required: 14, location_required: true  }
+        4: { title: "Recording Artist",      daily_pay: 90,  skill_req: {music: 7},    days_required: 21, location_required: false }
+        5: { title: "Headlining Performer",  daily_pay: 110, skill_req: {music: 9},    days_required: null, location_required: true }
+
+    content_creation:
+      display_name: "Content Creation"
+      icon: "📱"
+      skill_xp_grant: "creativity"
+      location_required: false
+      is_grey_area: false
+      tiers:
+        1: { title: "Micro-Influencer", daily_pay: 50,  skill_req: {creativity: 1},                    days_required: 7  }
+        2: { title: "Content Creator",  daily_pay: 60,  skill_req: {creativity: 3},                    days_required: 10 }
+        3: { title: "Influencer",       daily_pay: 75,  skill_req: {creativity: 4, charisma: 4},        days_required: 14 }
+        4: { title: "Brand Partner",    daily_pay: 90,  skill_req: {creativity: 6, charisma: 6},        days_required: 21 }
+        5: { title: "Media Personality",daily_pay: 110, skill_req: {creativity: 8, charisma: 8},        days_required: null }
+
+    fitness_sports:
+      display_name: "Fitness & Sports"
+      icon: "💪"
+      skill_xp_grant: "fitness"
+      location_required: true
+      is_grey_area: false
+      tiers:
+        1: { title: "Gym Staff",        daily_pay: 50,  skill_req: null,              days_required: 7  }
+        2: { title: "Fitness Instructor",daily_pay: 60, skill_req: {fitness: 2},      days_required: 10 }
+        3: { title: "Personal Trainer", daily_pay: 75,  skill_req: {fitness: 5},      days_required: 14 }
+        4: { title: "Head Coach",       daily_pay: 90,  skill_req: {fitness: 7},      days_required: 21 }
+        5: { title: "Pro Athlete",      daily_pay: 110, skill_req: {fitness: 9},      days_required: null, location_required: false }
+
+    law:
+      display_name: "Law"
+      icon: "⚖️"
+      skill_xp_grant: "knowledge"
+      location_required: true
+      is_grey_area: false
+      tiers:
+        1: { title: "Legal Clerk",        daily_pay: 55,  skill_req: null,                         days_required: 7  }
+        2: { title: "Paralegal",          daily_pay: 65,  skill_req: {knowledge: 3},               days_required: 10 }
+        3: { title: "Associate Attorney", daily_pay: 80,  skill_req: {knowledge: 4, charisma: 4},  days_required: 14 }
+        4: { title: "Senior Attorney",    daily_pay: 95,  skill_req: {knowledge: 6, charisma: 6},  days_required: 21 }
+        5: { title: "Partner",            daily_pay: 115, skill_req: {knowledge: 9, charisma: 9},  days_required: null }
+
+    corporate:
+      display_name: "Corporate"
+      icon: "💼"
+      skill_xp_grant: "charisma"
+      location_required: true
+      is_grey_area: false
+      tiers:
+        1: { title: "Intern",          daily_pay: 50,  skill_req: null,                          days_required: 7  }
+        2: { title: "Analyst",         daily_pay: 60,  skill_req: {knowledge: 2},                days_required: 10 }
+        3: { title: "Manager",         daily_pay: 75,  skill_req: {knowledge: 4, charisma: 4},   days_required: 14 }
+        4: { title: "Senior Manager",  daily_pay: 90,  skill_req: {knowledge: 6, charisma: 6},   days_required: 21 }
+        5: { title: "Executive",       daily_pay: 110, skill_req: {knowledge: 8, charisma: 8},   days_required: null }
+
+    transportation:
+      display_name: "Transportation"
+      icon: "🚗"
+      skill_xp_grant: "charisma"
+      location_required: false
+      is_grey_area: false
+      tiers:
+        1: { title: "Delivery Driver",    daily_pay: 50,  skill_req: null,              days_required: 7  }
+        2: { title: "Rideshare Driver",   daily_pay: 60,  skill_req: {charisma: 2},     days_required: 10 }
+        3: { title: "Private Chauffeur",  daily_pay: 75,  skill_req: {charisma: 4},     days_required: 14 }
+        4: { title: "Fleet Supervisor",   daily_pay: 90,  skill_req: {charisma: 6},     days_required: 21, location_required: true }
+        5: { title: "Logistics Manager",  daily_pay: 110, skill_req: {charisma: 8},     days_required: null, location_required: true }
+
+    retail:
+      display_name: "Retail"
+      icon: "🛍️"
+      skill_xp_grant: "charisma"
+      location_required: true
+      is_grey_area: false
+      tiers:
+        1: { title: "Stock Associate",   daily_pay: 50,  skill_req: null,              days_required: 7  }
+        2: { title: "Sales Associate",   daily_pay: 60,  skill_req: {charisma: 2},     days_required: 10 }
+        3: { title: "Senior Sales",      daily_pay: 75,  skill_req: {charisma: 4},     days_required: 14 }
+        4: { title: "Department Lead",   daily_pay: 90,  skill_req: {charisma: 6},     days_required: 21 }
+        5: { title: "Store Manager",     daily_pay: 110, skill_req: {charisma: 8},     days_required: null }
+
+    cleaning:
+      display_name: "Cleaning & Maintenance"
+      icon: "🧹"
+      skill_xp_grant: "fitness"
+      location_required: false
+      is_grey_area: false
+      tiers:
+        1: { title: "Cleaner",             daily_pay: 50, skill_req: null,             days_required: 7  }
+        2: { title: "Maintenance Tech",    daily_pay: 60, skill_req: {fitness: 2},     days_required: 14 }
+        3: { title: "Facilities Manager",  daily_pay: 75, skill_req: {fitness: 4},     days_required: null }
+
+    # --- Grey area careers ---
+    the_syndicate:
+      display_name: "The Syndicate"
+      icon: "🌹"
+      skill_xp_grant: null
+      location_required: false
+      is_grey_area: true
+      tiers:
+        1: { title: "Associate", daily_pay: 75,  skill_req: null,                          days_required: 7  }
+        2: { title: "Soldier",   daily_pay: 90,  skill_req: {fitness: 2},                  days_required: 14 }
+        3: { title: "Enforcer",  daily_pay: 110, skill_req: {fitness: 4},                  days_required: 21 }
+        4: { title: "Capo",      daily_pay: 130, skill_req: {fitness: 5, charisma: 4},      days_required: 30 }
+        5: { title: "Boss",      daily_pay: 160, skill_req: {fitness: 7, charisma: 7},      days_required: null, location_required: true }
+
+    underground_casino:
+      display_name: "Underground Casino"
+      icon: "🎰"
+      skill_xp_grant: null
+      location_required: true
+      is_grey_area: true
+      tiers:
+        1: { title: "Card Dealer",    daily_pay: 75,  skill_req: null,              days_required: 7  }
+        2: { title: "Pit Boss",       daily_pay: 90,  skill_req: {charisma: 2},     days_required: 14 }
+        3: { title: "Floor Manager",  daily_pay: 110, skill_req: {charisma: 5},     days_required: 21 }
+        4: { title: "Casino Owner",   daily_pay: 130, skill_req: {charisma: 7},     days_required: null }
+
+    black_market:
+      display_name: "Black Market"
+      icon: "🕶️"
+      skill_xp_grant: null
+      location_required: false
+      is_grey_area: true
+      tiers:
+        1: { title: "Street Vendor", daily_pay: 75,  skill_req: null,              days_required: 7  }
+        2: { title: "Hustler",       daily_pay: 90,  skill_req: {knowledge: 2},    days_required: 14 }
+        3: { title: "Broker",        daily_pay: 110, skill_req: {knowledge: 4},    days_required: 21 }
+        4: { title: "Kingpin",       daily_pay: 130, skill_req: {knowledge: 6},    days_required: null }
+
+    underground_fixer:
+      display_name: "Underground Fixer"
+      icon: "🕵️"
+      skill_xp_grant: null
+      location_required: false
+      is_grey_area: true
+      tiers:
+        1: { title: "Street Fixer", daily_pay: 75,  skill_req: null,                          days_required: 10 }
+        2: { title: "Fixer",        daily_pay: 90,  skill_req: {charisma: 3},                  days_required: 21 }
+        3: { title: "The Cleaner",  daily_pay: 110, skill_req: {charisma: 5, fitness: 5},      days_required: null }
+
+# ============================================================
+#  WAVELENGTH RADIO STATIONS
+# ============================================================
+
+wavelength:
+  free_tier_stations: ["lumen_lofi", "rise_fm", "the_groove", "hardline"]
+  premium_cost_weekly: 25
+  stations:
+    lumen_lofi:
+      display_name: "Lumen Lofi"
+      genre: "Lofi hip hop · study beats"
+      stream_url: ""  # add AzuraCast URL when ready
+      xp_effect: { knowledge: 0.03 }
+      vibe_possible: "hyperfocused"
+      is_premium: false
+
+    neon_pulse:
+      display_name: "Neon Pulse"
+      genre: "Electronic · synthwave · hyperpop"
+      stream_url: ""
+      need_effect: { fun_decay_mult: 0.95 }
+      is_premium: true
+
+    the_groove:
+      display_name: "The Groove"
+      genre: "R&B · soul · neo-soul"
+      stream_url: ""
+      social_gain_mult: 1.05
+      is_premium: false
+
+    rise_fm:
+      display_name: "Rise FM"
+      genre: "Pop · upbeat · mainstream"
+      stream_url: ""
+      tune_in_bonus: { fun: 3 }
+      is_premium: false
+
+    stillwater:
+      display_name: "Stillwater"
+      genre: "Ambient · meditation · nature"
+      stream_url: ""
+      need_effect: { energy_decay_mult: 0.92 }
+      xp_effect: { purpose_passive_bonus: 0.05 }
+      is_premium: true
+
+    the_cypher:
+      display_name: "The Cypher"
+      genre: "Hip hop · rap · freestyle"
+      stream_url: ""
+      xp_effect: { charisma: 0.03, fitness: 0.03 }
+      is_premium: true
+
+    velvet_hour:
+      display_name: "Velvet Hour"
+      genre: "Jazz · blues · late night"
+      stream_url: ""
+      tune_in_bonus: { purpose: 2 }
+      is_premium: true
+
+    solstice:
+      display_name: "Solstice"
+      genre: "Indie · folk · alternative"
+      stream_url: ""
+      xp_effect: { creativity: 0.03 }
+      is_premium: true
+
+    hardline:
+      display_name: "Hardline"
+      genre: "Rock · punk · metal"
+      stream_url: ""
+      xp_effect: { fitness: 0.05 }
+      is_premium: false
+
+    carnaval:
+      display_name: "Carnaval"
+      genre: "Latin · Afrobeats · dancehall"
+      stream_url: ""
+      social_gain_mult: 1.08
+      is_premium: true
+
+    greenhouse:
+      display_name: "Greenhouse"
+      genre: "Classical · orchestral · piano"
+      stream_url: ""
+      xp_effect: { knowledge: 0.05 }
+      is_premium: true
+
+    player_fm:
+      display_name: "Player FM"
+      genre: "Player-uploaded · Musician career"
+      stream_url: ""
+      xp_effect: { music: 0.05 }
+      musician_passive: true
+      is_premium: true

@@ -70,28 +70,28 @@ async def update_need(player_id: int, need_key: str, delta: float, db, action_te
     return new_value
 
 
-async def apply_moodlet(player_id: int, moodlet_key: str, db):
+async def apply_vibe(player_id: int, vibe_key: str, db):
     cfg = get_config()
-    moodlet_cfg = cfg.get("moodlets", {}).get(moodlet_key, {})
-    duration = moodlet_cfg.get("duration_minutes", 0)
-    is_negative = 1 if moodlet_cfg.get("is_negative", False) else 0
+    vibe_cfg = cfg.get("vibes", {}).get(vibe_key, {})
+    duration = vibe_cfg.get("duration_minutes", 0)
+    is_negative = 1 if vibe_cfg.get("is_negative", False) else 0
 
     if is_postgres():
         if duration > 0:
             await db.execute(
-                """INSERT INTO moodlets (player_id, moodlet_key, is_negative, expires_at)
+                """INSERT INTO vibes (player_id, vibe_key, is_negative, expires_at)
                    VALUES ($1, $2, $3, (now() + ($4 || ' minutes')::interval)::text)
-                   ON CONFLICT (player_id, moodlet_key) DO UPDATE SET
+                   ON CONFLICT (player_id, vibe_key) DO UPDATE SET
                    applied_at = now()::text,
                    expires_at = (now() + ($4 || ' minutes')::interval)::text""",
-                player_id, moodlet_key, is_negative, str(duration)
+                player_id, vibe_key, is_negative, str(duration)
             )
         else:
             await db.execute(
-                """INSERT INTO moodlets (player_id, moodlet_key, is_negative, expires_at)
+                """INSERT INTO vibes (player_id, vibe_key, is_negative, expires_at)
                    VALUES ($1, $2, $3, NULL)
-                   ON CONFLICT (player_id, moodlet_key) DO UPDATE SET applied_at = now()::text, expires_at = NULL""",
-                player_id, moodlet_key, is_negative
+                   ON CONFLICT (player_id, vibe_key) DO UPDATE SET applied_at = now()::text, expires_at = NULL""",
+                player_id, vibe_key, is_negative
             )
     else:
         if duration > 0:
@@ -99,36 +99,36 @@ async def apply_moodlet(player_id: int, moodlet_key: str, db):
         else:
             expires_sql = "NULL"
         await db.execute(
-            f"""INSERT INTO moodlets (player_id, moodlet_key, is_negative, expires_at)
+            f"""INSERT INTO vibes (player_id, vibe_key, is_negative, expires_at)
                 VALUES (?, ?, ?, {expires_sql})
-                ON CONFLICT(player_id, moodlet_key) DO UPDATE SET
+                ON CONFLICT(player_id, vibe_key) DO UPDATE SET
                 applied_at = datetime('now'), expires_at = {expires_sql}""",
-            (player_id, moodlet_key, is_negative)
+            (player_id, vibe_key, is_negative)
         )
 
 
 async def get_active_multipliers(player_id: int, db) -> dict:
     cfg = get_config()
-    moodlet_cfgs = cfg.get("moodlets", {})
+    vibe_cfgs = cfg.get("vibes", {})
 
     if is_postgres():
         rows = await db.fetch(
-            "SELECT moodlet_key FROM moodlets WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text)",
+            "SELECT vibe_key FROM vibes WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text)",
             player_id
         )
     else:
         async with db.execute(
-            "SELECT moodlet_key FROM moodlets WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now'))",
+            "SELECT vibe_key FROM vibes WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now'))",
             (player_id,)
         ) as cursor:
             rows = await cursor.fetchall()
 
     combined = {}
     for row in rows:
-        key = row["moodlet_key"]
-        if key not in moodlet_cfgs:
+        key = row["vibe_key"]
+        if key not in vibe_cfgs:
             continue
-        mods = moodlet_cfgs[key].get("modifiers", {})
+        mods = vibe_cfgs[key].get("modifiers", {})
         for mod_key, mod_val in mods.items():
             if mod_key in combined and isinstance(mod_val, float):
                 combined[mod_key] *= mod_val
@@ -185,7 +185,7 @@ async def process_action(player_id: int, object_key: str, duration_seconds: int,
     objects = cfg.get("objects", {})
 
     if object_key not in objects:
-        return {"changes": [], "log_entries": [], "message": f"Unknown object: {object_key}", "moodlets_applied": []}
+        return {"changes": [], "log_entries": [], "message": f"Unknown object: {object_key}", "vibes_applied": []}
 
     obj = objects[object_key]
     obj_name = obj.get("display_name", object_key)
@@ -193,7 +193,7 @@ async def process_action(player_id: int, object_key: str, duration_seconds: int,
     multipliers = await get_active_multipliers(player_id, db)
     skill_xp_mult = multipliers.get("skill_xp_mult", 1.0)
 
-    changes, log_entries, messages, moodlets_applied = [], [], [], []
+    changes, log_entries, messages, vibes_applied = [], [], [], []
 
     for need_key, gain_cfg in obj.get("needs_affected", {}).items():
         if need_key not in cfg["needs"]:
@@ -216,17 +216,17 @@ async def process_action(player_id: int, object_key: str, duration_seconds: int,
         await award_skill_xp(player_id, skill_key, adjusted_xp, db)
         log_entries.append({"action_text": f"{skill_key.capitalize()} +{adjusted_xp} XP", "delta": adjusted_xp, "need_key": None, "timestamp": datetime.utcnow().isoformat()})
 
-    grant_moodlet = obj.get("grants_moodlet")
-    if grant_moodlet:
-        if grant_moodlet == "well_rested":
-            min_energy = obj.get("moodlet_min_energy", 90)
+    grant_vibe = obj.get("grants_vibe")
+    if grant_vibe:
+        if grant_vibe == "well_rested":
+            min_energy = obj.get("vibe_min_energy", 90)
             energy_now = await get_need_value(player_id, "energy", db)
             if energy_now >= min_energy:
-                await apply_moodlet(player_id, grant_moodlet, db)
-                moodlets_applied.append(grant_moodlet)
+                await apply_vibe(player_id, grant_vibe, db)
+                vibes_applied.append(grant_vibe)
         else:
-            await apply_moodlet(player_id, grant_moodlet, db)
-            moodlets_applied.append(grant_moodlet)
+            await apply_vibe(player_id, grant_vibe, db)
+            vibes_applied.append(grant_vibe)
 
     summary = f"Used {obj_name}" + (f" · {', '.join(messages)}" if messages else "")
-    return {"changes": changes, "log_entries": log_entries, "message": summary, "moodlets_applied": moodlets_applied}
+    return {"changes": changes, "log_entries": log_entries, "message": summary, "vibes_applied": vibes_applied}

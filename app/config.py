@@ -19,7 +19,7 @@ def get_config() -> dict:
     global _cache, _cache_mtime
     mtime = CONFIG_PATH.stat().st_mtime
     if mtime != _cache_mtime:
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        with open(CONFIG_PATH, "r") as f:
             _cache = yaml.safe_load(f)
         _cache_mtime = mtime
     return _cache
@@ -35,9 +35,9 @@ def get_object(object_key: str) -> dict:
     return get_config()["objects"][object_key]
 
 
-def get_moodlet(moodlet_key: str) -> dict:
-    """Shortcut to fetch a single moodlet's config block."""
-    return get_config()["moodlets"][moodlet_key]
+def get_vibe(vibe_key: str) -> dict:
+    """Shortcut to fetch a single vibe's config block."""
+    return get_config()["vibes"][vibe_key]
 
 
 def get_skill(skill_key: str) -> dict:

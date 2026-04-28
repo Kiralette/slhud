@@ -6,7 +6,7 @@ Compatible with both SQLite and PostgreSQL.
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from app.database import get_db, is_postgres
-from app.services.needs import apply_moodlet
+from app.services.needs import apply_vibe
 from app.config import get_config
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -97,9 +97,9 @@ async def admin_home(request: Request, db=Depends(get_db)):
     events = await fetch_val(db,
         "SELECT COUNT(*) FROM event_log", [],
         "SELECT COUNT(*) FROM event_log", [])
-    active_moodlets = await fetch_val(db,
-        "SELECT COUNT(*) FROM moodlets WHERE expires_at IS NULL OR expires_at > now()::text", [],
-        "SELECT COUNT(*) FROM moodlets WHERE expires_at IS NULL OR expires_at > datetime('now')", [])
+    active_vibes = await fetch_val(db,
+        "SELECT COUNT(*) FROM vibes WHERE expires_at IS NULL OR expires_at > now()::text", [],
+        "SELECT COUNT(*) FROM vibes WHERE expires_at IS NULL OR expires_at > datetime('now')", [])
 
     players = await fetch_all(db,
         "SELECT * FROM players WHERE is_banned = 0 ORDER BY last_seen DESC", [],
@@ -133,7 +133,7 @@ async def admin_home(request: Request, db=Depends(get_db)):
       <div class="stat"><div class="stat-val">{total}</div><div class="stat-lbl">Total players</div></div>
       <div class="stat"><div class="stat-val" style="color:#4caf50;">{online}</div><div class="stat-lbl">Online now</div></div>
       <div class="stat"><div class="stat-val">{events}</div><div class="stat-lbl">Total events logged</div></div>
-      <div class="stat"><div class="stat-val">{active_moodlets}</div><div class="stat-lbl">Active moodlets</div></div>
+      <div class="stat"><div class="stat-val">{active_vibes}</div><div class="stat-lbl">Active vibes</div></div>
     </div>
     <h2>Players</h2>
     <table>
@@ -164,15 +164,15 @@ async def admin_player(player_id: int, request: Request, db=Depends(get_db)):
         "SELECT * FROM skills WHERE player_id = ?", (player_id,))
 
     if is_postgres():
-        moodlets = await db.fetch(
-            "SELECT * FROM moodlets WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text)", player_id)
+        vibes = await db.fetch(
+            "SELECT * FROM vibes WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text)", player_id)
         logs = await db.fetch(
             "SELECT * FROM event_log WHERE player_id = $1 ORDER BY timestamp DESC LIMIT 30", player_id)
     else:
         async with db.execute(
-            "SELECT * FROM moodlets WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now'))", (player_id,)
+            "SELECT * FROM vibes WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now'))", (player_id,)
         ) as cursor:
-            moodlets = await cursor.fetchall()
+            vibes = await cursor.fetchall()
         async with db.execute(
             "SELECT * FROM event_log WHERE player_id = ? ORDER BY timestamp DESC LIMIT 30", (player_id,)
         ) as cursor:
@@ -192,7 +192,7 @@ async def admin_player(player_id: int, request: Request, db=Depends(get_db)):
         </tr>""" for n in needs])
 
     skills_rows = "".join([f"<tr><td>{s['skill_key']}</td><td>Level {s['level']}</td><td>{float(s['xp']):.1f} XP</td></tr>" for s in skills])
-    moodlet_rows = "".join([f"<tr><td>{m['moodlet_key']}</td><td>{'negative' if m['is_negative'] else 'positive'}</td><td>{m['expires_at'] or 'permanent'}</td></tr>" for m in moodlets]) or "<tr><td colspan='3' style='color:#666;'>No active moodlets</td></tr>"
+    vibe_rows = "".join([f"<tr><td>{m['vibe_key']}</td><td>{'negative' if m['is_negative'] else 'positive'}</td><td>{m['expires_at'] or 'permanent'}</td></tr>" for m in vibes]) or "<tr><td colspan='3' style='color:#666;'>No active vibes</td></tr>"
     log_rows = "".join([f"<tr><td style='color:#888;font-size:0.75rem;'>{l['timestamp']}</td><td>{l['need_key'] or '—'}</td><td>{l['action_text']}</td><td style='color:{'#4caf50' if l['delta'] >= 0 else '#f44336'};'>{'+' if l['delta'] >= 0 else ''}{l['delta']}</td></tr>" for l in logs])
 
     online_badge = '<span class="badge badge-green">online</span>' if player["is_online"] else '<span class="badge" style="background:#222;color:#666;">offline</span>'
@@ -203,13 +203,13 @@ async def admin_player(player_id: int, request: Request, db=Depends(get_db)):
     <div class="subtitle">{player['avatar_uuid']} &nbsp;|&nbsp; Registered: {player['registered_at']}</div>
     <h2>Needs</h2>
     <table><tr><th>Need</th><th>Value</th><th>Override</th></tr>{needs_rows}</table>
-    <h2>Apply moodlet</h2>
-    <form method="post" action="/admin/player/{player_id}/apply_moodlet?secret={secret}">
-      <select name="moodlet_key">{''.join([f'<option value="{k}">{k}</option>' for k in cfg['moodlets'].keys()])}</select>
+    <h2>Apply vibe</h2>
+    <form method="post" action="/admin/player/{player_id}/apply_vibe?secret={secret}">
+      <select name="vibe_key">{''.join([f'<option value="{k}">{k}</option>' for k in cfg['vibes'].keys()])}</select>
       <button type="submit">Apply</button>
     </form>
-    <h2>Active moodlets</h2>
-    <table><tr><th>Moodlet</th><th>Type</th><th>Expires</th></tr>{moodlet_rows}</table>
+    <h2>Active vibes</h2>
+    <table><tr><th>Vibe</th><th>Type</th><th>Expires</th></tr>{vibe_rows}</table>
     <h2>Skills</h2>
     <table><tr><th>Skill</th><th>Level</th><th>XP</th></tr>{skills_rows}</table>
     <h2>Event log (last 30)</h2>
@@ -237,11 +237,11 @@ async def set_need(player_id: int, request: Request, need_key: str = Form(...), 
     return RedirectResponse(f"/admin/player/{player_id}?secret={secret}", status_code=303)
 
 
-@router.post("/player/{player_id}/apply_moodlet", response_class=HTMLResponse)
-async def admin_apply_moodlet(player_id: int, request: Request, moodlet_key: str = Form(...), db=Depends(get_db)):
+@router.post("/player/{player_id}/apply_vibe", response_class=HTMLResponse)
+async def admin_apply_vibe(player_id: int, request: Request, vibe_key: str = Form(...), db=Depends(get_db)):
     check_admin(request)
     secret = request.query_params.get("secret", "")
-    await apply_moodlet(player_id, moodlet_key, db)
+    await apply_vibe(player_id, vibe_key, db)
     if not is_postgres():
         await db.commit()
     return RedirectResponse(f"/admin/player/{player_id}?secret={secret}", status_code=303)

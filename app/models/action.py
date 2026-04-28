@@ -33,5 +33,5 @@ class ActionResponse(BaseModel):
     success: bool
     needs: list[NeedState]       # all 7 needs, updated
     log_entries: list[LogEntry]  # what just happened (shown in the app)
-    moodlets_applied: list[str]  # any new moodlets triggered
+    vibes_applied: list[str]  # any new vibes triggered
     message: str                 # human-readable summary e.g. "You ate cookies +15 Hunger"
