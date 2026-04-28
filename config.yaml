@@ -1,0 +1,520 @@
+# ============================================================
+#  SL Phone HUD — Master Configuration
+#  All game values live here. Edit freely, no restart needed.
+#  The server hot-reloads this file on every request.
+# ============================================================
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  # Change this to a long random string in production
+  admin_secret: "i_like_to_eat_apples_and_bananas"
+  # How often the decay engine ticks (seconds)
+  decay_interval_seconds: 60
+
+database:
+  path: "data/hud.db"
+
+# ============================================================
+#  NEEDS
+#  decay_online  — points lost per minute while HUD is worn
+#  decay_offline — points lost per minute while HUD is off
+#  warn_threshold — zone boundary: below this = "Struggling"
+#  crit_threshold — zone boundary: below this = "Critical"
+#  zero_emote     — what the HUD says out loud at zero
+# ============================================================
+
+needs:
+  hunger:
+    display_name: "Hunger"
+    icon: "🍞"
+    color: "#993c1d"
+    category: "physical"
+    decay_online: 0.2222
+    decay_offline: 0.0741
+    warn_threshold: 40
+    crit_threshold: 20
+    zero_emote: "/me clutches their stomach, faint with hunger."
+    description: "How recently your character has eaten."
+
+  thirst:
+    display_name: "Thirst"
+    icon: "💧"
+    color: "#185fa5"
+    category: "physical"
+    decay_online: 0.3333
+    decay_offline: 0.1111
+    warn_threshold: 40
+    crit_threshold: 20
+    zero_emote: "/me is parched, lips cracked, desperately needing water."
+    description: "How hydrated your character is."
+
+  energy:
+    display_name: "Energy"
+    icon: "⚡"
+    color: "#534ab7"
+    category: "physical"
+    decay_online: 0.1667
+    decay_offline: 0.0556
+    warn_threshold: 40
+    crit_threshold: 20
+    zero_emote: "/me can barely keep their eyes open, exhausted to the bone."
+    description: "How rested your character is. Empties after ~8 hrs."
+
+  fun:
+    display_name: "Fun"
+    icon: "🎉"
+    color: "#ba7517"
+    category: "mental"
+    decay_online: 0.1111
+    decay_offline: 0.037
+    warn_threshold: 40
+    crit_threshold: 20
+    zero_emote: "/me looks dull-eyed and restless, badly in need of something enjoyable."
+    description: "How entertained and stimulated your character feels."
+
+  social:
+    display_name: "Social"
+    icon: "🫂"
+    color: "#1d9e75"
+    category: "mental"
+    decay_online: 0.0952
+    decay_offline: 0.0317
+    warn_threshold: 40
+    crit_threshold: 20
+    zero_emote: "/me looks withdrawn and lonely, craving company."
+    description: "How connected your character feels to others."
+
+  hygiene:
+    display_name: "Hygiene"
+    icon: "🛁"
+    color: "#5f5e5a"
+    category: "physical"
+    decay_online: 0.0556
+    decay_offline: 0.0185
+    warn_threshold: 40
+    crit_threshold: 20
+    zero_emote: "/me looks dishevelled and uncomfortable."
+    description: "How clean and well-groomed your character is."
+
+  purpose:
+    display_name: "Purpose"
+    icon: "🕯️"
+    color: "#7f77dd"
+    category: "special"
+    decay_online: 0.0278
+    decay_offline: 0.0093
+    warn_threshold: 40
+    crit_threshold: 20
+    zero_emote: "/me seems lost and hollow, going through the motions without meaning."
+    description: "A composite need. Rises when all other needs are healthy."
+    # Purpose is calculated differently — see services/purpose_engine.py
+    is_composite: true
+    # Wellbeing score above this = passive Purpose gain
+    passive_gain_threshold: 60
+    passive_gain_rate: 0.2
+    # Wellbeing score below this = Purpose also starts draining
+    passive_drain_threshold: 40
+    # Flat bonus to Purpose on any skill level-up
+    skill_levelup_bonus: 5
+
+# ============================================================
+#  INTERACTION OBJECTS
+#  Each object has:
+#    needs_affected  — which needs it fills and how
+#    base_gain       — flat points added instantly on use
+#    gain_per_minute — points per minute while using (time-based)
+#    quality_bonus   — extra points per quality tier (0–3)
+#    cooldown_seconds — how long before same object can be used again
+#    grants_moodlet  — moodlet key to apply after use (optional)
+#    min_duration    — minimum seconds of use to count at all
+# ============================================================
+
+objects:
+  # --- HUNGER ---
+  snack:
+    display_name: "Snack"
+    needs_affected:
+      hunger: { base_gain: 15, quality_bonus: 5 }
+    cooldown_seconds: 300
+    grants_moodlet: null
+
+  meal_basic:
+    display_name: "Basic meal"
+    needs_affected:
+      hunger: { base_gain: 35, quality_bonus: 10 }
+      thirst: { base_gain: 5, quality_bonus: 0 }
+    min_duration: 60
+    cooldown_seconds: 600
+    grants_moodlet: "well_fed"
+
+  meal_cooked:
+    display_name: "Home-cooked meal"
+    needs_affected:
+      hunger: { base_gain: 45, quality_bonus: 15 }
+      thirst: { base_gain: 8, quality_bonus: 0 }
+    min_duration: 120
+    cooldown_seconds: 600
+    grants_moodlet: "well_fed"
+
+  # --- THIRST ---
+  glass_of_water:
+    display_name: "Glass of water"
+    needs_affected:
+      thirst: { base_gain: 20, quality_bonus: 0 }
+    cooldown_seconds: 120
+    grants_moodlet: null
+
+  coffee:
+    display_name: "Coffee / specialty drink"
+    needs_affected:
+      thirst: { base_gain: 30, quality_bonus: 5 }
+    min_duration: 60
+    cooldown_seconds: 300
+    grants_moodlet: "caffeinated"
+
+  # --- ENERGY ---
+  lounge_chair:
+    display_name: "Lounge chair"
+    needs_affected:
+      energy: { gain_per_minute: 3 }
+    min_duration: 60
+    cooldown_seconds: 0
+
+  sofa_nap:
+    display_name: "Sofa nap"
+    needs_affected:
+      energy: { gain_per_minute: 6 }
+    min_duration: 120
+    cooldown_seconds: 0
+
+  bed_sleep:
+    display_name: "Bed"
+    needs_affected:
+      energy: { gain_per_minute: 10 }
+    min_duration: 300
+    cooldown_seconds: 0
+    grants_moodlet: "well_rested"
+    # well_rested only granted if energy ends above this threshold
+    moodlet_min_energy: 90
+
+  # --- HYGIENE ---
+  restroom:
+    display_name: "Restroom / toilet"
+    needs_affected:
+      hygiene: { base_gain: 25 }
+    min_duration: 30
+    cooldown_seconds: 600
+
+  shower:
+    display_name: "Shower"
+    needs_affected:
+      hygiene: { base_gain: 55 }
+    min_duration: 120
+    cooldown_seconds: 3600
+
+  bath:
+    display_name: "Bath"
+    needs_affected:
+      hygiene: { base_gain: 80 }
+    min_duration: 300
+    cooldown_seconds: 7200
+    grants_moodlet: "relaxed"
+
+  # --- FUN ---
+  arcade_game:
+    display_name: "Arcade / game object"
+    needs_affected:
+      fun: { gain_per_minute: 5 }
+    min_duration: 60
+    cooldown_seconds: 0
+    skill_xp: { gaming: 10 }
+
+  attend_event:
+    display_name: "Event / party"
+    needs_affected:
+      fun: { gain_per_minute: 4 }
+      social: { gain_per_minute: 2 }
+    min_duration: 300
+    cooldown_seconds: 0
+
+  # --- SOCIAL ---
+  conversation:
+    display_name: "Conversation"
+    needs_affected:
+      social: { gain_per_minute: 2 }
+    min_duration: 60
+    cooldown_seconds: 0
+
+  shared_activity:
+    display_name: "Shared activity"
+    needs_affected:
+      social: { gain_per_minute: 4 }
+      fun: { gain_per_minute: 1 }
+    min_duration: 120
+    cooldown_seconds: 0
+
+  # --- CREATIVE / SKILL OBJECTS ---
+  art_easel:
+    display_name: "Art easel"
+    needs_affected:
+      fun: { gain_per_minute: 3 }
+    min_duration: 120
+    cooldown_seconds: 0
+    skill_xp: { creativity: 12 }
+
+  musical_instrument:
+    display_name: "Musical instrument"
+    needs_affected:
+      fun: { gain_per_minute: 3 }
+    min_duration: 120
+    cooldown_seconds: 0
+    skill_xp: { music: 12 }
+
+  bookshelf:
+    display_name: "Bookshelf / library"
+    needs_affected:
+      fun: { gain_per_minute: 2 }
+    min_duration: 120
+    cooldown_seconds: 0
+    skill_xp: { knowledge: 10 }
+
+  gym_equipment:
+    display_name: "Gym equipment"
+    needs_affected:
+      fun: { gain_per_minute: 2 }
+      energy: { gain_per_minute: -1 }
+    min_duration: 120
+    cooldown_seconds: 0
+    skill_xp: { fitness: 15 }
+
+  kitchen_stove:
+    display_name: "Kitchen stove"
+    needs_affected: {}
+    min_duration: 60
+    cooldown_seconds: 0
+    skill_xp: { cooking: 15 }
+
+# ============================================================
+#  MOODLETS
+#  duration_minutes — how long the moodlet lasts (0 = until fixed)
+#  modifiers        — what it changes while active
+#    skill_xp_mult  — multiply all skill XP gain
+#    decay_mult     — multiply all need decay rates
+#    social_gain_mult — multiply social gain from interactions
+#    purpose_gain_mult — multiply passive purpose gain rate
+#    energy_freeze  — pause energy decay entirely
+# ============================================================
+
+moodlets:
+  well_fed:
+    display_name: "Well Fed"
+    icon: "🍽️"
+    color_bg: "#eaf3de"
+    color_text: "#27500a"
+    duration_minutes: 60
+    description: "A satisfying meal. Skill XP gains boosted."
+    modifiers:
+      skill_xp_mult: 1.15
+
+  caffeinated:
+    display_name: "Caffeinated"
+    icon: "☕"
+    color_bg: "#e6f1fb"
+    color_text: "#0c447c"
+    duration_minutes: 30
+    description: "The coffee is kicking in. Energy decay paused."
+    modifiers:
+      energy_freeze: true
+
+  well_rested:
+    display_name: "Well Rested"
+    icon: "😌"
+    color_bg: "#eeedfe"
+    color_text: "#3c3489"
+    duration_minutes: 120
+    description: "A full night of sleep. All need decay reduced."
+    modifiers:
+      decay_mult: 0.80
+
+  social_buzz:
+    display_name: "Social Buzz"
+    icon: "🫂"
+    color_bg: "#e1f5ee"
+    color_text: "#085041"
+    duration_minutes: 45
+    description: "In great company. Social gains doubled."
+    modifiers:
+      social_gain_mult: 2.0
+    # Triggered by: social >= this value
+    trigger_threshold: 75
+
+  on_a_roll:
+    display_name: "On a Roll"
+    icon: "🎯"
+    color_bg: "#faeeda"
+    color_text: "#633806"
+    duration_minutes: 30
+    description: "Fun is high and you're in the zone."
+    modifiers:
+      skill_xp_mult: 1.25
+    # Triggered by: fun >= this AND actively using a skill object
+    trigger_threshold: 80
+
+  relaxed:
+    display_name: "Relaxed"
+    icon: "🛁"
+    color_bg: "#fbeaf0"
+    color_text: "#4b1528"
+    duration_minutes: 90
+    description: "A long bath. Purpose gain rate doubled."
+    modifiers:
+      purpose_gain_mult: 2.0
+
+  stinky:
+    display_name: "Stinky"
+    icon: "🤢"
+    color_bg: "#fcebeb"
+    color_text: "#791f1f"
+    duration_minutes: 0
+    description: "Hygiene is very low. Social gains halved."
+    is_negative: true
+    modifiers:
+      social_gain_mult: 0.5
+    # Applied automatically when hygiene drops below this
+    trigger_threshold: 20
+
+  drained:
+    display_name: "Drained"
+    icon: "😔"
+    color_bg: "#f1efe8"
+    color_text: "#2c2c2a"
+    duration_minutes: 0
+    description: "Two or more needs are critical. All XP reduced."
+    is_negative: true
+    modifiers:
+      skill_xp_mult: 0.70
+    # Applied when this many needs are simultaneously critical
+    trigger_critical_count: 2
+
+# ============================================================
+#  SKILLS
+#  type: major (10 levels) or minor (5 levels)
+#  xp_per_level — XP needed to reach each level (list of 10 or 5)
+#  related_need  — which need benefits from high skill level
+# ============================================================
+
+skills:
+  # Major skills (10 levels)
+  cooking:
+    display_name: "Cooking"
+    icon: "🍳"
+    type: "major"
+    max_level: 10
+    related_need: "hunger"
+    xp_per_level: [100, 200, 350, 500, 700, 900, 1150, 1400, 1700, 2000]
+    level_unlocks:
+      1: "Basic meal objects usable."
+      3: "Meals grant +10 extra Hunger."
+      5: "Can mentor others. Well Fed moodlet extended by 30 min."
+      8: "Quality tier 3 meals available."
+      10: "Meals grant Hunger and Thirst simultaneously."
+
+  creativity:
+    display_name: "Creativity"
+    icon: "🎨"
+    type: "major"
+    max_level: 10
+    related_need: "fun"
+    xp_per_level: [100, 200, 350, 500, 700, 900, 1150, 1400, 1700, 2000]
+    level_unlocks:
+      1: "Art and music objects usable."
+      3: "Fun gain +20% from creative objects."
+      5: "Creative sessions boost Purpose gain."
+      10: "Creative sessions also grant Social XP."
+
+  charisma:
+    display_name: "Charisma"
+    icon: "💬"
+    type: "major"
+    max_level: 10
+    related_need: "social"
+    xp_per_level: [100, 200, 350, 500, 700, 900, 1150, 1400, 1700, 2000]
+    level_unlocks:
+      1: "Social gain +10% from talking."
+      5: "Can trigger Social Buzz moodlet in nearby players."
+      10: "Conversations fill both your Social and theirs."
+
+  fitness:
+    display_name: "Fitness"
+    icon: "💪"
+    type: "major"
+    max_level: 10
+    related_need: "energy"
+    xp_per_level: [100, 200, 350, 500, 700, 900, 1150, 1400, 1700, 2000]
+    level_unlocks:
+      1: "Gym and workout objects usable."
+      5: "Energy decay reduced by 15%."
+      10: "Critical Energy no longer blocks actions."
+
+  # Minor skills (5 levels)
+  gaming:
+    display_name: "Gaming"
+    icon: "🎮"
+    type: "minor"
+    max_level: 5
+    related_need: "fun"
+    xp_per_level: [100, 250, 450, 700, 1000]
+    level_unlocks:
+      1: "Arcade objects usable."
+      2: "+10% XP from game objects."
+      3: "Fun gain from gaming boosted."
+      4: "Moodlet durations from gaming extended."
+      5: "Can teach others this skill."
+
+  music:
+    display_name: "Music"
+    icon: "🎵"
+    type: "minor"
+    max_level: 5
+    related_need: "fun"
+    xp_per_level: [100, 250, 450, 700, 1000]
+    level_unlocks:
+      1: "Instruments usable."
+      3: "Playing music grants nearby players +Social."
+      5: "Can teach others this skill."
+
+  knowledge:
+    display_name: "Knowledge"
+    icon: "📚"
+    type: "minor"
+    max_level: 5
+    related_need: "fun"
+    xp_per_level: [100, 250, 450, 700, 1000]
+    level_unlocks:
+      1: "Bookshelves and libraries usable."
+      3: "Knowledge check interactions available."
+      5: "Can mentor others in all minor skills."
+
+# ============================================================
+#  CONSEQUENCE RULES
+#  What happens when a need hits zero
+# ============================================================
+
+consequences:
+  # Notification is always sent — no config needed
+  # Penalty applied to these systems when need is at zero:
+  zero_penalties:
+    hunger:  { xp_mult: 0.80, description: "Starving — XP gain reduced." }
+    thirst:  { xp_mult: 0.85, description: "Dehydrated — XP gain reduced." }
+    energy:  { block_skill_actions: true, description: "Exhausted — skill actions blocked." }
+    fun:     { xp_mult: 0.70, description: "Bored — all XP reduced." }
+    social:  { xp_mult: 0.85, description: "Isolated — XP gain reduced." }
+    hygiene: { social_gain_mult: 0.50, description: "Unhygienic — Social gains halved." }
+    purpose: { xp_mult: 0.50, description: "Lost — all XP heavily reduced." }
+
+  # Broadcast emote on zero (uses zero_emote from need definition above)
+  broadcast_on_zero: true
+  # Channel to broadcast on in SL (negative = local say, 0 = open chat)
+  broadcast_channel: 0

@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pyyaml
+apscheduler
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+aiosqlite
+watchfiles
+httpx
+asyncpg
