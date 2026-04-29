@@ -1,0 +1,743 @@
+{% extends "base.html" %}
+{% block title %}Canvas{% endblock %}
+
+{% block extra_style %}
+<style>
+  /* ── Profile card ── */
+  .profile-card {
+    padding: 22px 18px 16px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .profile-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--bg3); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 12px;
+    border: 0.5px solid var(--border2);
+  }
+  .profile-name {
+    font-family: var(--font-head);
+    font-size: 26px; font-weight: 400; color: var(--ink);
+    margin-bottom: 2px; line-height: 1.1;
+  }
+  .profile-pronouns { font-size: 11px; color: var(--ink4); margin-bottom: 8px; }
+  .profile-bio {
+    font-size: 12px; color: var(--ink2); line-height: 1.7;
+    margin-bottom: 10px;
+  }
+  .profile-bio-empty { font-size: 12px; color: var(--ink4); font-style: italic; margin-bottom: 10px; }
+  .profile-meta-row {
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .profile-meta-item {
+    font-size: 10px; color: var(--ink4); letter-spacing: 0.03em;
+  }
+  .profile-meta-item strong { color: var(--ink3); }
+
+  /* ── Edit bio form ── */
+  .edit-form {
+    padding: 14px 18px;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .edit-input {
+    width: 100%; background: var(--bg);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px; font-family: var(--font);
+    font-size: 12px; color: var(--ink); outline: none;
+    margin-bottom: 8px;
+  }
+  .edit-textarea {
+    width: 100%; background: var(--bg);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px; font-family: var(--font);
+    font-size: 12px; color: var(--ink); outline: none;
+    resize: none; min-height: 70px; line-height: 1.6;
+    margin-bottom: 8px;
+  }
+  .edit-save {
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: 99px; padding: 8px 20px;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font);
+  }
+  .edit-save:active { background: var(--ink2); }
+
+  /* ── Stat grid ── */
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0; border-bottom: 0.5px solid var(--border);
+  }
+  .stat-cell {
+    padding: 16px 18px;
+    border-right: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .stat-cell:nth-child(even) { border-right: none; }
+  .stat-val {
+    font-family: var(--font-head);
+    font-size: 24px; font-weight: 400; color: var(--ink); line-height: 1;
+  }
+  .stat-label {
+    font-size: 9px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink4); margin-top: 4px;
+  }
+
+  /* ── Trait cards ── */
+  .trait-card {
+    margin: 0 18px 10px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 15px;
+  }
+  .trait-name {
+    font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 3px;
+  }
+  .trait-cat {
+    font-size: 9px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink4);
+  }
+  .trait-edit-note {
+    margin: 0 18px 12px;
+    font-size: 11px; color: var(--ink4); line-height: 1.6;
+  }
+  .trait-edit-btn {
+    margin: 0 18px;
+    display: block; width: calc(100% - 36px);
+    background: var(--bg2); color: var(--ink2);
+    border: 0.5px solid var(--border2); border-radius: 99px;
+    padding: 10px; text-align: center;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font); text-decoration: none;
+    transition: background .15s;
+  }
+  .trait-edit-btn:active { background: var(--bg3); }
+  .trait-edit-btn.locked { color: var(--ink4); cursor: default; }
+
+  /* ── Vibe pills ── */
+  .vibe-section-title {
+    font-size: 9px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink4); padding: 12px 18px 6px;
+  }
+  .vibe-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 18px; border-bottom: 0.5px solid var(--border);
+  }
+  .vibe-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .vibe-dot.pos { background: var(--green); }
+  .vibe-dot.neg { background: var(--rose); }
+  .vibe-name { font-size: 12px; font-weight: 500; color: var(--ink); flex: 1; }
+  .vibe-since { font-size: 10px; color: var(--ink4); }
+
+  /* ── Occurrence cards ── */
+  .occ-card {
+    margin: 0 18px 10px;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 13px 14px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .occ-info { flex: 1; }
+  .occ-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .occ-since { font-size: 10px; color: var(--ink4); margin-top: 2px; }
+  .occ-remove {
+    background: none; border: none; cursor: pointer;
+    font-size: 16px; color: var(--ink4); padding: 4px;
+    transition: color .15s;
+  }
+  .occ-remove:active { color: var(--rose); }
+  .add-occ-wrap { padding: 12px 18px; }
+  .add-occ-select {
+    width: 100%; background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px; font-family: var(--font);
+    font-size: 12px; color: var(--ink); outline: none;
+    appearance: none; margin-bottom: 8px;
+  }
+  .add-occ-btn {
+    width: 100%; background: var(--ink); color: var(--bg);
+    border: none; border-radius: 99px; padding: 10px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font);
+  }
+  .add-occ-btn:active { background: var(--ink2); }
+
+  /* ── Notifications ── */
+  .notif-filter-row {
+    display: flex; gap: 6px; padding: 10px 18px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .notif-filter-row::-webkit-scrollbar { display: none; }
+  .notif-chip {
+    flex-shrink: 0; font-size: 10px; font-weight: 500;
+    padding: 5px 12px; border-radius: 99px;
+    border: 0.5px solid var(--border2); color: var(--ink3);
+    cursor: pointer; background: var(--bg); transition: all .15s;
+    letter-spacing: 0.04em;
+  }
+  .notif-chip.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  .notif-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 11px 18px; border-bottom: 0.5px solid var(--border);
+    transition: background .1s;
+  }
+  .notif-row.unread { background: var(--bg2); }
+  .notif-app-icon {
+    font-size: 14px; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg3); border-radius: 7px; flex-shrink: 0;
+  }
+  .notif-content { flex: 1; min-width: 0; }
+  .notif-title { font-size: 12px; font-weight: 500; color: var(--ink); }
+  .notif-body  { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+  .notif-time  { font-size: 10px; color: var(--ink4); flex-shrink: 0; }
+
+  /* ── Settings ── */
+  .settings-section {
+    padding: 16px 18px 8px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .settings-section-title {
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink4); margin-bottom: 12px;
+  }
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-label { font-size: 13px; color: var(--ink); }
+  .settings-sub   { font-size: 10px; color: var(--ink4); margin-top: 2px; }
+  .toggle {
+    width: 40px; height: 22px; border-radius: 99px;
+    background: var(--bg4); position: relative; cursor: pointer;
+    border: none; transition: background .2s; flex-shrink: 0;
+  }
+  .toggle.on { background: var(--green); }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; top: 3px; left: 3px;
+    transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  }
+  .toggle.on::after { transform: translateX(18px); }
+  .color-swatch {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--border2); cursor: pointer;
+    transition: transform .15s;
+  }
+  .color-swatch:active { transform: scale(.9); }
+  .color-swatch.active { border-color: var(--ink); border-width: 2.5px; }
+  .color-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .settings-link {
+    font-size: 12px; color: var(--gold); text-decoration: none;
+    font-weight: 500; letter-spacing: 0.02em;
+  }
+
+  /* ── Legacy placeholder ── */
+  .legacy-coming {
+    padding: 52px 18px; text-align: center;
+  }
+  .legacy-icon { font-size: 34px; margin-bottom: 12px; }
+  .legacy-title {
+    font-family: var(--font-head);
+    font-size: 20px; font-style: italic; color: var(--ink2); margin-bottom: 6px;
+  }
+  .legacy-text { font-size: 12px; color: var(--ink4); line-height: 1.7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">SL HUD</div>
+    <div class="topbar-title">Canvas</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(balance) }}
+    <span>lumens</span>
+  </div>
+</div>
+
+<!-- TABS (scrollable) -->
+<div class="tabs" style="overflow-x:auto;scrollbar-width:none;">
+  <button class="tab active" data-tab="tab-profile"       onclick="showTab('tab-profile')">Profile</button>
+  <button class="tab"        data-tab="tab-stats"         onclick="showTab('tab-stats')">Stats</button>
+  <button class="tab"        data-tab="tab-traits"        onclick="showTab('tab-traits')">Traits</button>
+  <button class="tab"        data-tab="tab-vibes"         onclick="showTab('tab-vibes')">Vibes</button>
+  <button class="tab"        data-tab="tab-occurrences"   onclick="showTab('tab-occurrences')">Life</button>
+  <button class="tab"        data-tab="tab-legacy"        onclick="showTab('tab-legacy')">Legacy</button>
+  <button class="tab"        data-tab="tab-notifications" onclick="showTab('tab-notifications')">Alerts</button>
+  <button class="tab"        data-tab="tab-settings"      onclick="showTab('tab-settings')">Settings</button>
+</div>
+
+<!-- ══ PROFILE TAB ══════════════════════════════════════════════════════════ -->
+<div id="tab-profile" class="tab-panel active">
+  <div class="profile-card">
+    <div class="profile-avatar">✦</div>
+    <div class="profile-name" id="display-name">{{ player.display_name }}</div>
+    {% if profile.pronouns %}
+    <div class="profile-pronouns">{{ profile.pronouns }}</div>
+    {% endif %}
+    {% if profile.bio %}
+    <div class="profile-bio" id="bio-display">{{ profile.bio }}</div>
+    {% else %}
+    <div class="profile-bio-empty" id="bio-display">No bio yet — add one below.</div>
+    {% endif %}
+    <div class="profile-meta-row">
+      {% if profile.age_group %}<div class="profile-meta-item"><strong>Age</strong> {{ profile.age_group }}</div>{% endif %}
+      {% if profile.gender_expression %}<div class="profile-meta-item"><strong>Expression</strong> {{ profile.gender_expression|title }}</div>{% endif %}
+      <div class="profile-meta-item"><strong>Days alive</strong> {{ stats.days_alive or 0 }}</div>
+    </div>
+  </div>
+
+  <div class="edit-form">
+    <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;">Edit Profile</div>
+    <input class="edit-input" type="text" id="edit-name" placeholder="Display name" value="{{ player.display_name }}" maxlength="40" />
+    <input class="edit-input" type="text" id="edit-pronouns" placeholder="Pronouns" value="{{ profile.pronouns or '' }}" maxlength="30" />
+    <textarea class="edit-textarea" id="edit-bio" placeholder="Bio (max 300 chars)" maxlength="300">{{ profile.bio or '' }}</textarea>
+    <button class="edit-save" onclick="saveProfile()">Save</button>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ══ STATS TAB ═════════════════════════════════════════════════════════════  -->
+<div id="tab-stats" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Lifetime Stats</div>
+    <div class="section-head-sub">Everything you've done since day one</div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-cell">
+      <div class="stat-val">{{ stats.days_alive or 0 }}</div>
+      <div class="stat-label">Days Alive</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">✦{{ "%.0f"|format(stats.total_lumens_earned or 0) }}</div>
+      <div class="stat-label">Lumens Earned</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ stats.total_meals_eaten or 0 }}</div>
+      <div class="stat-label">Meals Eaten</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ "%.0f"|format(stats.total_skill_xp_earned or 0) }}</div>
+      <div class="stat-label">Skill XP Earned</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ stats.total_players_met or 0 }}</div>
+      <div class="stat-label">Players Met</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ stats.total_shifts_worked or 0 }}</div>
+      <div class="stat-label">Shifts Worked</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ stats.total_posts_made or 0 }}</div>
+      <div class="stat-label">Posts Made</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ stats.lifetime_followers_gained or 0 }}</div>
+      <div class="stat-label">Followers Gained</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ stats.total_vibes_fired or 0 }}</div>
+      <div class="stat-label">Vibes Fired</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ "%.0f"|format(balance) }}</div>
+      <div class="stat-label">Current Balance</div>
+    </div>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ══ TRAITS TAB ════════════════════════════════════════════════════════════ -->
+<div id="tab-traits" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Your Traits</div>
+    <div class="section-head-sub">Personality characteristics that shape your experience</div>
+  </div>
+
+  {% if traits %}
+    <div class="stagger">
+    {% for t in traits %}
+    <div class="trait-card">
+      <div class="trait-name">{{ trait_defs.get(t, {}).get('display', t) }}</div>
+      <div class="trait-cat">{{ trait_defs.get(t, {}).get('category', '')|replace('_', ' ')|title }}</div>
+    </div>
+    {% endfor %}
+    </div>
+
+    <div class="trait-edit-note">
+      Traits shape how your needs decay, your XP gains, and the vibes you experience —
+      but the exact mechanics are yours to discover.
+      {% if days_until_trait_edit > 0 %}
+      Traits can be edited in <strong>{{ days_until_trait_edit }} days</strong>.
+      {% endif %}
+    </div>
+
+    {% if days_until_trait_edit == 0 %}
+    <a class="trait-edit-btn" href="/app/questionnaire?token={{ token }}">Edit Traits →</a>
+    {% else %}
+    <button class="trait-edit-btn locked" disabled>Edit Traits (locked {{ days_until_trait_edit }}d)</button>
+    {% endif %}
+
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">🌱</div>
+      <div class="empty-title">No traits yet</div>
+      <div class="empty-text">Complete the questionnaire to discover your traits.</div>
+    </div>
+    <a class="trait-edit-btn" href="/app/questionnaire?token={{ token }}" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">Start Questionnaire →</a>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ══ VIBES TAB ══════════════════════════════════════════════════════════════ -->
+<div id="tab-vibes" class="tab-panel">
+  {% set active_vibes = vibes | selectattr('expires_at', 'none') | list %}
+  {% set all_vibes = vibes %}
+
+  {% if vibes | selectattr('is_negative', 'equalto', 0) | list or vibes | selectattr('is_negative', 'equalto', 1) | list %}
+    <div class="vibe-section-title">Active</div>
+    {% for v in vibes[:20] %}
+    <div class="vibe-row">
+      <div class="vibe-dot {{ 'neg' if v.is_negative else 'pos' }}"></div>
+      <div class="vibe-name">{{ v.vibe_key | replace('_', ' ') | title }}</div>
+      <div class="vibe-since">{{ v.applied_at[:10] if v.applied_at else '' }}</div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">✨</div>
+      <div class="empty-title">No active vibes</div>
+      <div class="empty-text">Vibes fire automatically based on your needs, traits, and what you do.</div>
+    </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ══ OCCURRENCES (LIFE) TAB ════════════════════════════════════════════════ -->
+<div id="tab-occurrences" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Life Events</div>
+    <div class="section-head-sub">Things happening in your story right now</div>
+  </div>
+
+  <div id="occ-list">
+  {% if occurrences %}
+    {% for o in occurrences %}
+    <div class="occ-card" id="occ-{{ o.id }}">
+      <div class="occ-info">
+        <div class="occ-name">{{ o.display_name }}</div>
+        <div class="occ-since">Since {{ o.started_at[:10] if o.started_at else 'recently' }}</div>
+      </div>
+      <button class="occ-remove" onclick="removeOccurrence({{ o.id }}, this)" title="Resolve">✕</button>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty" id="occ-empty">
+      <div class="empty-icon">🌿</div>
+      <div class="empty-title">Nothing active</div>
+      <div class="empty-text">Life events affect your needs and vibes. Add something below.</div>
+    </div>
+  {% endif %}
+  </div>
+
+  <div class="add-occ-wrap">
+    <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:8px;">Add Life Event</div>
+    <select class="add-occ-select" id="occ-select">
+      <optgroup label="Relationship">
+        <option value="new_relationship">New Relationship 💕</option>
+        <option value="breakup">Breakup 💔</option>
+        <option value="engagement">Engaged 💍</option>
+        <option value="marriage">Married 🌸</option>
+        <option value="long_distance">Long Distance 📱</option>
+      </optgroup>
+      <optgroup label="Career / Financial">
+        <option value="new_job">New Job 💼</option>
+        <option value="job_loss">Job Loss 📦</option>
+        <option value="promotion">Promotion 🎉</option>
+        <option value="financial_windfall">Financial Windfall 💰</option>
+        <option value="debt">In Debt 💸</option>
+      </optgroup>
+      <optgroup label="Physical Health">
+        <option value="injury">Injured 🩹</option>
+        <option value="illness">Illness 🤒</option>
+        <option value="recovery">Recovery 🌱</option>
+        <option value="pregnancy">Pregnant 🤰</option>
+        <option value="new_parent">New Parent 🍼</option>
+      </optgroup>
+      <optgroup label="Life Transitions">
+        <option value="moving">Moving 📦</option>
+        <option value="new_home">Settled In 🏠</option>
+        <option value="studying">Studying 📚</option>
+        <option value="graduation">Graduated 🎓</option>
+        <option value="loss_of_loved_one">Loss 🕊️</option>
+        <option value="major_birthday">Big Birthday 🎂</option>
+        <option value="new_pet">New Pet 🐾</option>
+      </optgroup>
+      {% if mh_opted_in %}
+      <optgroup label="Mental Health">
+        <option value="depression">Depression 🌧️</option>
+        <option value="anxiety">Anxiety 🌀</option>
+        <option value="grief">Grief 🌊</option>
+        <option value="burnout">Burnout 🏳️</option>
+      </optgroup>
+      {% endif %}
+    </select>
+    <button class="add-occ-btn" onclick="addOccurrence()">Add to My Story</button>
+    {% if not mh_opted_in %}
+    <div style="font-size:10px;color:var(--ink4);margin-top:8px;line-height:1.6;">
+      Mental health events can be enabled in <button onclick="showTab('tab-settings')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:10px;padding:0;">Settings</button>.
+    </div>
+    {% endif %}
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ══ LEGACY TAB ════════════════════════════════════════════════════════════ -->
+<div id="tab-legacy" class="tab-panel">
+  <div class="legacy-coming">
+    <div class="legacy-icon">🏆</div>
+    <div class="legacy-title">Achievements coming soon</div>
+    <div class="legacy-text">
+      Complete actions, reach milestones, and unlock achievements.<br>
+      Your legacy builds with every choice you make.
+    </div>
+  </div>
+
+  {% if achievements %}
+  <div class="stagger">
+  {% for a in achievements %}
+  <div class="item-card">
+    <div class="item-emoji">🏆</div>
+    <div class="item-info">
+      <div class="item-name">{{ a.achievement_key | replace('_',' ') | title }}</div>
+      <div class="item-desc">Unlocked {{ a.unlocked_at[:10] if a.unlocked_at else '' }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ══ NOTIFICATIONS TAB ════════════════════════════════════════════════════ -->
+<div id="tab-notifications" class="tab-panel">
+  <div class="notif-filter-row" id="notif-filters">
+    <button class="notif-chip active" data-app="all" onclick="filterNotifs('all', this)">All</button>
+    <button class="notif-chip" data-app="flare"     onclick="filterNotifs('flare', this)">Flare</button>
+    <button class="notif-chip" data-app="ping"      onclick="filterNotifs('ping', this)">Ping</button>
+    <button class="notif-chip" data-app="ritual"    onclick="filterNotifs('ritual', this)">Ritual</button>
+    <button class="notif-chip" data-app="grind"     onclick="filterNotifs('grind', this)">Grind</button>
+    <button class="notif-chip" data-app="vault"     onclick="filterNotifs('vault', this)">Vault</button>
+    <button class="notif-chip" data-app="canvas"    onclick="filterNotifs('canvas', this)">Canvas</button>
+    <button class="notif-chip" data-app="system"    onclick="filterNotifs('system', this)">System</button>
+  </div>
+
+  <div id="notif-list">
+    {% if notifications %}
+      {% for n in notifications %}
+      <div class="notif-row {{ 'unread' if not n.is_read else '' }}" data-app="{{ n.app_source }}">
+        <div class="notif-app-icon">{{ app_icons.get(n.app_source, '📱') }}</div>
+        <div class="notif-content">
+          <div class="notif-title">{{ n.title }}</div>
+          {% if n.body %}<div class="notif-body">{{ n.body }}</div>{% endif %}
+        </div>
+        <div class="notif-time">{{ n.created_at[5:10] if n.created_at else '' }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">All clear</div>
+        <div class="empty-text">No notifications yet.</div>
+      </div>
+    {% endif %}
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ══ SETTINGS TAB ══════════════════════════════════════════════════════════ -->
+<div id="tab-settings" class="tab-panel">
+
+  <div class="settings-section">
+    <div class="settings-section-title">Appearance</div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Case Color</div>
+        <div class="settings-sub">Accent color for your HUD</div>
+        <div class="color-row" id="color-swatches">
+          {% set colors = ['#7f77dd','#d47a9a','#9a7c4e','#4a7c5f','#3a6a8c','#b8732a','#9c5050','#555555'] %}
+          {% for c in colors %}
+          <div class="color-swatch {{ 'active' if c == settings.get('theme_case_color','#7f77dd') else '' }}"
+               style="background:{{ c }};" data-color="{{ c }}"
+               onclick="pickColor('{{ c }}', this)"></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Notifications</div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Mute all sounds</div>
+        <div class="settings-sub">Suppress HUD audio alerts</div>
+      </div>
+      <button class="toggle {{ 'on' if settings.get('is_muted') else '' }}"
+              id="toggle-muted"
+              onclick="toggleSetting('is_muted', this)"></button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Privacy & Wellbeing</div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Mental health events</div>
+        <div class="settings-sub">Enable mental health occurrences in Life tab</div>
+      </div>
+      <button class="toggle {{ 'on' if settings.get('is_mental_health_opted_in') else '' }}"
+              id="toggle-mh"
+              onclick="toggleSetting('is_mental_health_opted_in', this)"></button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Profile</div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Retake Questionnaire</div>
+        <div class="settings-sub">Redo personality discovery</div>
+      </div>
+      <a class="settings-link" href="/app/questionnaire?token={{ token }}">Open →</a>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Avatar UUID</div>
+        <div class="settings-sub" style="font-family:monospace;font-size:9px;color:var(--ink4);">{{ player.avatar_uuid }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN = "{{ token }}";
+
+  // ── Profile save ───────────────────────────────────────────
+
+  async function saveProfile() {
+    const name     = document.getElementById('edit-name').value.trim();
+    const pronouns = document.getElementById('edit-pronouns').value.trim();
+    const bio      = document.getElementById('edit-bio').value.trim();
+
+    try {
+      const res = await fetch('/profile/update', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, display_name: name, pronouns: pronouns, bio: bio })
+      });
+      if (res.ok) {
+        toast('Profile updated ✓');
+        if (name) document.getElementById('display-name').textContent = name;
+        document.getElementById('bio-display').textContent = bio || 'No bio yet — add one below.';
+      } else {
+        toast('Could not save');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Notifications filter ───────────────────────────────────
+
+  function filterNotifs(app, btn) {
+    document.querySelectorAll('.notif-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.notif-row').forEach(row => {
+      row.style.display = (app === 'all' || row.dataset.app === app) ? '' : 'none';
+    });
+  }
+
+  // ── Occurrences ────────────────────────────────────────────
+
+  async function addOccurrence() {
+    const key = document.getElementById('occ-select').value;
+    try {
+      const res = await fetch('/occurrences/add', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, occurrence_key: key })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast((data.display || key) + ' added');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        toast(data.detail || 'Could not add');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function removeOccurrence(id, btn) {
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/occurrences/${id}?token=${TOKEN}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast('Resolved ✓');
+        document.getElementById('occ-' + id).remove();
+      }
+    } catch(e) { toast('Connection error'); btn.disabled = false; }
+  }
+
+  // ── Settings ───────────────────────────────────────────────
+
+  const pendingSettings = {};
+
+  function pickColor(color, el) {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    pendingSettings.theme_case_color = color;
+    saveSettings();
+  }
+
+  function toggleSetting(key, btn) {
+    const isOn = btn.classList.contains('on');
+    btn.classList.toggle('on');
+    pendingSettings[key] = !isOn;
+    saveSettings();
+  }
+
+  async function saveSettings() {
+    if (!Object.keys(pendingSettings).length) return;
+    try {
+      const res = await fetch('/settings/update', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, ...pendingSettings })
+      });
+      if (res.ok) toast('Settings saved ✓');
+    } catch(e) { toast('Connection error'); }
+  }
+</script>
+{% endblock %}

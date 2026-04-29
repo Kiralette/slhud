@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
 from app.database import init_db
-from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire
+from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire, profile as profile_router
 from app.admin import panel
 from app.services.decay import run_decay_tick
 from app.services.economy import rotate_weekly_specials, bill_subscriptions
@@ -86,6 +86,8 @@ app.include_router(calendar.router)
 app.include_router(cycle.router)
 app.include_router(occurrences.router)
 app.include_router(questionnaire.router)
+app.include_router(profile_router.router)
+app.include_router(profile_router.settings_router)
 
 
 @app.get("/", tags=["health"])

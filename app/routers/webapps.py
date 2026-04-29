@@ -928,3 +928,107 @@ async def questionnaire_app(
         "player":  player,
         "traits":  traits,
     })
+
+
+# ── CANVAS ────────────────────────────────────────────────────────────────────
+@router.get("/canvas", response_class=HTMLResponse)
+async def canvas(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+    trait_defs = cfg.get("traits", {}).get("definitions", {})
+
+    if is_postgres():
+        profile_row   = await db.fetchrow("SELECT * FROM player_profiles WHERE player_id = $1", player_id)
+        stats_row     = await db.fetchrow("SELECT * FROM player_stats WHERE player_id = $1", player_id)
+        trait_rows    = await db.fetch("SELECT trait_key, applied_at FROM player_traits WHERE player_id = $1", player_id)
+        vibe_rows     = await db.fetch("SELECT * FROM vibes WHERE player_id = $1 ORDER BY applied_at DESC", player_id)
+        occ_rows      = await db.fetch(
+            "SELECT * FROM player_occurrences WHERE player_id = $1 AND is_resolved = 0 ORDER BY started_at DESC", player_id)
+        notif_rows    = await db.fetch(
+            "SELECT * FROM notifications WHERE player_id = $1 ORDER BY created_at DESC LIMIT 60", player_id)
+        wallet_row    = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        settings_row  = await db.fetchrow("SELECT * FROM player_settings WHERE player_id = $1", player_id)
+        achieve_rows  = await db.fetch(
+            "SELECT * FROM player_achievements WHERE player_id = $1 ORDER BY unlocked_at DESC", player_id)
+    else:
+        async with db.execute("SELECT * FROM player_profiles WHERE player_id = ?", (player_id,)) as cur:
+            profile_row = await cur.fetchone()
+        async with db.execute("SELECT * FROM player_stats WHERE player_id = ?", (player_id,)) as cur:
+            stats_row = await cur.fetchone()
+        async with db.execute("SELECT trait_key, applied_at FROM player_traits WHERE player_id = ?", (player_id,)) as cur:
+            trait_rows = await cur.fetchall()
+        async with db.execute("SELECT * FROM vibes WHERE player_id = ? ORDER BY applied_at DESC", (player_id,)) as cur:
+            vibe_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT * FROM player_occurrences WHERE player_id = ? AND is_resolved = 0 ORDER BY started_at DESC", (player_id,)) as cur:
+            occ_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT * FROM notifications WHERE player_id = ? ORDER BY created_at DESC LIMIT 60", (player_id,)) as cur:
+            notif_rows = await cur.fetchall()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute("SELECT * FROM player_settings WHERE player_id = ?", (player_id,)) as cur:
+            settings_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT * FROM player_achievements WHERE player_id = ? ORDER BY unlocked_at DESC", (player_id,)) as cur:
+            achieve_rows = await cur.fetchall()
+
+    # Occurrence display names
+    from app.routers.occurrences import OCCURRENCE_DISPLAY
+    occurrences = []
+    for r in occ_rows:
+        d = dict(r)
+        info = OCCURRENCE_DISPLAY.get(d["occurrence_key"], (d["occurrence_key"], "unknown"))
+        d["display_name"] = info[0]
+        occurrences.append(d)
+
+    # Trait edit cooldown
+    days_until_trait_edit = 0
+    if trait_rows:
+        from datetime import datetime, timezone
+        try:
+            last_applied = sorted([r["applied_at"] for r in trait_rows if r["applied_at"]])[-1]
+            last_dt = datetime.fromisoformat(last_applied.replace("Z", "+00:00"))
+            days_since = (datetime.now(timezone.utc) - last_dt).days
+            days_until_trait_edit = max(0, 14 - days_since)
+        except Exception:
+            pass
+
+    profile  = dict(profile_row)  if profile_row  else {}
+    settings = dict(settings_row) if settings_row else {}
+    settings["is_mental_health_opted_in"] = bool(profile.get("is_mental_health_opted_in", 0))
+
+    app_icons = {
+        "flare": "✦", "ping": "💬", "ritual": "🗓", "grind": "💼",
+        "vault": "💰", "canvas": "✦", "aura": "👋", "system": "📡",
+        "lumen_eats": "🍽", "sip": "💧", "recharge": "⚡",
+        "thrill": "🎉", "glow": "✨", "luminary": "🕯",
+    }
+
+    return templates.TemplateResponse("apps/canvas.html", {
+        "request":               request,
+        "token":                 token,
+        "player":                player,
+        "profile":               profile,
+        "stats":                 dict(stats_row) if stats_row else {},
+        "traits":                [r["trait_key"] for r in trait_rows],
+        "trait_defs":            {k: {"display": v.get("display", k), "category": v.get("category", "")}
+                                  for k, v in trait_defs.items()},
+        "vibes":                 [dict(r) for r in vibe_rows],
+        "occurrences":           occurrences,
+        "mh_opted_in":           bool(profile.get("is_mental_health_opted_in", 0)),
+        "notifications":         [dict(r) for r in notif_rows],
+        "balance":               float(wallet_row["balance"]) if wallet_row else 0.0,
+        "settings":              settings,
+        "achievements":          [dict(r) for r in achieve_rows],
+        "app_icons":             app_icons,
+        "days_until_trait_edit": days_until_trait_edit,
+    })
