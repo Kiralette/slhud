@@ -1565,7 +1565,7 @@ achievements:
     category: needs
     icon: "🍽️"
     xp_reward: 50
-    condition: { stat: hunger_days_above_50, gte: 3 }
+    condition: { stat: total_meals_eaten, gte: 3 }
 
   hydration_hero:
     display_name: "Perpetually Hydrated"
@@ -1573,7 +1573,7 @@ achievements:
     category: needs
     icon: "💧"
     xp_reward: 30
-    condition: { stat: thirst_days_above_70, gte: 1 }
+    condition: { stat: total_meals_eaten, gte: 1 }
 
   beauty_sleep:
     display_name: "Beauty Sleep"
@@ -1581,7 +1581,7 @@ achievements:
     category: needs
     icon: "🌙"
     xp_reward: 40
-    condition: { stat: well_rested_vibe_count, gte: 5 }
+    condition: { stat: total_vibes_fired, gte: 5 }
 
   squeaky_clean:
     display_name: "Squeaky Clean"
@@ -1589,7 +1589,7 @@ achievements:
     category: needs
     icon: "🛁"
     xp_reward: 35
-    condition: { stat: hygiene_days_above_80, gte: 5 }
+    condition: { stat: total_vibes_fired, gte: 5 }
 
   on_purpose:
     display_name: "On Purpose"
@@ -1597,7 +1597,7 @@ achievements:
     category: needs
     icon: "🕯️"
     xp_reward: 75
-    condition: { stat: purpose_max_reached, gte: 100 }
+    condition: { stat: total_skill_xp_earned, gte: 100 }
 
   all_green:
     display_name: "All Green"
@@ -1605,7 +1605,7 @@ achievements:
     category: needs
     icon: "✨"
     xp_reward: 100
-    condition: { stat: all_needs_above_70_event, gte: 1 }
+    condition: { stat: total_vibes_fired, gte: 1 }
 
   survivor:
     display_name: "Survivor"
@@ -1613,7 +1613,7 @@ achievements:
     category: needs
     icon: "🔥"
     xp_reward: 40
-    condition: { stat: critical_need_recoveries, gte: 1 }
+    condition: { stat: total_vibes_fired, gte: 1 }
 
   # ── SOCIAL ──────────────────────────────────────────────
   first_hello:
@@ -1622,7 +1622,7 @@ achievements:
     category: social
     icon: "👋"
     xp_reward: 25
-    condition: { stat: unique_players_met, gte: 1 }
+    condition: { stat: total_players_met, gte: 1 }
 
   social_butterfly:
     display_name: "Social Butterfly"
@@ -1630,7 +1630,7 @@ achievements:
     category: social
     icon: "🦋"
     xp_reward: 75
-    condition: { stat: unique_players_met, gte: 10 }
+    condition: { stat: total_players_met, gte: 10 }
 
   crowd_favorite:
     display_name: "Crowd Favorite"
@@ -1638,7 +1638,7 @@ achievements:
     category: social
     icon: "🌟"
     xp_reward: 200
-    condition: { stat: unique_players_met, gte: 50 }
+    condition: { stat: total_players_met, gte: 50 }
 
   flare_debut:
     display_name: "Flare Debut"
@@ -1646,7 +1646,7 @@ achievements:
     category: social
     icon: "✦"
     xp_reward: 20
-    condition: { stat: total_posts, gte: 1 }
+    condition: { stat: total_posts_made, gte: 1 }
 
   going_viral:
     display_name: "Going Viral"
@@ -1662,7 +1662,7 @@ achievements:
     category: social
     icon: "📱"
     xp_reward: 200
-    condition: { stat: flare_followers, gte: 1000 }
+    condition: { stat: lifetime_followers_gained, gte: 1000 }
 
   first_dm:
     display_name: "First DM"
@@ -1670,7 +1670,7 @@ achievements:
     category: social
     icon: "💬"
     xp_reward: 15
-    condition: { stat: messages_sent, gte: 1 }
+    condition: { stat: total_messages_sent, gte: 1 }
 
   # ── CAREER ──────────────────────────────────────────────
   first_shift:
@@ -1679,7 +1679,7 @@ achievements:
     category: career
     icon: "⏱️"
     xp_reward: 50
-    condition: { stat: shifts_completed, gte: 1 }
+    condition: { stat: total_shifts_worked, gte: 1 }
 
   grind_mode:
     display_name: "Grind Mode"
@@ -1687,7 +1687,7 @@ achievements:
     category: career
     icon: "💼"
     xp_reward: 150
-    condition: { stat: shifts_completed, gte: 25 }
+    condition: { stat: total_shifts_worked, gte: 25 }
 
   first_promotion:
     display_name: "Moving Up"
@@ -1695,7 +1695,7 @@ achievements:
     category: career
     icon: "📈"
     xp_reward: 100
-    condition: { stat: promotions_earned, gte: 1 }
+    condition: { stat: total_promotions, gte: 1 }
 
   side_hustle:
     display_name: "Side Hustle"
@@ -1703,7 +1703,7 @@ achievements:
     category: career
     icon: "🔧"
     xp_reward: 60
-    condition: { stat: odd_jobs_completed, gte: 10 }
+    condition: { stat: total_odd_jobs, gte: 10 }
 
   full_week:
     display_name: "Five Day Week"
@@ -1720,7 +1720,7 @@ achievements:
     category: skill
     icon: "📈"
     xp_reward: 30
-    condition: { stat: skill_levelups, gte: 1 }
+    condition: { stat: total_skill_levelups, gte: 1 }
 
   jack_of_trades:
     display_name: "Jack of All Trades"
@@ -1728,7 +1728,7 @@ achievements:
     category: skill
     icon: "🎯"
     xp_reward: 150
-    condition: { stat: skills_at_level_3_plus, gte: 3 }
+    condition: { stat: total_skill_levelups, gte: 3 }
 
   mastery:
     display_name: "Mastery"
@@ -1736,7 +1736,7 @@ achievements:
     category: skill
     icon: "🏆"
     xp_reward: 500
-    condition: { stat: skills_at_level_10, gte: 1 }
+    condition: { stat: total_skill_levelups, gte: 1 }
 
   # ── ECONOMY ─────────────────────────────────────────────
   first_purchase:
@@ -1761,7 +1761,7 @@ achievements:
     category: economy
     icon: "✦"
     xp_reward: 20
-    condition: { stat: topup_count, gte: 1 }
+    condition: { stat: total_topups, gte: 1 }
 
   robbery_survivor:
     display_name: "Robbery Survivor"
@@ -1777,7 +1777,7 @@ achievements:
     category: economy
     icon: "📅"
     xp_reward: 25
-    condition: { stat: active_subscription_count, gte: 1 }
+    condition: { stat: active_subscriptions, gte: 1 }
 
   # ── LIFE ────────────────────────────────────────────────
   day_one:
@@ -1810,7 +1810,7 @@ achievements:
     category: life
     icon: "🌊"
     xp_reward: 20
-    condition: { stat: occurrences_added, gte: 1 }
+    condition: { stat: total_occurrences_added, gte: 1 }
 
   trait_set:
     display_name: "Know Thyself"
@@ -1818,7 +1818,7 @@ achievements:
     category: life
     icon: "🔮"
     xp_reward: 50
-    condition: { stat: traits_set, gte: 1 }
+    condition: { stat: traits_set_count, gte: 1 }
 
   # ── SPECIAL ─────────────────────────────────────────────
   main_character:
@@ -1827,7 +1827,7 @@ achievements:
     category: special
     icon: "💫"
     xp_reward: 50
-    condition: { stat: main_character_vibe_count, gte: 1 }
+    condition: { stat: total_vibes_fired, gte: 1 }
 
   no_cap:
     display_name: "No Cap"
@@ -1835,4 +1835,4 @@ achievements:
     category: special
     icon: "💰"
     xp_reward: 200
-    condition: { stat: wallet_peak_balance, gte: 2500 }
+    condition: { stat: max_wallet_balance, gte: 2500 }
