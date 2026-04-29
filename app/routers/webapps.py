@@ -1690,7 +1690,7 @@ async def guide(
     trait_defs = cfg.get("traits", {}).get("definitions", {})
 
     return templates.TemplateResponse(request, "apps/guide.html", {
-"token":       token,
+        "token":       token,
         "player":      player,
         "page":        page,
         "career_list": career_list,
