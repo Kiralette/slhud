@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Lumen Eats{% endblock %}
+
+{% block extra_style %}
+<style>
+  .hero {
+    padding: 22px 18px 16px;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .hero-greeting {
+    font-size: 10px; font-weight: 400;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink4); margin-bottom: 3px;
+  }
+  .hero-name {
+    font-family: var(--font-head);
+    font-size: 26px; font-weight: 300; font-style: italic;
+    color: var(--ink); line-height: 1; margin-bottom: 14px;
+  }
+  .hero-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hero-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500;
+    padding: 6px 12px; border-radius: 99px;
+    border: 0.5px solid var(--border2); color: var(--ink2);
+    background: var(--bg);
+  }
+  .hero-chip .sym { color: var(--gold); font-weight: 600; }
+  .hero-chip.crit { background: var(--rose-light); border-color: var(--rose); color: var(--rose); }
+  .hero-chip.warn { background: var(--amber-light); border-color: var(--amber); color: var(--amber); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Lumen Eats</div>
+    <div class="topbar-title">{{ player.display_name }}</div>
+  </div>
+  <div class="topbar-lumen">
+    <span>Balance</span>
+    <span class="sym">✦</span>{{ "%.0f"|format(wallet_balance) }}
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-greeting">How are you feeling?</div>
+  <div class="hero-name">
+    {% if hunger_value >= 75 %}Satisfied 🌿
+    {% elif hunger_value >= 50 %}A little peckish 🍞
+    {% elif hunger_value >= 25 %}Getting hungry 🌿
+    {% else %}Starving — eat something 🚨
+    {% endif %}
+  </div>
+  <div class="hero-chips">
+    <div class="hero-chip {{ hunger_zone }}">
+      <span>Hunger</span>
+      <strong>{{ "%.0f"|format(hunger_value) }}</strong>
+    </div>
+    <div class="hero-chip">
+      <span class="sym">✦</span>
+      <span>{{ "%.0f"|format(wallet_balance) }} available</span>
+    </div>
+  </div>
+</div>
+
+<!-- Need bar -->
+<div class="need-bar-wrap">
+  <div class="need-bar-label">
+    <span class="need-name">Hunger</span>
+    <span class="need-val">{{ "%.0f"|format(hunger_value) }} / 100</span>
+  </div>
+  <div class="need-bar-track">
+    <div class="need-bar-fill {{ hunger_zone }}" style="width:{{ hunger_value }}%"></div>
+  </div>
+  <div class="status-pill {{ hunger_zone }}">
+    <span class="status-dot"></span>
+    {% if hunger_zone == 'ok' %}Well fed
+    {% elif hunger_zone == 'warn' %}Getting hungry
+    {% else %}Critical — XP reduced
+    {% endif %}
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="order" onclick="showTab('order')">Order</button>
+  <button class="tab" data-tab="market" onclick="showTab('market')">Market</button>
+  <button class="tab" data-tab="log" onclick="showTab('log')">Activity</button>
+</div>
+
+<!-- ORDER TAB -->
+<div id="order" class="tab-panel active">
+
+  {% if weekly_specials %}
+  <div class="section-head">
+    <div>
+      <div class="section-head-title">This week's specials</div>
+      <div class="section-head-sub">Rotates Sunday · {{ specials_days_left }} days remaining</div>
+    </div>
+  </div>
+  <div class="specials-strip stagger">
+    {% for item in weekly_specials %}
+    <div class="special-card">
+      <div class="special-badge">Limited</div>
+      <div class="special-card-emoji">{{ item.emoji }}</div>
+      <div class="special-card-name">{{ item.display_name }}</div>
+      <div class="special-card-price">
+        {% if item.was_price %}<span class="special-card-was">✦{{ item.was_price }}</span>{% endif %}
+        ✦{{ item.special_price }}
+      </div>
+      <button class="special-card-btn"
+        onclick="buyItem('{{ item.item_key }}','{{ token }}','{{ item.display_name }}',{{ item.special_price }})">
+        Order
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="section-head">
+    <div>
+      <div class="section-head-title">Always available</div>
+      <div class="section-head-sub">Base menu · items always in stock</div>
+    </div>
+  </div>
+
+  <div class="chips-row">
+    <span class="category-chip active" onclick="filterCat(this,'all')">All</span>
+    <span class="category-chip" onclick="filterCat(this,'free')">Free</span>
+    <span class="category-chip" onclick="filterCat(this,'snacks')">Snacks</span>
+    <span class="category-chip" onclick="filterCat(this,'meals')">Meals</span>
+    <span class="category-chip" onclick="filterCat(this,'drinks')">Drinks</span>
+  </div>
+
+  <div id="item-list" class="stagger">
+    {% for item in shop_items %}
+    <div class="item-card" data-category="{{ item.category }}">
+      <div class="item-emoji">{{ item.emoji }}</div>
+      <div class="item-info">
+        <div class="item-name">{{ item.display_name }}</div>
+        <div class="item-desc">{{ item.description }}</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+{{ item.hunger_gain }} Hunger</span>
+          {% if item.vibe_granted %}
+          <span class="item-tag vibe">{{ item.vibe_name }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price {% if item.lumen_cost == 0 %}free{% endif %}">
+          {% if item.lumen_cost == 0 %}
+            Free
+          {% else %}
+            <span class="sym">✦</span>{{ item.lumen_cost }}
+          {% endif %}
+        </div>
+        <button class="item-btn {% if item.lumen_cost == 0 %}free-btn{% endif %}"
+          onclick="buyItem('{{ item.item_key }}','{{ token }}','{{ item.display_name }}',{{ item.lumen_cost }})">
+          {% if item.lumen_cost == 0 %}Collect{% else %}Order{% endif %}
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- MARKET TAB -->
+<div id="market" class="tab-panel">
+  <div class="section-head">
+    <div>
+      <div class="section-head-title">Nearby vendors</div>
+      <div class="section-head-sub">In-world food objects within range</div>
+    </div>
+  </div>
+
+  {% if nearby_vendors %}
+    {% for v in nearby_vendors %}
+    <div class="vendor-card">
+      <div class="vendor-icon">🏪</div>
+      <div>
+        <div class="vendor-name">{{ v.name }}</div>
+        <div class="vendor-meta">{{ v.distance }}m away · {{ v.type }}</div>
+        <div class="vendor-note">In-person items may be cheaper</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">Nothing nearby</div>
+    <div class="empty-text">No food vendors detected in range.<br>Order directly from the Order tab instead.</div>
+  </div>
+  {% endif %}
+
+  <div class="info-card" style="margin-top:8px;">
+    <p>
+      🏷️ Vendors often price below the Order tab<br>
+      🌟 Exclusive items sometimes only available in-world<br>
+      🫂 Eating near other players gives a Social bonus
+    </p>
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ACTIVITY TAB -->
+<div id="log" class="tab-panel">
+  <div class="section-head">
+    <div>
+      <div class="section-head-title">Hunger activity</div>
+      <div class="section-head-sub">Last 20 entries</div>
+    </div>
+  </div>
+
+  {% if hunger_log %}
+  <div class="stagger">
+    {% for entry in hunger_log %}
+    <div class="log-entry">
+      <div class="log-delta {% if entry.delta >= 0 %}pos{% else %}neg{% endif %}">
+        {% if entry.delta >= 0 %}+{% endif %}{{ "%.1f"|format(entry.delta) }}
+      </div>
+      <div class="log-text">{{ entry.action_text }}</div>
+      <div class="log-time">{{ entry.time_ago }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title">No activity yet</div>
+    <div class="empty-text">Your hunger changes will appear here.</div>
+  </div>
+  {% endif %}
+
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const token = "{{ token }}";
+  function filterCat(el, cat) {
+    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#item-list .item-card').forEach(card => {
+      if (cat === 'all') {
+        card.style.display = 'flex';
+      } else if (cat === 'free') {
+        card.style.display = card.querySelector('.item-price.free') ? 'flex' : 'none';
+      } else {
+        card.style.display = card.dataset.category.includes(cat) ? 'flex' : 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}

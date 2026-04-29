@@ -7,6 +7,33 @@ import aiosqlite
 from app.config import get_config
 from app.database import is_postgres, get_db_url, get_db_path
 
+# Need zone notification config
+# Fires once per crossing — tracked by checking previous value
+_NEED_NOTIFICATIONS = {
+    "hunger":  {"app": "lumen_eats", "warn": ("Getting hungry 🍞", "Hunger is running low — time to eat.", "normal"),
+                "crit": ("Starving 🚨", "Hunger is critical — XP is reduced until you eat.", "urgent")},
+    "thirst":  {"app": "sip",        "warn": ("Getting thirsty 💧", "Thirst is running low.", "normal"),
+                "crit": ("Dehydrated 🚨", "Critically dehydrated — XP reduced.", "urgent")},
+    "energy":  {"app": "recharge",   "warn": ("Running low on energy ⚡", "Energy is running low — consider resting.", "normal"),
+                "crit": ("Exhausted 🚨", "Exhausted — skill actions are blocked.", "urgent")},
+    "fun":     {"app": "thrill",     "warn": ("Getting bored 🎉", "Fun is running low.", "normal"),
+                "crit": ("Very bored 🚨", "Boredom is affecting your XP gains.", "urgent")},
+    "social":  {"app": "aura",       "warn": ("Feeling isolated 🫂", "Social is running low.", "normal"),
+                "crit": ("Isolated 🚨", "Social isolation is affecting your XP gains.", "urgent")},
+    "hygiene": {"app": "glow",       "warn": ("Could use a shower 🛁", "Hygiene is running low.", "normal"),
+                "crit": ("Very unhygienic 🚨", "Hygiene is critical — Social gains are reduced.", "urgent")},
+    "purpose": {"app": "luminary",   "warn": ("Feeling a bit lost 🕯️", "Purpose is running low.", "normal"),
+                "crit": ("Lost 🚨", "Purpose is critical — XP heavily reduced.", "urgent")},
+}
+
+def _get_zone(value: float) -> str:
+    if value >= 35:
+        return "ok"
+    elif value >= 20:
+        return "warn"
+    return "crit"
+
+
 
 async def run_decay_tick():
     """Called every N seconds by APScheduler."""
@@ -60,6 +87,7 @@ async def _run_decay_postgres():
 
             await _process_purpose_pg(conn, player_id, needs_dict, needs_cfg, interval_minutes, is_online)
             await _check_automatic_vibes_pg(conn, player_id, needs_dict, needs_cfg)
+            await _check_need_notifications_pg(conn, player_id, needs_dict)
 
     finally:
         await conn.close()
@@ -181,6 +209,7 @@ async def _run_decay_sqlite():
 
             await _process_purpose_sqlite(db, player_id, needs_dict, needs_cfg, interval_minutes, is_online)
             await _check_automatic_vibes_sqlite(db, player_id, needs_dict, needs_cfg)
+            await _check_need_notifications_sqlite(db, player_id, needs_dict)
 
         await db.commit()
 
@@ -250,4 +279,62 @@ async def _check_automatic_vibes_sqlite(db, player_id, needs_dict, needs_cfg):
         await db.execute(
             "DELETE FROM vibes WHERE player_id = ? AND vibe_key = 'drained'",
             (player_id,)
+        )
+
+
+async def _check_need_notifications_sqlite(db, player_id: int, needs_dict: dict):
+    """Fire notifications when needs cross warning/critical thresholds."""
+    for need_key, notif_cfg in _NEED_NOTIFICATIONS.items():
+        value = needs_dict.get(need_key)
+        if value is None:
+            continue
+        zone = _get_zone(value)
+        if zone == "ok":
+            continue
+
+        # Check if we already have an unread notification for this need+zone combo
+        async with db.execute(
+            """SELECT id FROM notifications
+               WHERE player_id = ? AND app_source = ? AND is_read = 0
+               AND title = ? LIMIT 1""",
+            (player_id, notif_cfg["app"],
+             notif_cfg["warn"][0] if zone == "warn" else notif_cfg["crit"][0])
+        ) as cur:
+            exists = await cur.fetchone()
+
+        if exists:
+            continue  # Already notified for this zone crossing
+
+        title, body, priority = notif_cfg["warn"] if zone == "warn" else notif_cfg["crit"]
+        await db.execute(
+            """INSERT INTO notifications (player_id, app_source, title, body, priority)
+               VALUES (?, ?, ?, ?, ?)""",
+            (player_id, notif_cfg["app"], title, body, priority)
+        )
+
+
+async def _check_need_notifications_pg(conn, player_id: int, needs_dict: dict):
+    """Fire notifications when needs cross warning/critical thresholds (Postgres)."""
+    for need_key, notif_cfg in _NEED_NOTIFICATIONS.items():
+        value = needs_dict.get(need_key)
+        if value is None:
+            continue
+        zone = _get_zone(value)
+        if zone == "ok":
+            continue
+
+        title, body, priority = notif_cfg["warn"] if zone == "warn" else notif_cfg["crit"]
+        exists = await conn.fetchrow(
+            """SELECT id FROM notifications
+               WHERE player_id = $1 AND app_source = $2 AND is_read = 0
+               AND title = $3 LIMIT 1""",
+            player_id, notif_cfg["app"], title
+        )
+        if exists:
+            continue
+
+        await conn.execute(
+            """INSERT INTO notifications (player_id, app_source, title, body, priority)
+               VALUES ($1, $2, $3, $4, $5)""",
+            player_id, notif_cfg["app"], title, body, priority
         )

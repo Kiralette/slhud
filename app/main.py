@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
 from app.database import init_db
-from app.routers import players, actions, needs
+from app.routers import players, actions, needs, webapps, notifications
 from app.admin import panel
 from app.services.decay import run_decay_tick
 
@@ -53,6 +53,8 @@ app.include_router(players.router)
 app.include_router(actions.router)
 app.include_router(needs.router)
 app.include_router(panel.router)
+app.include_router(webapps.router)
+app.include_router(notifications.router)
 
 
 @app.get("/", tags=["health"])

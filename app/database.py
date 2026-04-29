@@ -402,14 +402,16 @@ async def _init_sqlite():
         # --- NOTIFICATIONS ---
         await db.execute("""
             CREATE TABLE IF NOT EXISTS notifications (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                player_id  INTEGER NOT NULL REFERENCES players(id),
-                app_source TEXT    NOT NULL DEFAULT 'system',
-                title      TEXT    NOT NULL,
-                body       TEXT    NOT NULL DEFAULT '',
-                is_read    INTEGER NOT NULL DEFAULT 0,
-                action_url TEXT    DEFAULT NULL,
-                created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id    INTEGER NOT NULL REFERENCES players(id),
+                app_source   TEXT    NOT NULL DEFAULT 'system',
+                title        TEXT    NOT NULL,
+                body         TEXT    NOT NULL DEFAULT '',
+                priority     TEXT    NOT NULL DEFAULT 'normal',
+                is_read      INTEGER NOT NULL DEFAULT 0,
+                is_toasted   INTEGER NOT NULL DEFAULT 0,
+                action_url   TEXT    DEFAULT NULL,
+                created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
             )
         """)
         # --- STREAMING ---
@@ -434,6 +436,19 @@ async def _init_sqlite():
                 reminder_time_slt TEXT    DEFAULT NULL,
                 created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
                 is_active         INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS weekly_specials (
+                id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_key             TEXT    NOT NULL,
+                special_price        REAL    NOT NULL,
+                display_name_override TEXT   DEFAULT NULL,
+                available_from       TEXT    NOT NULL,
+                available_until      TEXT    NOT NULL,
+                is_pinned            INTEGER NOT NULL DEFAULT 0,
+                created_at           TEXT    NOT NULL DEFAULT (datetime('now'))
             )
         """)
 
@@ -815,6 +830,19 @@ async def _init_postgres():
                 reminder_time_slt TEXT    DEFAULT NULL,
                 created_at        TEXT    NOT NULL DEFAULT (now()::text),
                 is_active         INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS weekly_specials (
+                id                   SERIAL PRIMARY KEY,
+                item_key             TEXT    NOT NULL,
+                special_price        REAL    NOT NULL,
+                display_name_override TEXT   DEFAULT NULL,
+                available_from       TEXT    NOT NULL,
+                available_until      TEXT    NOT NULL,
+                is_pinned            INTEGER NOT NULL DEFAULT 0,
+                created_at           TEXT    NOT NULL DEFAULT (now()::text)
             )
         """)
 

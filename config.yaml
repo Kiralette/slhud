@@ -9,7 +9,7 @@ server:
   port: 8000
   debug: false
   # Change this to a long random string in production
-  admin_secret: "i_like_to_eat_apples_and_bananas"
+  admin_secret: "change_me_before_deploy"
   # How often the decay engine ticks (seconds)
   decay_interval_seconds: 60
 
