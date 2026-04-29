@@ -370,7 +370,10 @@ async def clockout(
 
     result = await do_clockout(db, player_id, emp, reason="manual")
 
-    await increment_stat(player_id, "total_shifts_worked")
+    try:
+        await increment_stat(player_id, "total_shifts_worked")
+    except Exception:
+        pass
 
     return {
         "ok": True,
@@ -540,7 +543,10 @@ async def promote(
         priority="normal", db=db
     )
 
-    await increment_stat(player_id, "total_promotions")
+    try:
+        await increment_stat(player_id, "total_promotions")
+    except Exception:
+        pass
 
     return {
         "ok": True,
@@ -622,7 +628,10 @@ async def complete_odd_job(
         priority="low", db=db
     )
 
-    await increment_stat(player_id, "total_odd_jobs")
+    try:
+        await increment_stat(player_id, "total_odd_jobs")
+    except Exception:
+        pass
 
     return {
         "ok": True,

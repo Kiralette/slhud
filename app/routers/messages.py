@@ -299,5 +299,8 @@ async def send_message(body: SendMessage, db=Depends(get_db)):
         db=db,
     )
 
-    await increment_stat(player_id, "total_messages_sent")
+    try:
+        await increment_stat(player_id, "total_messages_sent")
+    except Exception:
+        pass
     return {"status": "sent", "thread_id": thread_id}

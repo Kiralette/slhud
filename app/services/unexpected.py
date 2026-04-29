@@ -71,7 +71,10 @@ async def run_unexpected_event_engine(db=None):
 
         if lumen_loss_pct > 0:
             await _apply_lumen_loss(player_id, lumen_loss_pct, display, db)
-            await increment_stat(player_id, "times_robbed")
+            try:
+                await increment_stat(player_id, "times_robbed")
+            except Exception:
+                pass
 
         # Apply need effects
         need_bonus   = event_cfg.get("need_bonus", {})

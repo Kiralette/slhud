@@ -205,7 +205,10 @@ async def add_occurrence(body: AddOccurrence, db=Depends(get_db)):
         await db.commit()
 
     display = OCCURRENCE_DISPLAY.get(key, (key, "unknown"))
-    await increment_stat(player_id, "total_occurrences_added")
+    try:
+        await increment_stat(player_id, "total_occurrences_added")
+    except Exception:
+        pass
     return {"status": "added", "occurrence_id": occ_id, "display": display[0]}
 
 

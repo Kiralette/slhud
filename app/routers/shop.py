@@ -252,10 +252,19 @@ async def buy_item(
         await db.commit()
 
     # ── Achievement stat tracking ─────────────────────────────────────────────
-    await increment_stat(player_id, "total_purchases")
+    try:
+        await increment_stat(player_id, "total_purchases")
+    except Exception:
+        pass
     if actual_cost > 0:
-        await increment_stat(player_id, "lumens_spent_total", actual_cost)
-    await set_stat_if_greater(player_id, "max_wallet_balance", new_balance)
+        try:
+            await increment_stat(player_id, "lumens_spent_total", actual_cost)
+        except Exception:
+            pass
+    try:
+        await set_stat_if_greater(player_id, "max_wallet_balance", new_balance)
+    except Exception:
+        pass
 
     return {
         "ok": True,

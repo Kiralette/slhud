@@ -176,7 +176,10 @@ async def award_skill_xp(player_id: int, skill_key: str, xp_amount: float, db):
 
     # Track levelups for achievements
     if current_level > start_level:
-        await increment_stat(player_id, "total_skill_levelups", current_level - start_level)
+        try:
+            await increment_stat(player_id, "total_skill_levelups", current_level - start_level)
+        except Exception:
+            pass
 
     if is_postgres():
         await db.execute("UPDATE skills SET level = $1, xp = $2 WHERE player_id = $3 AND skill_key = $4",

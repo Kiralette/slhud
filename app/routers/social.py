@@ -244,7 +244,10 @@ async def update_proximity(body: ProximityUpdate, db=Depends(get_db)):
                     priority="low",
                     db=db,
                 )
-                await increment_stat(player_id, "total_players_met")
+                try:
+                    await increment_stat(player_id, "total_players_met")
+                except Exception:
+                    pass
             await db.commit()
 
         encountered.append(nearby["display_name"])

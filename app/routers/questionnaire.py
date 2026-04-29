@@ -171,7 +171,10 @@ async def submit_questionnaire(body: QuestionnaireSubmit, db=Depends(get_db)):
     trait_defs = cfg.get("traits", {}).get("definitions", {})
     display_names = [trait_defs.get(k, {}).get("display", k) for k in selected]
 
-    await increment_stat(player_id, "traits_set_count")
+    try:
+        await increment_stat(player_id, "traits_set_count")
+    except Exception:
+        pass
 
     return {
         "status":        "complete",
@@ -226,7 +229,10 @@ async def build_traits(body: BuildSubmit, db=Depends(get_db)):
     await apply_traits_to_player(player_id, selected, db, source="manual")
     bonus = await award_negative_bonuses(player_id, selected, db)
 
-    await increment_stat(player_id, "traits_set_count")
+    try:
+        await increment_stat(player_id, "traits_set_count")
+    except Exception:
+        pass
 
     return {
         "status":        "applied",
