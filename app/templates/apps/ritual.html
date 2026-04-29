@@ -1,0 +1,595 @@
+{% extends "base.html" %}
+{% block title %}Ritual{% endblock %}
+
+{% block extra_style %}
+<style>
+  /* ── Month navigation ── */
+  .month-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px 10px;
+  }
+  .month-nav-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: var(--ink3); padding: 4px 8px;
+    border-radius: var(--radius-sm); transition: color .15s;
+  }
+  .month-nav-btn:active { color: var(--ink); }
+  .month-title {
+    font-family: var(--font-head);
+    font-size: 20px; font-weight: 400; color: var(--ink);
+  }
+
+  /* ── Calendar grid ── */
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7,1fr);
+    gap: 2px; padding: 0 12px 12px;
+  }
+  .cal-dow {
+    text-align: center; font-size: 9px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink4); padding: 4px 0;
+  }
+  .cal-day {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 400; color: var(--ink2);
+    cursor: pointer; transition: background .1s;
+  }
+  .cal-day:active { background: var(--bg3); }
+  .cal-day.today { font-weight: 700; color: var(--ink); }
+  .cal-day.today::after {
+    content: '';
+    position: absolute; bottom: 3px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--gold);
+  }
+  .cal-day.other-month { color: var(--ink4); }
+  .cal-day.has-event { background: var(--bg3); }
+  .cal-day.event-dot::before {
+    content: ''; position: absolute; top: 4px; right: 4px;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--gold);
+  }
+
+  /* ── Period shading ── */
+  .cal-day.confirmed_period  { background: #f5e0e8; color: var(--ink2); }
+  .cal-day.predicted_start   { background: #f9d0dc; color: var(--ink2); }
+  .cal-day.predicted_window  { background: rgba(245,220,232,0.4); }
+  .cal-day.post_glow::after  { background: var(--gold) !important; }
+
+  /* ── Holiday dot ── */
+  .cal-day .holiday-dot {
+    position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+    font-size: 7px; line-height: 1;
+  }
+
+  /* ── Event list ── */
+  .event-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 18px; border-bottom: 0.5px solid var(--border);
+  }
+  .event-dot-color {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .color-purple { background: #7f77dd; }
+  .color-rose   { background: var(--rose); }
+  .color-amber  { background: var(--amber); }
+  .color-green  { background: var(--green); }
+  .color-gold   { background: var(--gold); }
+  .color-blue   { background: #3a6a8c; }
+  .color-pink   { background: #d47a9a; }
+  .color-grey   { background: var(--ink4); }
+  .event-info { flex: 1; min-width: 0; }
+  .event-title { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .event-meta  { font-size: 10px; color: var(--ink4); margin-top: 1px; }
+  .event-del {
+    background: none; border: none; cursor: pointer;
+    font-size: 16px; color: var(--ink4); padding: 4px;
+    transition: color .15s;
+  }
+  .event-del:active { color: var(--rose); }
+
+  /* ── Add event form ── */
+  .add-event-form {
+    padding: 14px 18px;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .form-label {
+    font-size: 9px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink4); margin-bottom: 5px; display: block;
+  }
+  .form-input {
+    width: 100%; background: var(--bg);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px; font-family: var(--font);
+    font-size: 12px; color: var(--ink); outline: none;
+    margin-bottom: 8px;
+  }
+  .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .form-select {
+    flex: 1; background: var(--bg);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 9px 10px; font-family: var(--font);
+    font-size: 12px; color: var(--ink); outline: none; appearance: none;
+  }
+  .form-submit {
+    width: 100%; background: var(--ink); color: var(--bg);
+    border: none; border-radius: 99px; padding: 10px 0;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font);
+    transition: background .15s;
+  }
+  .form-submit:active { background: var(--ink2); }
+
+  /* ── Cycle tab ── */
+  .cycle-log-btn {
+    margin: 14px 18px 0;
+    display: block; width: calc(100% - 36px);
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: var(--radius);
+    padding: 14px; text-align: center;
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.04em; cursor: pointer;
+    font-family: var(--font); transition: background .15s;
+  }
+  .cycle-log-btn:active { background: var(--ink2); }
+  .cycle-log-btn.secondary {
+    background: var(--bg2); color: var(--ink2);
+    border: 0.5px solid var(--border2); margin-top: 8px;
+  }
+  .cycle-stat-row {
+    display: flex; gap: 0; border-top: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border); margin-top: 14px;
+  }
+  .cycle-stat {
+    flex: 1; padding: 13px 10px; text-align: center;
+    border-right: 0.5px solid var(--border);
+  }
+  .cycle-stat:last-child { border-right: none; }
+  .cycle-stat-val {
+    font-family: var(--font-head);
+    font-size: 20px; color: var(--ink); line-height: 1;
+  }
+  .cycle-stat-label {
+    font-size: 9px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink4); margin-top: 3px;
+  }
+  .cycle-history-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 18px; border-bottom: 0.5px solid var(--border);
+  }
+  .cycle-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #d47a9a; flex-shrink: 0;
+  }
+  .cycle-dates { font-size: 12px; color: var(--ink2); }
+  .cycle-length { font-size: 10px; color: var(--ink4); margin-left: auto; }
+
+  /* ── Community tab ── */
+  .community-card {
+    margin: 0 18px 10px;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px; box-shadow: var(--shadow);
+  }
+  .community-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+  .community-event-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .community-event-date  { font-size: 10px; color: var(--gold); font-weight: 500; }
+  .community-creator     { font-size: 10px; color: var(--ink4); margin-bottom: 8px; }
+  .community-rsvp-btn {
+    background: var(--gold-light); color: var(--gold);
+    border: 0.5px solid var(--gold2); border-radius: 99px;
+    padding: 5px 14px; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.06em; cursor: pointer; font-family: var(--font);
+    transition: background .15s;
+  }
+  .community-rsvp-btn:active { background: var(--amber-light); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">SL HUD</div>
+    <div class="topbar-title">Ritual 🗓</div>
+  </div>
+  <div class="topbar-lumen">
+    {{ today }}
+    <span>today</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" data-tab="tab-calendar"  onclick="showTab('tab-calendar')">Calendar</button>
+  <button class="tab"        data-tab="tab-community" onclick="showTab('tab-community')">Community</button>
+  {% if show_cycle_tab %}
+  <button class="tab"        data-tab="tab-cycle"     onclick="showTab('tab-cycle')">Cycle</button>
+  {% endif %}
+</div>
+
+<!-- ── CALENDAR TAB ── -->
+<div id="tab-calendar" class="tab-panel active">
+
+  <!-- Month nav -->
+  <div class="month-nav">
+    <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+    <div class="month-title" id="month-label">{{ current_month_label }}</div>
+    <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <!-- Day-of-week headers -->
+  <div class="cal-grid" id="cal-grid">
+    {% for dow in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}
+    <div class="cal-dow">{{ dow }}</div>
+    {% endfor %}
+    <!-- Days injected by JS -->
+  </div>
+
+  <!-- Upcoming events list -->
+  <div class="section-head">
+    <div class="section-head-title">This Week</div>
+  </div>
+  <div id="upcoming-list">
+    {% if upcoming %}
+      {% for e in upcoming %}
+      <div class="event-row">
+        <div class="event-dot-color color-{{ e.color_key }}"></div>
+        <div class="event-info">
+          <div class="event-title">{{ e.title }}</div>
+          <div class="event-meta">{{ e.event_date_slt }} · {{ e.event_type|title }}</div>
+        </div>
+        <button class="event-del" onclick="deleteEvent({{ e.id }}, this)" title="Remove">✕</button>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding:18px 18px 8px;font-size:12px;color:var(--ink4);">Nothing this week.</div>
+    {% endif %}
+  </div>
+
+  <!-- Add event form -->
+  <div class="section-head" style="padding-top:14px;">
+    <div class="section-head-title">Add Event</div>
+  </div>
+  <div class="add-event-form">
+    <label class="form-label">Title</label>
+    <input class="form-input" type="text" id="ev-title" placeholder="Event name" maxlength="100" />
+    <div class="form-row">
+      <input class="form-input" type="date" id="ev-date" style="flex:1;margin:0;" />
+      <select class="form-select" id="ev-type">
+        <option value="personal">Personal</option>
+        <option value="social">Social</option>
+        <option value="birthday">Birthday</option>
+        <option value="work">Work</option>
+        <option value="health">Health</option>
+        <option value="community">Community</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <select class="form-select" id="ev-color">
+        <option value="purple">Purple</option>
+        <option value="rose">Rose</option>
+        <option value="amber">Amber</option>
+        <option value="green">Green</option>
+        <option value="gold">Gold</option>
+        <option value="blue">Blue</option>
+        <option value="pink">Pink</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);flex:1;">
+        <input type="checkbox" id="ev-public" /> Public
+      </label>
+    </div>
+    <button class="form-submit" onclick="addEvent()">Add to Calendar</button>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── COMMUNITY TAB ── -->
+<div id="tab-community" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Community Events</div>
+    <div class="section-head-sub">Public events from the community — next 30 days</div>
+  </div>
+
+  <div id="community-list" class="stagger">
+    {% if community %}
+      {% for ev in community %}
+      <div class="community-card">
+        <div class="community-card-header">
+          <div>
+            <div class="community-event-title">{{ ev.title }}</div>
+            <div class="community-creator">by {{ ev.creator_name }}</div>
+          </div>
+          <div class="community-event-date">{{ ev.event_date_slt }}</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:10px;color:var(--ink4);">{{ ev.rsvp_count }} going</span>
+          <button class="community-rsvp-btn" onclick="rsvpEvent({{ ev.id }}, this)">RSVP</button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">📅</div>
+        <div class="empty-title">No upcoming events</div>
+        <div class="empty-text">Create a public event from the Calendar tab to share it here.</div>
+      </div>
+    {% endif %}
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── CYCLE TAB ── -->
+{% if show_cycle_tab %}
+<div id="tab-cycle" class="tab-panel">
+  <div style="padding:16px 18px 0;">
+    <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);">Cycle Tracking</div>
+    <div style="font-size:11px;color:var(--ink4);margin-top:3px;">Private — only you can see this</div>
+  </div>
+
+  {% if cycle_prediction and cycle_prediction.has_data %}
+  <div class="cycle-stat-row">
+    <div class="cycle-stat">
+      <div class="cycle-stat-val">{{ "%.0f"|format(cycle_prediction.avg_cycle_length or 0) }}d</div>
+      <div class="cycle-stat-label">Avg Cycle</div>
+    </div>
+    <div class="cycle-stat">
+      <div class="cycle-stat-val">{{ cycle_prediction.next_predicted_start[:7] if cycle_prediction.next_predicted_start else '—' }}</div>
+      <div class="cycle-stat-label">Next Predicted</div>
+    </div>
+    <div class="cycle-stat">
+      <div class="cycle-stat-val">{{ cycle_history|length }}</div>
+      <div class="cycle-stat-label">Cycles Logged</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="info-card" style="margin-top:14px;">
+    <p>Log 2+ cycles to see predictions. Tap below to log your first.</p>
+  </div>
+  {% endif %}
+
+  <button class="cycle-log-btn" onclick="logCycleStart()">🌙 I started today</button>
+  <button class="cycle-log-btn secondary" onclick="logCycleEnd()">✓ I finished today</button>
+  <button class="cycle-log-btn secondary" onclick="skipCycle()">↷ Skip this cycle</button>
+
+  <div class="section-head" style="padding-top:18px;">
+    <div class="section-head-title">History</div>
+  </div>
+
+  {% if cycle_history %}
+    {% for c in cycle_history[:12] %}
+    <div class="cycle-history-row">
+      <div class="cycle-dot"></div>
+      <div class="cycle-dates">
+        {{ c.cycle_start_slt }}
+        {% if c.cycle_end_slt %} → {{ c.cycle_end_slt }}{% endif %}
+      </div>
+      {% if c.cycle_length_days %}
+      <div class="cycle-length">{{ c.cycle_length_days }}d cycle</div>
+      {% elif c.is_manual_override %}
+      <div class="cycle-length">skipped</div>
+      {% else %}
+      <div class="cycle-length" style="color:var(--amber);">active</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">🌸</div>
+      <div class="empty-title">No cycles logged yet</div>
+      <div class="empty-text">Start tracking above to see predictions and history.</div>
+    </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN = "{{ token }}";
+
+  // ── Calendar state ──────────────────────────────────────────
+  const PERIOD_DAYS  = {{ cycle_calendar_days | tojson }};
+  const HOLIDAYS     = {{ holidays_this_month | tojson }};
+  const EVENTS_BY_DATE = {};
+
+  {% for e in all_events %}
+  (EVENTS_BY_DATE["{{ e.event_date_slt }}"] = EVENTS_BY_DATE["{{ e.event_date_slt }}"] || []).push({
+    id: {{ e.id }}, title: "{{ e.title|replace('"','\\\"') }}", color: "{{ e.color_key }}"
+  });
+  {% endfor %}
+
+  let viewYear  = {{ current_year }};
+  let viewMonth = {{ current_month }};  // 1-indexed
+
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+
+  function pad2(n) { return String(n).padStart(2,'0'); }
+  function todayStr() {
+    const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('cal-grid');
+    // Remove all but header row (7 dow cells)
+    while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+
+    document.getElementById('month-label').textContent = `${MONTHS[viewMonth-1]} ${viewYear}`;
+
+    const firstDay = new Date(viewYear, viewMonth-1, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+    const daysInPrev  = new Date(viewYear, viewMonth-1, 0).getDate();
+    const today = todayStr();
+
+    let cells = [];
+
+    // Leading blanks from previous month
+    for (let i = firstDay - 1; i >= 0; i--) {
+      cells.push({ day: daysInPrev - i, month: viewMonth - 1, year: viewYear, other: true });
+    }
+    // This month
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ day: d, month: viewMonth, year: viewYear, other: false });
+    }
+    // Trailing blanks
+    const trailing = 42 - cells.length;
+    for (let d = 1; d <= trailing; d++) {
+      cells.push({ day: d, month: viewMonth + 1, year: viewYear, other: true });
+    }
+
+    cells.forEach(c => {
+      const m = c.month < 1 ? 12 : c.month > 12 ? 1 : c.month;
+      const y = c.month < 1 ? c.year - 1 : c.month > 12 ? c.year + 1 : c.year;
+      const dateStr = `${y}-${pad2(m)}-${pad2(c.day)}`;
+      const mmdd    = `${pad2(m)}-${pad2(c.day)}`;
+
+      const el = document.createElement('div');
+      el.className = 'cal-day';
+      if (c.other) el.classList.add('other-month');
+      if (dateStr === today) el.classList.add('today');
+
+      // Period shading
+      if (PERIOD_DAYS[dateStr]) el.classList.add(PERIOD_DAYS[dateStr]);
+
+      // Personal event dot
+      if (EVENTS_BY_DATE[dateStr]) el.classList.add('event-dot');
+
+      el.textContent = c.day;
+
+      // Holiday mini emoji
+      if (HOLIDAYS[mmdd] && !c.other) {
+        const dot = document.createElement('span');
+        dot.className = 'holiday-dot';
+        dot.textContent = HOLIDAYS[mmdd];
+        el.appendChild(dot);
+      }
+
+      grid.appendChild(el);
+    });
+  }
+
+  function changeMonth(dir) {
+    viewMonth += dir;
+    if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+    if (viewMonth < 1)  { viewMonth = 12; viewYear--; }
+    renderCalendar();
+  }
+
+  renderCalendar();
+
+  // ── Add event ───────────────────────────────────────────────
+
+  async function addEvent() {
+    const title = document.getElementById('ev-title').value.trim();
+    const dateV = document.getElementById('ev-date').value;
+    if (!title || !dateV) { toast('Fill in title and date'); return; }
+
+    const body = {
+      token: TOKEN,
+      title: title,
+      event_date_slt: dateV,
+      event_type: document.getElementById('ev-type').value,
+      color_key:  document.getElementById('ev-color').value,
+      is_public:  document.getElementById('ev-public').checked,
+    };
+
+    try {
+      const res  = await fetch('/calendar/event', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Event added ✓');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        toast(data.detail || 'Could not add event');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function deleteEvent(id, btn) {
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/calendar/event/${id}?token=${TOKEN}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast('Event removed');
+        btn.closest('.event-row').remove();
+      }
+    } catch(e) { toast('Connection error'); btn.disabled = false; }
+  }
+
+  // ── Community RSVP ──────────────────────────────────────────
+
+  async function rsvpEvent(id, btn) {
+    btn.disabled = true; btn.textContent = '✓ Going';
+    try {
+      const res = await fetch(`/calendar/rsvp/${id}`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      if (!res.ok) { btn.disabled = false; btn.textContent = 'RSVP'; }
+    } catch(e) { btn.disabled = false; btn.textContent = 'RSVP'; }
+  }
+
+  // ── Cycle logging ───────────────────────────────────────────
+
+  async function logCycleStart() {
+    const dur = parseInt(prompt('How many days does your period usually last? (3–8)', '5'));
+    if (!dur || isNaN(dur)) return;
+    const today = todayStr();
+    try {
+      const res = await fetch('/cycle/log-start', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, cycle_start_slt: today, period_duration_days: dur })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Period logged 🌙');
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        toast(data.detail || 'Could not log');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function logCycleEnd() {
+    const today = todayStr();
+    try {
+      const res = await fetch('/cycle/log-end', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, cycle_end_slt: today })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`Period ended — ${data.cycle_length_days}d cycle ✓`);
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        toast(data.detail || 'Could not log');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function skipCycle() {
+    try {
+      const res = await fetch('/cycle/skip', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      if (res.ok) toast('Cycle skipped');
+    } catch(e) { toast('Connection error'); }
+  }
+</script>
+{% endblock %}

@@ -733,3 +733,166 @@ async def ping(
         "threads":      threads,
         "total_unread": total_unread,
     })
+
+
+# ── RITUAL ────────────────────────────────────────────────────────────────────
+@router.get("/ritual", response_class=HTMLResponse)
+async def ritual(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    from datetime import date, timedelta
+    today = date.today()
+    current_year  = today.year
+    current_month = today.month
+
+    # Month display
+    month_names = ['January','February','March','April','May','June',
+                   'July','August','September','October','November','December']
+    current_month_label = f"{month_names[current_month-1]} {current_year}"
+
+    # Check cycle eligibility
+    if is_postgres():
+        profile_row = await db.fetchrow(
+            "SELECT biology_agab FROM player_profiles WHERE player_id = $1", player_id)
+    else:
+        async with db.execute(
+            "SELECT biology_agab FROM player_profiles WHERE player_id = ?", (player_id,)
+        ) as cur:
+            profile_row = await cur.fetchone()
+
+    agab = (dict(profile_row)["biology_agab"] if profile_row else "") or ""
+    show_cycle_tab = agab.lower() in ("female", "intersex", "")
+
+    # Events for current month
+    month_start = f"{current_year:04d}-{current_month:02d}-01"
+    next_month  = current_month + 1
+    next_year   = current_year
+    if next_month > 12:
+        next_month = 1
+        next_year += 1
+    month_end = f"{next_year:04d}-{next_month:02d}-01"
+
+    if is_postgres():
+        all_events_rows = await db.fetch(
+            """SELECT * FROM calendar_events WHERE player_id = $1
+               AND event_date_slt >= $2 AND event_date_slt < $3
+               ORDER BY event_date_slt ASC""",
+            player_id, month_start, month_end)
+        upcoming_rows = await db.fetch(
+            """SELECT * FROM calendar_events WHERE player_id = $1
+               AND event_date_slt >= $2
+               AND event_date_slt <= $3
+               ORDER BY event_date_slt ASC""",
+            player_id, today.isoformat(), (today + timedelta(days=7)).isoformat())
+        community_rows = await db.fetch(
+            """SELECT ce.*, p.display_name AS creator_name FROM calendar_events ce
+               JOIN players p ON p.id = ce.player_id
+               WHERE ce.is_public = 1 AND ce.event_date_slt >= $1
+               AND ce.event_date_slt <= $2
+               ORDER BY ce.event_date_slt ASC""",
+            today.isoformat(), (today + timedelta(days=30)).isoformat())
+    else:
+        async with db.execute(
+            """SELECT * FROM calendar_events WHERE player_id = ?
+               AND event_date_slt >= ? AND event_date_slt < ?
+               ORDER BY event_date_slt ASC""",
+            (player_id, month_start, month_end)) as cur:
+            all_events_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT * FROM calendar_events WHERE player_id = ?
+               AND event_date_slt >= ? AND event_date_slt <= ?
+               ORDER BY event_date_slt ASC""",
+            (player_id, today.isoformat(), (today + timedelta(days=7)).isoformat())) as cur:
+            upcoming_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT ce.*, p.display_name AS creator_name FROM calendar_events ce
+               JOIN players p ON p.id = ce.player_id
+               WHERE ce.is_public = 1 AND ce.event_date_slt >= ?
+               AND ce.event_date_slt <= ?
+               ORDER BY ce.event_date_slt ASC""",
+            (today.isoformat(), (today + timedelta(days=30)).isoformat())) as cur:
+            community_rows = await cur.fetchall()
+
+    # Cycle data
+    cycle_history = []
+    cycle_prediction = {"has_data": False, "calendar_days": {}}
+    if show_cycle_tab:
+        if is_postgres():
+            ch_rows = await db.fetch(
+                "SELECT * FROM cycle_log WHERE player_id = $1 ORDER BY cycle_start_slt DESC LIMIT 24", player_id)
+            latest_cycle = await db.fetchrow(
+                """SELECT avg_cycle_length, next_predicted_start, period_duration_days
+                   FROM cycle_log WHERE player_id = $1 ORDER BY cycle_start_slt DESC LIMIT 1""", player_id)
+        else:
+            async with db.execute(
+                "SELECT * FROM cycle_log WHERE player_id = ? ORDER BY cycle_start_slt DESC LIMIT 24", (player_id,)) as cur:
+                ch_rows = await cur.fetchall()
+            async with db.execute(
+                """SELECT avg_cycle_length, next_predicted_start, period_duration_days
+                   FROM cycle_log WHERE player_id = ? ORDER BY cycle_start_slt DESC LIMIT 1""", (player_id,)) as cur:
+                latest_cycle = await cur.fetchone()
+
+        cycle_history = [dict(r) for r in ch_rows]
+
+        if latest_cycle and latest_cycle["avg_cycle_length"]:
+            from datetime import date, timedelta
+            calendar_days = {}
+            for c in cycle_history:
+                if c.get("cycle_start_slt"):
+                    try:
+                        s = date.fromisoformat(c["cycle_start_slt"][:10])
+                        dur = c.get("period_duration_days") or 5
+                        for i in range(dur):
+                            calendar_days[(s + timedelta(days=i)).isoformat()] = "confirmed_period"
+                        end = date.fromisoformat(c["cycle_end_slt"][:10]) if c.get("cycle_end_slt") else s + timedelta(days=dur)
+                        for i in range(1, 4):
+                            k = (end + timedelta(days=i)).isoformat()
+                            if k not in calendar_days:
+                                calendar_days[k] = "post_glow"
+                    except Exception:
+                        pass
+            nxt = latest_cycle["next_predicted_start"]
+            if nxt:
+                try:
+                    ns = date.fromisoformat(nxt[:10])
+                    dur = latest_cycle["period_duration_days"] or 5
+                    for i in range(-3, dur + 3):
+                        k = (ns + timedelta(days=i)).isoformat()
+                        if k not in calendar_days:
+                            calendar_days[k] = "predicted_start" if 0 <= i < dur else "predicted_window"
+                except Exception:
+                    pass
+            cycle_prediction = {"has_data": True, "avg_cycle_length": latest_cycle["avg_cycle_length"],
+                                 "next_predicted_start": nxt, "calendar_days": calendar_days}
+
+    # Holidays for this month as {MM-DD: emoji}
+    all_holidays = cfg.get("holidays", {})
+    holidays_this_month = {k: v["emoji"] for k, v in all_holidays.items()
+                           if k.startswith(f"{current_month:02d}-")}
+
+    return templates.TemplateResponse("apps/ritual.html", {
+        "request":              request,
+        "token":                token,
+        "player":               player,
+        "today":                today.isoformat(),
+        "current_year":         current_year,
+        "current_month":        current_month,
+        "current_month_label":  current_month_label,
+        "all_events":           [dict(r) for r in all_events_rows],
+        "upcoming":             [dict(r) for r in upcoming_rows],
+        "community":            [dict(r) for r in community_rows],
+        "show_cycle_tab":       show_cycle_tab,
+        "cycle_history":        cycle_history,
+        "cycle_prediction":     cycle_prediction,
+        "cycle_calendar_days":  cycle_prediction.get("calendar_days", {}),
+        "holidays_this_month":  holidays_this_month,
+    })

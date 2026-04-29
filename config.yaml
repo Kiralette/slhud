@@ -1054,3 +1054,182 @@ flare:
     - gaming
     - art
     - career
+
+# ============================================================
+#  CALENDAR & RITUAL
+# ============================================================
+
+calendar:
+  max_events_per_player: 100
+  reminder_window_hours: 24   # fire reminder this many hours before event
+
+# ============================================================
+#  HOLIDAYS  (SLT date: MM-DD)
+# ============================================================
+
+holidays:
+  "01-01": { name: "New Year's Day",          emoji: "🎆" }
+  "02-14": { name: "Valentine's Day",         emoji: "💝" }
+  "03-17": { name: "St. Patrick's Day",       emoji: "🍀" }
+  "04-01": { name: "April Fools'",            emoji: "🃏" }
+  "04-20": { name: "420",                     emoji: "🌿" }
+  "05-01": { name: "May Day",                 emoji: "🌸" }
+  "06-19": { name: "Juneteenth",              emoji: "✊" }
+  "06-21": { name: "Summer Solstice",         emoji: "☀️" }
+  "07-04": { name: "4th of July",             emoji: "🎇" }
+  "10-31": { name: "Halloween",               emoji: "🎃" }
+  "11-27": { name: "Thanksgiving",            emoji: "🍂" }
+  "12-21": { name: "Winter Solstice",         emoji: "❄️" }
+  "12-25": { name: "Christmas",               emoji: "🎄" }
+  "12-31": { name: "New Year's Eve",          emoji: "🥂" }
+
+# ============================================================
+#  UNEXPECTED EVENTS  (per-player daily roll)
+# ============================================================
+
+unexpected_events:
+  daily_roll_chance: 0.04     # 4% chance per player per day
+
+  events:
+    windfall:
+      weight: 20              # relative weight in pool
+      display: "Unexpected windfall 💸"
+      description: "A small financial lucky break came your way."
+      lumen_gain: 75
+      vibe_key: "lucky"
+
+    robbery:
+      weight: 8
+      display: "Got robbed 😱"
+      description: "Someone made off with your Lumens."
+      lumen_loss_pct: 0.12    # lose 12% of wallet
+      vibe_key: "shaken"
+      notification_priority: urgent
+
+    minor_illness:
+      weight: 15
+      display: "Feeling off 🤒"
+      description: "You're not at 100% today."
+      need_penalty: { energy: -15, fun: -10 }
+      vibe_key: "under_the_weather"
+
+    good_news:
+      weight: 25
+      display: "Good news 📬"
+      description: "Something good happened today."
+      need_bonus: { purpose: 15, social: 8 }
+      vibe_key: "uplifted"
+
+    found_item:
+      weight: 20
+      display: "Found something ✨"
+      description: "You stumbled onto a small windfall."
+      lumen_gain: 30
+
+    bad_day:
+      weight: 12
+      display: "Just a bad day 🌧️"
+      description: "Everything feels a bit harder today."
+      need_penalty: { fun: -12, purpose: -8 }
+      vibe_key: "off_day"
+
+# ============================================================
+#  OCCURRENCE VIBES — cycle & pregnancy effects
+# ============================================================
+
+occurrence_vibes:
+  # Period window
+  period_active:
+    vibe_key:    "period_active"
+    display:     "PMS 🌙"
+    description: "Period window active — Fun drains faster."
+    is_negative: 1
+    auto: true
+
+  period_irritable:
+    vibe_key:    "period_irritable"
+    display:     "Irritable 😤"
+    description: "Social interactions feel draining right now."
+    is_negative: 1
+    daily_chance: 0.5
+
+  period_craving:
+    vibe_key:    "period_craving"
+    display:     "Craving Something 🍫"
+    description: "Nice meal gives 2× Hunger restore today."
+    is_negative: 0
+    daily_chance: 0.3
+
+  post_cycle_glow:
+    vibe_key:    "post_cycle_glow"
+    display:     "Glowing ✨"
+    description: "Post-cycle glow — Purpose +10, Social gains +15% for 48 hrs."
+    is_negative: 0
+    auto: true
+    fires_days_after_end: 3
+
+  post_cycle_invincible:
+    vibe_key:    "actually_invincible"
+    display:     "Actually Invincible 💪"
+    description: "All decay -10% for 24 hrs."
+    is_negative: 0
+    auto: true
+    fires_days_after_end: 1
+
+  # Pregnancy T1
+  morning_sickness:
+    vibe_key:    "morning_sickness"
+    display:     "Morning Sickness 🤢"
+    description: "Hunger gains halved for 2 hrs, Fun -8."
+    is_negative: 1
+    daily_chance: 0.4
+    trimester: 1
+
+  pregnancy_glowing:
+    vibe_key:    "pregnancy_glowing"
+    display:     "Glowing ✨"
+    description: "Purpose +10, Social +5."
+    is_negative: 0
+    condition: "all_needs_above_65"
+    trimester: 1
+
+  # Pregnancy T2
+  nesting:
+    vibe_key:    "nesting"
+    display:     "Nesting 🏠"
+    description: "Purpose +8, all decay -10%."
+    is_negative: 0
+    daily_chance: 0.25
+    trimester: 2
+
+  uncomfortable:
+    vibe_key:    "uncomfortable"
+    display:     "Uncomfortable 😮‍💨"
+    description: "Energy -5, Fun -5."
+    is_negative: 1
+    daily_chance: 0.25
+    trimester: 2
+
+  # Pregnancy T3
+  nesting_hard:
+    vibe_key:    "nesting_hard"
+    display:     "Nesting Hard 🏠"
+    description: "All decay -15%, Purpose +5/hr passive."
+    is_negative: 0
+    daily_chance: 0.3
+    trimester: 3
+
+  # New parent
+  sleep_deprived:
+    vibe_key:    "sleep_deprived"
+    display:     "Sleep Deprived 😵"
+    description: "All XP -5%, Energy harder to restore."
+    is_negative: 1
+    condition:   "energy_below_60"
+
+  worth_it:
+    vibe_key:    "worth_it"
+    display:     "Worth It 🥺"
+    description: "Energy below 40 but you're finding meaning."
+    is_negative: 0
+    condition:   "energy_below_40_purpose_above_75"
