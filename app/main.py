@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
 from app.database import init_db
-from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences
+from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire
 from app.admin import panel
 from app.services.decay import run_decay_tick
 from app.services.economy import rotate_weekly_specials, bill_subscriptions
@@ -21,6 +21,7 @@ from app.services.ritual import (
     run_cycle_prediction_update, run_pregnancy_progression, run_period_vibe_engine
 )
 from app.services.unexpected import run_unexpected_event_engine
+from app.services.traits import run_trait_vibe_engine
 
 scheduler = AsyncIOScheduler()
 
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(run_pregnancy_progression, "cron", hour=0, minute=3, id="pregnancy_progression")
     scheduler.add_job(run_period_vibe_engine, "cron", hour=0, minute=4, id="period_vibes")
     scheduler.add_job(run_unexpected_event_engine, "cron", hour=0, minute=5, id="unexpected_events")
+    scheduler.add_job(run_trait_vibe_engine, "cron", hour=0, minute=10, id="trait_vibes")
     scheduler.start()
     print(f"   Decay engine started ✓ (every {interval}s)\n")
     yield
@@ -83,6 +85,7 @@ app.include_router(messages.router)
 app.include_router(calendar.router)
 app.include_router(cycle.router)
 app.include_router(occurrences.router)
+app.include_router(questionnaire.router)
 
 
 @app.get("/", tags=["health"])

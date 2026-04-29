@@ -1233,3 +1233,318 @@ occurrence_vibes:
     description: "Energy below 40 but you're finding meaning."
     is_negative: 0
     condition:   "energy_below_40_purpose_above_75"
+
+# ============================================================
+#  TRAITS
+# ============================================================
+
+traits:
+  max_per_player: 5
+  edit_cooldown_days: 14
+  negative_bonus_lumens: 50   # awarded per negative trait, up to 100 total
+
+  # ── Definitions ──────────────────────────────────────────────────────────────
+  # Each trait has:
+  #   display       — shown to player
+  #   category      — grouping only
+  #   is_negative   — grants starting lumen bonus
+  #   decay_mults   — multipliers applied to need decay rates in engine
+  #   xp_mult       — global skill XP multiplier
+  #   need_bonus    — flat need gains on relevant actions (applied by action handlers)
+  #   vibe_triggers — conditions that auto-fire vibes (checked in trait vibe engine)
+  #   hour_window   — XP/decay active window (for night_owl / morning_person)
+
+  definitions:
+
+    # ── POSITIVE ──────────────────────────────────────────────
+    talkative:
+      display: "Talkative"
+      category: social_emotional
+      is_negative: false
+      decay_mults: { social: 0.85 }
+      vibe_triggers:
+        - { condition: social_above_70, vibe_key: social_butterfly, is_negative: false }
+        - { condition: social_below_30, vibe_key: going_quiet, is_negative: true }
+
+    bookworm:
+      display: "Bookworm"
+      category: mind_personality
+      is_negative: false
+      xp_mult: { knowledge: 1.15 }
+      vibe_triggers:
+        - { condition: knowledge_xp_today_above_50, vibe_key: deep_focus, is_negative: false }
+
+    creative_soul:
+      display: "Creative Soul"
+      category: mind_personality
+      is_negative: false
+      xp_mult: { creativity: 1.15 }
+      decay_mults: { fun: 0.90 }
+      vibe_triggers:
+        - { condition: fun_above_75, vibe_key: inspired, is_negative: false }
+
+    athletic:
+      display: "Athletic"
+      category: body_physical
+      is_negative: false
+      xp_mult: { fitness: 1.20 }
+      decay_mults: { energy: 0.90 }
+      vibe_triggers:
+        - { condition: fitness_xp_today_above_30, vibe_key: in_the_zone, is_negative: false }
+
+    iron_stomach:
+      display: "Iron Stomach"
+      category: body_physical
+      is_negative: false
+      decay_mults: { hunger: 0.85 }
+      need_bonus: { hunger: 5 }     # extra +5 on every meal
+
+    extrovert:
+      display: "Extrovert"
+      category: social_emotional
+      is_negative: false
+      decay_mults: { social: 0.80, fun: 0.90 }
+      vibe_triggers:
+        - { condition: nearby_players_above_0, vibe_key: lit_up, is_negative: false }
+        - { condition: no_proximity_24h, vibe_key: cabin_fever, is_negative: true }
+
+    empath:
+      display: "Empath"
+      category: social_emotional
+      is_negative: false
+      decay_mults: { purpose: 0.90 }
+      vibe_triggers:
+        - { condition: purpose_above_70, vibe_key: connected, is_negative: false }
+        - { condition: purpose_below_30, vibe_key: overwhelmed, is_negative: true }
+
+    ambitious:
+      display: "Ambitious"
+      category: work_drive
+      is_negative: false
+      xp_mult: { all: 1.05 }
+      vibe_triggers:
+        - { condition: worked_today, vibe_key: in_my_element, is_negative: false }
+        - { condition: no_work_3_days, vibe_key: restless, is_negative: true }
+
+    resilient:
+      display: "Resilient"
+      category: self_wellbeing
+      is_negative: false
+      decay_mults: { all: 0.95 }
+
+    confident:
+      display: "Confident"
+      category: self_wellbeing
+      is_negative: false
+      xp_mult: { charisma: 1.15 }
+      vibe_triggers:
+        - { condition: all_needs_above_60, vibe_key: main_character_energy, is_negative: false }
+
+    self_aware:
+      display: "Self-Aware"
+      category: self_wellbeing
+      is_negative: false
+      decay_mults: { purpose: 0.85 }
+
+    growing:
+      display: "Growing"
+      category: self_wellbeing
+      is_negative: false
+      xp_mult: { all: 1.08 }
+
+    # ── NEGATIVE (grant ✦50 bonus each, max ✦100) ─────────────
+    overthinker:
+      display: "Overthinker"
+      category: mind_personality
+      is_negative: true
+      decay_mults: { fun: 1.10 }
+      vibe_triggers:
+        - { condition: fun_below_40, vibe_key: spiraling, is_negative: true }
+
+    forgetful:
+      display: "Forgetful"
+      category: mind_personality
+      is_negative: true
+      vibe_triggers:
+        - { condition: random_daily_20pct, vibe_key: scattered, is_negative: true }
+
+    slob:
+      display: "Slob"
+      category: body_physical
+      is_negative: true
+      decay_mults: { hygiene: 1.20 }
+
+    couch_potato:
+      display: "Couch Potato"
+      category: body_physical
+      is_negative: true
+      xp_mult: { fitness: 0.80 }
+      decay_mults: { energy: 1.10 }
+
+    picky_eater:
+      display: "Picky Eater"
+      category: body_physical
+      is_negative: true
+      decay_mults: { hunger: 1.10 }
+      need_bonus: { hunger: -3 }    # meals restore 3 less
+
+    introvert:
+      display: "Introvert"
+      category: social_emotional
+      is_negative: true
+      decay_mults: { social: 1.15 }
+      vibe_triggers:
+        - { condition: no_proximity_24h, vibe_key: recharging, is_negative: false }
+        - { condition: nearby_players_above_2, vibe_key: overstimulated, is_negative: true }
+
+    hot_headed:
+      display: "Hot-Headed"
+      category: social_emotional
+      is_negative: true
+      vibe_triggers:
+        - { condition: social_below_25, vibe_key: on_edge, is_negative: true }
+
+    clingy:
+      display: "Clingy"
+      category: social_emotional
+      is_negative: true
+      decay_mults: { social: 1.20 }
+
+    lazy:
+      display: "Lazy"
+      category: work_drive
+      is_negative: true
+      xp_mult: { all: 0.90 }
+      decay_mults: { energy: 1.05 }
+
+    impulsive:
+      display: "Impulsive"
+      category: work_drive
+      is_negative: true
+      vibe_triggers:
+        - { condition: random_daily_15pct, vibe_key: itchy_feet, is_negative: true }
+
+    insecure:
+      display: "Insecure"
+      category: self_wellbeing
+      is_negative: true
+      decay_mults: { purpose: 1.15 }
+      vibe_triggers:
+        - { condition: purpose_below_40, vibe_key: self_doubt, is_negative: true }
+
+    grieving:
+      display: "Grieving"
+      category: self_wellbeing
+      is_negative: true
+      decay_mults: { purpose: 1.10, fun: 1.10 }
+      vibe_triggers:
+        - { condition: purpose_below_50, vibe_key: heavy_heart, is_negative: true }
+
+    # ── NEUTRAL ────────────────────────────────────────────────
+    curious:
+      display: "Curious"
+      category: mind_personality
+      is_negative: false
+      xp_mult: { knowledge: 1.10, creativity: 1.05 }
+
+    night_owl:
+      display: "Night Owl"
+      category: mind_personality
+      is_negative: false
+      hour_window: { active_start: 20, active_end: 4 }   # 8pm–4am SLT
+      xp_mult_in_window: { all: 1.15 }
+      decay_mults_in_window: { all: 0.90 }
+      vibe_triggers:
+        - { condition: in_hour_window, vibe_key: second_wind, is_negative: false }
+
+    morning_person:
+      display: "Morning Person"
+      category: mind_personality
+      is_negative: false
+      hour_window: { active_start: 5, active_end: 11 }   # 5am–11am SLT
+      xp_mult_in_window: { all: 1.15 }
+      decay_mults_in_window: { all: 0.90 }
+      vibe_triggers:
+        - { condition: in_hour_window, vibe_key: early_bird, is_negative: false }
+
+    guarded:
+      display: "Guarded"
+      category: social_emotional
+      is_negative: false
+      decay_mults: { social: 1.05 }
+      vibe_triggers:
+        - { condition: social_above_80, vibe_key: letting_in, is_negative: false }
+
+    romantic:
+      display: "Romantic"
+      category: social_emotional
+      is_negative: false
+      vibe_triggers:
+        - { condition: has_relationship_occurrence, vibe_key: love_drunk, is_negative: false }
+
+    homebody:
+      display: "Homebody"
+      category: social_emotional
+      is_negative: false
+      decay_mults_in_zone: { home: { all: 0.85 } }    # decay slower at home
+      vibe_triggers:
+        - { condition: in_home_zone, vibe_key: cozy, is_negative: false }
+        - { condition: not_home_4h, vibe_key: out_of_sorts, is_negative: true }
+
+# ============================================================
+#  QUESTIONNAIRE — scoring map
+# ============================================================
+
+questionnaire:
+  # Each answer key maps to a list of [trait_key, points] pairs
+  # Points accumulate across all answers — top 3-5 traits applied
+
+  scoring:
+    # Q1: How do you usually spend a free evening?
+    q1_social:      [[talkative, 3], [extrovert, 3], [introvert, -1]]
+    q1_creative:    [[creative_soul, 3], [curious, 2], [bookworm, 1]]
+    q1_active:      [[athletic, 3], [resilient, 2], [couch_potato, -1]]
+    q1_homebody:    [[homebody, 3], [introvert, 2], [couch_potato, 1]]
+    q1_reading:     [[bookworm, 3], [curious, 2], [self_aware, 1]]
+
+    # Q2: How do you handle stress?
+    q2_overthink:   [[overthinker, 3], [insecure, 1], [self_aware, -1]]
+    q2_exercise:    [[athletic, 2], [resilient, 3], [impulsive, -1]]
+    q2_talk:        [[talkative, 2], [empath, 2], [extrovert, 1]]
+    q2_alone:       [[introvert, 2], [guarded, 2], [homebody, 1]]
+    q2_ignore:      [[lazy, 2], [impulsive, 2], [resilient, -1]]
+
+    # Q3: At a party, you are...
+    q3_hosting:     [[extrovert, 3], [talkative, 2], [ambitious, 1]]
+    q3_corner:      [[introvert, 3], [guarded, 2], [empath, 1]]
+    q3_everywhere:  [[talkative, 3], [extrovert, 2], [impulsive, 1]]
+    q3_observing:   [[curious, 3], [guarded, 2], [self_aware, 2]]
+    q3_left_early:  [[introvert, 3], [homebody, 2], [clingy, -1]]
+
+    # Q4: Which sounds most like you?
+    q4_goal_driven: [[ambitious, 3], [resilient, 2], [lazy, -2]]
+    q4_go_with_flow: [[impulsive, 2], [couch_potato, 1], [resilient, 1]]
+    q4_planner:     [[ambitious, 2], [overthinker, 2], [resilient, 1]]
+    q4_creative:    [[creative_soul, 3], [curious, 2], [bookworm, 1]]
+    q4_helper:      [[empath, 3], [talkative, 1], [clingy, 1]]
+
+    # Q5: Your relationship with food?
+    q5_adventurous: [[iron_stomach, 3], [curious, 1]]
+    q5_comfort:     [[homebody, 1], [couch_potato, 1], [picky_eater, 1]]
+    q5_picky:       [[picky_eater, 3], [overthinker, 1]]
+    q5_fuel:        [[athletic, 2], [ambitious, 1], [iron_stomach, 1]]
+    q5_forget:      [[forgetful, 2], [lazy, 1], [ambitious, -1]]
+
+    # Q6: How do you feel about your own mind?
+    q6_aware:       [[self_aware, 3], [growing, 2], [insecure, -1]]
+    q6_harsh:       [[insecure, 3], [overthinker, 2], [self_aware, -1]]
+    q6_curious:     [[curious, 3], [growing, 2], [bookworm, 1]]
+    q6_night_owl:   [[night_owl, 3], [curious, 1]]
+    q6_morning:     [[morning_person, 3], [ambitious, 1]]
+
+    # Q7: What do people say about you?
+    q7_caring:      [[empath, 3], [clingy, 1], [talkative, 1]]
+    q7_funny:       [[talkative, 2], [extrovert, 2], [hot_headed, -1]]
+    q7_intense:     [[ambitious, 2], [hot_headed, 2], [resilient, 1]]
+    q7_quiet:       [[introvert, 2], [guarded, 2], [bookworm, 1]]
+    q7_unpredictable: [[impulsive, 3], [hot_headed, 2], [resilient, -1]]

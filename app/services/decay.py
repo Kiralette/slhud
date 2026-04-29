@@ -6,6 +6,7 @@ Works with both SQLite (local) and PostgreSQL (Render).
 import aiosqlite
 from app.config import get_config
 from app.database import is_postgres, get_db_url, get_db_path
+from app.services.traits import get_player_traits, build_trait_multipliers
 
 # Need zone notification config
 # Fires once per crossing — tracked by checking previous value
@@ -69,6 +70,13 @@ async def _run_decay_postgres():
             )
             needs_dict = {n["need_key"]: float(n["value"]) for n in needs}
 
+            # Load trait multipliers for this player
+            from datetime import datetime, timezone
+            current_hour = datetime.now(timezone.utc).hour
+            trait_keys = await get_player_traits(player_id, conn)
+            trait_mults = build_trait_multipliers(trait_keys, current_hour)
+            decay_trait_mults = trait_mults.get("decay_mults", {})
+
             for need_key, need_cfg in needs_cfg.items():
                 if need_key not in needs_dict:
                     continue
@@ -76,6 +84,8 @@ async def _run_decay_postgres():
                     continue
 
                 rate = need_cfg["decay_online"] if is_online else need_cfg["decay_offline"]
+                # Apply trait decay multiplier
+                rate *= decay_trait_mults.get(need_key, 1.0)
                 delta = -(rate * interval_minutes)
                 new_value = max(0.0, needs_dict[need_key] + delta)
                 needs_dict[need_key] = round(new_value, 2)
@@ -191,6 +201,13 @@ async def _run_decay_sqlite():
 
             needs_dict = {n["need_key"]: float(n["value"]) for n in needs}
 
+            # Load trait multipliers for this player
+            from datetime import datetime, timezone
+            current_hour = datetime.now(timezone.utc).hour
+            trait_keys = await get_player_traits(player_id, db)
+            trait_mults = build_trait_multipliers(trait_keys, current_hour)
+            decay_trait_mults = trait_mults.get("decay_mults", {})
+
             for need_key, need_cfg in needs_cfg.items():
                 if need_key not in needs_dict:
                     continue
@@ -198,6 +215,8 @@ async def _run_decay_sqlite():
                     continue
 
                 rate = need_cfg["decay_online"] if is_online else need_cfg["decay_offline"]
+                # Apply trait decay multiplier
+                rate *= decay_trait_mults.get(need_key, 1.0)
                 delta = -(rate * interval_minutes)
                 new_value = max(0.0, needs_dict[need_key] + delta)
                 needs_dict[need_key] = round(new_value, 2)

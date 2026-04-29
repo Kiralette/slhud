@@ -896,3 +896,35 @@ async def ritual(
         "cycle_calendar_days":  cycle_prediction.get("calendar_days", {}),
         "holidays_this_month":  holidays_this_month,
     })
+
+
+# ── QUESTIONNAIRE ─────────────────────────────────────────────────────────────
+@router.get("/questionnaire", response_class=HTMLResponse)
+async def questionnaire_app(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    cfg = get_config()
+    trait_defs = cfg.get("traits", {}).get("definitions", {})
+
+    # Build trait list for the Build path
+    traits = []
+    for key, tdef in trait_defs.items():
+        traits.append({
+            "key":         key,
+            "display":     tdef.get("display", key),
+            "is_negative": tdef.get("is_negative", False),
+            "category":    tdef.get("category", ""),
+        })
+
+    return templates.TemplateResponse("apps/questionnaire.html", {
+        "request": request,
+        "token":   token,
+        "player":  player,
+        "traits":  traits,
+    })
