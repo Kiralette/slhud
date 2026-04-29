@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SL HUD — Phone Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #faf9f7; --bg2: #f4f2ee; --bg3: #ede9e3;
+      --ink: #1c1814; --ink2: #4a4540; --ink3: #8c8580; --ink4: #b8b3ad;
+      --gold: #9a7c4e; --gold2: #c4a265; --gold-light: #f5ede0;
+      --green: #4a7c5f; --green-light: #e8f0eb;
+      --rose: #9c5050; --rose-light: #f5eaea;
+      --border: rgba(28,24,20,0.08);
+      --font: 'Jost', sans-serif;
+      --font-head: 'Cormorant Garamond', serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1814;
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 60px;
+    }
+
+    /* Config bar at top */
+    .config-bar {
+      width: 100%; max-width: 900px;
+      background: rgba(255,255,255,0.07);
+      border: 0.5px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 28px;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .config-label { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: .1em; }
+    .config-input {
+      flex: 1; min-width: 260px;
+      background: rgba(255,255,255,0.08);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: white; font-family: var(--font); font-size: 13px;
+      outline: none;
+    }
+    .config-input::placeholder { color: rgba(255,255,255,0.25); }
+    .config-input:focus { border-color: rgba(255,255,255,0.35); }
+    .config-btn {
+      padding: 8px 20px; background: var(--gold); color: white;
+      border: none; border-radius: 8px;
+      font-family: var(--font); font-size: 12px; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+    }
+    .base-url-input {
+      width: 200px; min-width: 0;
+    }
+
+    /* Phone shell */
+    .phone-shell {
+      width: 390px;
+      background: #2a2520;
+      border-radius: 48px;
+      padding: 12px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08),
+        0 40px 120px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    .phone-screen {
+      background: var(--bg);
+      border-radius: 38px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Dynamic island */
+    .dynamic-island {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 34px;
+      background: #1a1814;
+      border-radius: 20px;
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+    }
+    .di-camera {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #2a2520;
+      border: 2px solid #0a0806;
+    }
+    .di-sensor {
+      width: 32px; height: 8px; border-radius: 4px;
+      background: #0a0806;
+    }
+
+    /* Status bar */
+    .status-bar {
+      padding: 52px 24px 8px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--bg);
+    }
+    .status-time {
+      font-family: var(--font-head); font-size: 15px; font-weight: 400;
+      color: var(--ink);
+    }
+    .status-icons { font-size: 11px; color: var(--ink3); display: flex; gap: 6px; align-items: center; }
+
+    /* App iframe */
+    .app-frame {
+      width: 100%;
+      height: 780px;
+      border: none;
+      display: block;
+      background: var(--bg);
+    }
+
+    /* Home screen (shown when no app is open) */
+    .home-screen {
+      width: 100%; height: 780px;
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 8px 0 80px;
+    }
+
+    .home-greeting {
+      padding: 24px 24px 16px;
+      font-family: var(--font-head);
+      font-size: 28px; font-weight: 400; font-style: italic;
+      color: var(--ink);
+    }
+    .home-greeting span { color: var(--gold); }
+
+    .app-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; padding: 0 20px 16px;
+    }
+    .app-icon {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .app-icon-bubble {
+      width: 54px; height: 54px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      transition: transform .1s;
+      box-shadow: 0 2px 8px rgba(28,24,20,0.12);
+    }
+    .app-icon:active .app-icon-bubble { transform: scale(0.93); }
+    .app-icon-label {
+      font-size: 9px; color: var(--ink2); text-align: center;
+      font-weight: 500; letter-spacing: .02em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      width: 56px;
+    }
+
+    /* Dock */
+    .dock {
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(250,249,247,0.85);
+      backdrop-filter: blur(20px);
+      border: 0.5px solid rgba(28,24,20,0.12);
+      border-radius: 24px;
+      padding: 10px 16px;
+      display: flex; gap: 14px;
+      box-shadow: 0 4px 24px rgba(28,24,20,0.12);
+      z-index: 100;
+    }
+    .dock .app-icon-bubble { width: 48px; height: 48px; border-radius: 12px; font-size: 22px; }
+
+    /* Back button */
+    .back-btn {
+      position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: rgba(28,24,20,0.75);
+      color: white; border: none; border-radius: 20px;
+      padding: 8px 20px;
+      font-family: var(--font); font-size: 11px; font-weight: 500;
+      cursor: pointer; z-index: 150;
+      display: none;
+    }
+
+    /* App sections */
+    .section-title {
+      padding: 12px 20px 6px;
+      font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
+      color: var(--ink3); font-weight: 500;
+    }
+
+    /* Info panel below phone */
+    .info-panel {
+      width: 390px;
+      margin-top: 20px;
+      background: rgba(255,255,255,0.05);
+      border: 0.5px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+    .info-panel-title { font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+    .current-app-label { font-size: 13px; color: white; font-family: var(--font-head); }
+    .info-url { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 4px; word-break: break-all; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+      background: var(--ink); color: var(--bg);
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      opacity: 0; transition: opacity .3s;
+      z-index: 9999; white-space: nowrap;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- Config bar -->
+<div class="config-bar">
+  <div class="config-label">Server</div>
+  <input class="config-input base-url-input" id="base-url" value="https://slhud.onrender.com" placeholder="http://localhost:8000">
+  <div class="config-label">Token</div>
+  <input class="config-input" id="player-token" value="test_token_session10" placeholder="paste your player token">
+  <button class="config-btn" onclick="applyConfig()">Connect ✓</button>
+</div>
+
+<!-- Phone -->
+<div class="phone-shell">
+  <div class="phone-screen" id="phone-screen">
+
+    <!-- Dynamic Island -->
+    <div class="dynamic-island">
+      <div class="di-sensor"></div>
+      <div class="di-camera"></div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-time" id="status-time">9:41</div>
+      <div class="status-icons">
+        <span>●●●●</span>
+        <span>WiFi</span>
+        <span>🔋</span>
+      </div>
+    </div>
+
+    <!-- Home screen -->
+    <div class="home-screen" id="home-screen">
+      <div class="home-greeting">Hello, <span id="greeting-name">traveller</span>.</div>
+
+      <div class="section-title">Needs</div>
+      <div class="app-grid">
+        <div class="app-icon" onclick="openApp('pulse', 'Pulse', '🏠')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
+          <div class="app-icon-label">Pulse</div>
+        </div>
+        <div class="app-icon" onclick="openApp('lumen-eats','Lumen Eats','🍽️')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f5e0c0)">🍽️</div>
+          <div class="app-icon-label">Lumen Eats</div>
+        </div>
+        <div class="app-icon" onclick="openApp('sip','Sip','💧')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#d0e4d8)">💧</div>
+          <div class="app-icon-label">Sip</div>
+        </div>
+        <div class="app-icon" onclick="openApp('recharge','Recharge','⚡')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">⚡</div>
+          <div class="app-icon-label">Recharge</div>
+        </div>
+        <div class="app-icon" onclick="openApp('thrill','Thrill','🎉')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#fae0b0)">🎉</div>
+          <div class="app-icon-label">Thrill</div>
+        </div>
+        <div class="app-icon" onclick="openApp('aura','Aura','🫂')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">🫂</div>
+          <div class="app-icon-label">Aura</div>
+        </div>
+        <div class="app-icon" onclick="openApp('glow','Glow','🛁')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e8e4dc)">🛁</div>
+          <div class="app-icon-label">Glow</div>
+        </div>
+        <div class="app-icon" onclick="openApp('luminary','Luminary','🕯️')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#d8d0ec)">🕯️</div>
+          <div class="app-icon-label">Luminary</div>
+        </div>
+      </div>
+
+      <div class="section-title">Life</div>
+      <div class="app-grid">
+        <div class="app-icon" onclick="openApp('canvas','Canvas','🪞')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
+          <div class="app-icon-label">Canvas</div>
+        </div>
+        <div class="app-icon" onclick="openApp('ritual','Ritual','🗓️')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🗓️</div>
+          <div class="app-icon-label">Ritual</div>
+        </div>
+        <div class="app-icon" onclick="openApp('grind','Grind','💼')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e0dcd4)">💼</div>
+          <div class="app-icon-label">Grind</div>
+        </div>
+        <div class="app-icon" onclick="openApp('vault','Vault','💰')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8d8b8)">💰</div>
+          <div class="app-icon-label">Vault</div>
+        </div>
+      </div>
+
+      <div class="section-title">Social & Media</div>
+      <div class="app-grid">
+        <div class="app-icon" onclick="openApp('flare','Flare','✦')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
+          <div class="app-icon-label">Flare</div>
+        </div>
+        <div class="app-icon" onclick="openApp('ping','Ping','💬')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
+          <div class="app-icon-label">Ping</div>
+        </div>
+        <div class="app-icon" onclick="openApp('wavelength','Wavelength','🎵')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#e8d0d0)">🎵</div>
+          <div class="app-icon-label">Wavelength</div>
+        </div>
+        <div class="app-icon" onclick="openApp('haul','Haul','🛍️')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🛍️</div>
+          <div class="app-icon-label">Haul</div>
+        </div>
+      </div>
+
+      <div class="section-title">Skills</div>
+      <div class="app-grid">
+        <div class="app-icon" onclick="openApp('skill/cooking','Craft','🍳')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f5e0c0)">🍳</div>
+          <div class="app-icon-label">Craft</div>
+        </div>
+        <div class="app-icon" onclick="openApp('skill/creativity','Flow','🎨')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8d8b0)">🎨</div>
+          <div class="app-icon-label">Flow</div>
+        </div>
+        <div class="app-icon" onclick="openApp('skill/charisma','Charm','💬')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
+          <div class="app-icon-label">Charm</div>
+        </div>
+        <div class="app-icon" onclick="openApp('skill/fitness','Stride','💪')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">💪</div>
+          <div class="app-icon-label">Stride</div>
+        </div>
+        <div class="app-icon" onclick="openApp('skill/gaming','Play','🎮')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8dcc8)">🎮</div>
+          <div class="app-icon-label">Play</div>
+        </div>
+        <div class="app-icon" onclick="openApp('skill/music','Strings','🎵')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🎵</div>
+          <div class="app-icon-label">Strings</div>
+        </div>
+        <div class="app-icon" onclick="openApp('skill/knowledge','Pages','📚')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e8e4dc)">📚</div>
+          <div class="app-icon-label">Pages</div>
+        </div>
+        <div class="app-icon" onclick="openApp('guide','Guide','📖')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#ddd8d0)">📖</div>
+          <div class="app-icon-label">Guide</div>
+        </div>
+      </div>
+
+      <div class="section-title">Setup</div>
+      <div class="app-grid">
+        <div class="app-icon" onclick="openApp('questionnaire','Setup','🔮')">
+          <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#d8d0ec)">🔮</div>
+          <div class="app-icon-label">Setup</div>
+        </div>
+      </div>
+
+    </div><!-- /home-screen -->
+
+    <!-- App iframe (hidden until app opened) -->
+    <iframe class="app-frame" id="app-frame" src="about:blank" style="display:none;"></iframe>
+
+    <!-- Back button -->
+    <button class="back-btn" id="back-btn" onclick="goHome()">← Home</button>
+
+    <!-- Dock -->
+    <div class="dock">
+      <div class="app-icon" onclick="openApp('pulse','Pulse','🏠')">
+        <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
+      </div>
+      <div class="app-icon" onclick="openApp('ping','Ping','💬')">
+        <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
+      </div>
+      <div class="app-icon" onclick="openApp('flare','Flare','✦')">
+        <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
+      </div>
+      <div class="app-icon" onclick="openApp('canvas','Canvas','🪞')">
+        <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
+      </div>
+    </div>
+
+  </div><!-- /phone-screen -->
+</div><!-- /phone-shell -->
+
+<!-- Info panel -->
+<div class="info-panel" id="info-panel">
+  <div class="info-panel-title">Current app</div>
+  <div class="current-app-label" id="current-app-label">Home Screen</div>
+  <div class="info-url" id="current-url">—</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let BASE_URL = 'http://localhost:8000';
+let TOKEN = 'test_token_session10';
+let currentApp = null;
+
+function applyConfig() {
+  BASE_URL = document.getElementById('base-url').value.replace(/\/$/, '');
+  TOKEN = document.getElementById('player-token').value.trim();
+  showToast('Connected ✓');
+
+  // Try to fetch player name
+  fetch(`${BASE_URL}/app/pulse?token=${TOKEN}`)
+    .then(r => r.text())
+    .then(html => {
+      const m = html.match(/class="topbar-title[^>]*>([^<]+)</);
+      if (m) document.getElementById('greeting-name').textContent = m[1].trim();
+    }).catch(() => {});
+}
+
+function openApp(appKey, appName, icon) {
+  const url = `${BASE_URL}/app/${appKey}?token=${TOKEN}`;
+  const frame = document.getElementById('app-frame');
+  const homeScreen = document.getElementById('home-screen');
+  const backBtn = document.getElementById('back-btn');
+
+  frame.src = url;
+  frame.style.display = 'block';
+  homeScreen.style.display = 'none';
+  backBtn.style.display = 'block';
+  currentApp = appKey;
+
+  document.getElementById('current-app-label').textContent = `${icon} ${appName}`;
+  document.getElementById('current-url').textContent = url;
+}
+
+function goHome() {
+  const frame = document.getElementById('app-frame');
+  const homeScreen = document.getElementById('home-screen');
+  const backBtn = document.getElementById('back-btn');
+
+  frame.src = 'about:blank';
+  frame.style.display = 'none';
+  homeScreen.style.display = 'block';
+  backBtn.style.display = 'none';
+  currentApp = null;
+
+  document.getElementById('current-app-label').textContent = 'Home Screen';
+  document.getElementById('current-url').textContent = '—';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// Live clock
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes().toString().padStart(2, '0');
+  document.getElementById('status-time').textContent = `${h}:${m}`;
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+// Auto-connect on load
+window.addEventListener('load', () => {
+  setTimeout(applyConfig, 300);
+});
+</script>
+
+</body>
+</html>

@@ -1696,3 +1696,10 @@ async def guide(
         "career_list": career_list,
         "trait_defs":  trait_defs,
     })
+
+
+# ── SIMULATOR ─────────────────────────────────────────────────────────────────
+@router.get("/simulator", response_class=HTMLResponse)
+async def simulator(request: Request):
+    """Phone simulator — no auth required. Served at /app/simulator"""
+    return templates.TemplateResponse(request, "simulator.html", {})
