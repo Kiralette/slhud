@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 from app.config import get_config
 from app.database import is_postgres, get_db_url, get_db_path
 from app.services.notifications import push_notification
+from app.services.achievements import increment_stat
 
 
 def _now_str() -> str:
@@ -202,7 +203,25 @@ async def _midnight_reset_sqlite(cfg):
     async with aiosqlite.connect(db_path) as db:
         db.row_factory = aiosqlite.Row
         await db.execute("UPDATE employment SET hours_today = 0")
+        # Increment days_alive for all players with an active wallet (i.e. registered)
+        await db.execute(
+            "UPDATE player_stats SET days_alive = days_alive + 1 WHERE player_id IN (SELECT player_id FROM wallets)"
+        )
         await db.commit()
+    # Check days_alive achievements for all players
+    try:
+        import aiosqlite as _aio
+        async with _aio.connect(db_path) as db2:
+            db2.row_factory = _aio.Row
+            async with db2.execute("SELECT player_id FROM wallets") as cur:
+                pids = [r[0] for r in await cur.fetchall()]
+        for pid in pids:
+            try:
+                await increment_stat(pid, "days_alive", 0)  # 0 = just trigger check, already incremented above
+            except Exception:
+                pass
+    except Exception:
+        pass
     print("[career] SQLite midnight reset done.")
 
 

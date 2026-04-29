@@ -15,6 +15,7 @@ from datetime import datetime, timezone, timedelta
 from app.config import get_config
 from app.database import is_postgres
 from app.services.notifications import push_notification
+from app.services.achievements import check_achievements, increment_stat
 
 
 # ── Follower Engine ───────────────────────────────────────────────────────────
@@ -110,6 +111,7 @@ async def run_follower_engine(db=None):
                     db=db,
                 )
         else:
+            await increment_stat(player_id, "viral_moments")
             await db.execute(
                 """UPDATE flare_stats
                    SET follower_count = follower_count + ?
