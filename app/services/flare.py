@@ -111,7 +111,10 @@ async def run_follower_engine(db=None):
                     db=db,
                 )
         else:
-            await increment_stat(player_id, "viral_moments")
+            try:
+                await increment_stat(player_id, "viral_moments")
+            except Exception:
+                pass
             await db.execute(
                 """UPDATE flare_stats
                    SET follower_count = follower_count + ?
