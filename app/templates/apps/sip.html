@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Sip · SL HUD{% endblock %}
+
+{% block extra_style %}
+<style>
+  .drink-free-banner {
+    margin: 12px 18px 4px;
+    background: var(--green-light);
+    border: 0.5px solid rgba(74,124,95,0.25);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .drink-free-banner .icon { font-size: 20px; }
+  .drink-free-banner .text { font-size: 11px; color: var(--green); line-height: 1.5; }
+  .drink-free-banner .text strong { font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Sip</div>
+    <div class="topbar-title">Drinks & Hydration</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+<!-- Thirst bar -->
+<div class="need-bar-wrap">
+  <div class="need-bar-label">
+    <span class="need-name">💧 Thirst</span>
+    <span class="need-val">{{ "%.0f"|format(thirst_value) }}/100</span>
+  </div>
+  <div class="need-bar-track">
+    <div class="need-bar-fill {{ thirst_zone }}" style="width:{{ thirst_value }}%;"></div>
+  </div>
+  {% if thirst_zone == 'ok' %}
+  <span class="status-pill ok"><span class="status-dot"></span>Hydrated</span>
+  {% elif thirst_zone == 'warn' %}
+  <span class="status-pill warn"><span class="status-dot"></span>Getting Thirsty</span>
+  {% else %}
+  <span class="status-pill crit"><span class="status-dot"></span>Dehydrated — XP reduced</span>
+  {% endif %}
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="tab-order" onclick="showTab('tab-order')">Order</button>
+  <button class="tab"        data-tab="tab-activity" onclick="showTab('tab-activity')">Activity</button>
+</div>
+
+<!-- ── ORDER TAB ──────────────────────────────────────────── -->
+<div id="tab-order" class="tab-panel active">
+
+  <!-- Free water banner -->
+  <div class="drink-free-banner">
+    <div class="icon">💧</div>
+    <div class="text"><strong>Water is always free.</strong> Stay hydrated at no cost.</div>
+  </div>
+
+  <!-- Category filter chips -->
+  <div class="chips-row">
+    <button class="category-chip active" onclick="filterDrinks('all', this)">All</button>
+    <button class="category-chip" onclick="filterDrinks('free', this)">Free</button>
+    <button class="category-chip" onclick="filterDrinks('drinks', this)">Drinks</button>
+  </div>
+
+  <div class="section-head">
+    <div class="section-head-title">What'll it be?</div>
+    <div class="section-head-sub">Order directly — delivered to your inventory.</div>
+  </div>
+
+  <div id="drink-list" class="stagger">
+    {% for item in drink_items %}
+    <div class="item-card" data-cat="{{ item.category }}">
+      <div class="item-emoji">{{ item.emoji }}</div>
+      <div class="item-info">
+        <div class="item-name">{{ item.display_name }}</div>
+        <div class="item-desc">{{ item.description }}</div>
+        <div class="item-tags">
+          {% set thirst_gain = item.need_effects.get('thirst', 0) %}
+          {% if thirst_gain > 0 %}
+          <span class="item-tag thirst">+{{ thirst_gain }} Thirst</span>
+          {% endif %}
+          {% set energy_gain = item.need_effects.get('energy', 0) %}
+          {% if energy_gain > 0 %}
+          <span class="item-tag" style="background:var(--bg3);color:var(--ink2);">+{{ energy_gain }} Energy</span>
+          {% endif %}
+          {% if item.vibe_name %}
+          <span class="item-tag vibe">{{ item.vibe_name }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="item-right">
+        {% if item.lumen_cost == 0 %}
+        <div class="item-price free">Free</div>
+        <button class="item-btn free-btn"
+                onclick="buyItem('{{ item.item_key }}', '{{ token }}', '{{ item.display_name }}', 0)">
+          Collect
+        </button>
+        {% else %}
+        <div class="item-price"><span class="sym">✦</span>{{ item.lumen_cost }}</div>
+        <button class="item-btn"
+                onclick="buyItem('{{ item.item_key }}', '{{ token }}', '{{ item.display_name }}', {{ item.lumen_cost }})">
+          Order
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── ACTIVITY TAB ───────────────────────────────────────── -->
+<div id="tab-activity" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Recent drinks</div>
+    <div class="section-head-sub">Last 20 thirst entries</div>
+  </div>
+
+  {% if thirst_log %}
+    {% for entry in thirst_log %}
+    <div class="log-entry">
+      <div class="log-delta {{ 'pos' if entry.delta > 0 else 'neg' }}">
+        {{ '+' if entry.delta > 0 else '' }}{{ "%.0f"|format(entry.delta) }}
+      </div>
+      <div class="log-text">{{ entry.action_text }}</div>
+      <div class="log-time">{{ entry.time_ago }}</div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">💧</div>
+      <div class="empty-title">Nothing yet</div>
+      <div class="empty-text">Your drink history will appear here.</div>
+    </div>
+  {% endif %}
+
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  function filterDrinks(cat, btn) {
+    document.querySelectorAll('.chips-row .category-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#drink-list .item-card').forEach(el => {
+      const elCat = el.dataset.cat;
+      if (cat === 'all') {
+        el.style.display = '';
+      } else if (cat === 'free') {
+        el.style.display = (elCat === 'drinks_free') ? '' : 'none';
+      } else if (cat === 'drinks') {
+        el.style.display = (elCat === 'drinks_paid') ? '' : 'none';
+      }
+    });
+  }
+</script>
+{% endblock %}

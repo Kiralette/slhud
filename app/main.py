@@ -10,9 +10,10 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
 from app.database import init_db
-from app.routers import players, actions, needs, webapps, notifications
+from app.routers import players, actions, needs, webapps, notifications, shop
 from app.admin import panel
 from app.services.decay import run_decay_tick
+from app.services.economy import rotate_weekly_specials, bill_subscriptions
 
 scheduler = AsyncIOScheduler()
 
@@ -27,6 +28,8 @@ async def lifespan(app: FastAPI):
     await init_db()
     interval = cfg["server"]["decay_interval_seconds"]
     scheduler.add_job(run_decay_tick, "interval", seconds=interval, id="decay")
+    scheduler.add_job(rotate_weekly_specials, "interval", seconds=60, id="specials_rotation")
+    scheduler.add_job(bill_subscriptions, "interval", seconds=60, id="subscription_billing")
     scheduler.start()
     print(f"   Decay engine started ✓ (every {interval}s)\n")
     yield
@@ -55,6 +58,7 @@ app.include_router(needs.router)
 app.include_router(panel.router)
 app.include_router(webapps.router)
 app.include_router(notifications.router)
+app.include_router(shop.router)
 
 
 @app.get("/", tags=["health"])

@@ -215,3 +215,160 @@ async def lumen_eats(
         "shop_items":     shop_items,
         "nearby_vendors": nearby_vendors,
     })
+
+
+# ── VAULT ─────────────────────────────────────────────────────────────────────
+@router.get("/vault", response_class=HTMLResponse)
+async def vault(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        wallet_row = await db.fetchrow(
+            "SELECT * FROM wallets WHERE player_id = $1", player_id)
+        tx_rows = await db.fetch(
+            """SELECT amount, type, description, timestamp
+               FROM transactions WHERE player_id = $1
+               ORDER BY timestamp DESC LIMIT 60""", player_id)
+        weekly = await db.fetchrow(
+            """SELECT
+                 COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS earned,
+                 COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 0) AS spent
+               FROM transactions
+               WHERE player_id = $1
+                 AND timestamp >= (now() - interval '7 days')::text""",
+            player_id)
+    else:
+        async with db.execute(
+            "SELECT * FROM wallets WHERE player_id = ?", (player_id,)
+        ) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            """SELECT amount, type, description, timestamp
+               FROM transactions WHERE player_id = ?
+               ORDER BY timestamp DESC LIMIT 60""", (player_id,)
+        ) as cur:
+            tx_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT
+                 COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS earned,
+                 COALESCE(SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END), 0) AS spent
+               FROM transactions
+               WHERE player_id = ?
+                 AND timestamp >= datetime('now', '-7 days')""",
+            (player_id,)
+        ) as cur:
+            weekly = await cur.fetchone()
+
+    wallet = {
+        "balance":       float(wallet_row["balance"]) if wallet_row else 500.0,
+        "total_earned":  float(wallet_row["total_earned"]) if wallet_row else 0.0,
+        "total_spent":   float(wallet_row["total_spent"]) if wallet_row else 0.0,
+        "weekly_earned": float(weekly["earned"]) if weekly else 0.0,
+        "weekly_spent":  float(weekly["spent"]) if weekly else 0.0,
+    }
+
+    transactions = [
+        {
+            "amount":      float(r["amount"]),
+            "type":        r["type"],
+            "description": r["description"],
+            "time_ago":    time_ago(r["timestamp"]),
+        }
+        for r in tx_rows
+    ]
+
+    topup_tiers = cfg.get("economy", {}).get("lumen_topup_rates", [])
+
+    return templates.TemplateResponse("apps/vault.html", {
+        "request":      request,
+        "token":        token,
+        "player":       player,
+        "wallet":       wallet,
+        "transactions": transactions,
+        "topup_tiers":  topup_tiers,
+    })
+
+
+# ── SIP ───────────────────────────────────────────────────────────────────────
+@router.get("/sip", response_class=HTMLResponse)
+async def sip(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        need_row = await db.fetchrow(
+            "SELECT value FROM needs WHERE player_id = $1 AND need_key = 'thirst'", player_id)
+        wallet_row = await db.fetchrow(
+            "SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        log_rows = await db.fetch(
+            """SELECT action_text, delta, value_after, timestamp
+               FROM event_log
+               WHERE player_id = $1 AND need_key = 'thirst'
+               ORDER BY timestamp DESC LIMIT 20""", player_id)
+    else:
+        async with db.execute(
+            "SELECT value FROM needs WHERE player_id = ? AND need_key = 'thirst'", (player_id,)
+        ) as cur:
+            need_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT balance FROM wallets WHERE player_id = ?", (player_id,)
+        ) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            """SELECT action_text, delta, value_after, timestamp
+               FROM event_log
+               WHERE player_id = ? AND need_key = 'thirst'
+               ORDER BY timestamp DESC LIMIT 20""", (player_id,)
+        ) as cur:
+            log_rows = await cur.fetchall()
+
+    thirst_value = float(need_row["value"]) if need_row else 100.0
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+
+    # Zone calculation for thirst
+    def thirst_zone(v):
+        if v >= 50: return "ok"
+        elif v >= 25: return "warn"
+        return "crit"
+
+    # All drink shop items
+    drink_items = build_shop_items(cfg, categories=["drinks_free", "drinks_paid"])
+
+    thirst_log = [
+        {
+            "action_text": row["action_text"],
+            "delta":       float(row["delta"]),
+            "value_after": float(row["value_after"]) if row["value_after"] else None,
+            "time_ago":    time_ago(row["timestamp"]),
+        }
+        for row in log_rows
+    ]
+
+    return templates.TemplateResponse("apps/sip.html", {
+        "request":        request,
+        "token":          token,
+        "player":         player,
+        "thirst_value":   thirst_value,
+        "thirst_zone":    thirst_zone(thirst_value),
+        "wallet_balance": wallet_balance,
+        "drink_items":    drink_items,
+        "thirst_log":     thirst_log,
+    })
+
