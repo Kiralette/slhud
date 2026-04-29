@@ -195,7 +195,12 @@
     <button class="post-action-btn" onclick="commentPost({{ post.id }}, '{{ token }}')">
       💬 Comment
     </button>
-    <span class="post-npc-count">{{ post.npc_likes }} likes · {{ post.npc_comments }} comments</span>
+    {% if post.player_id != player.id %}
+    <button class="post-action-btn" onclick="followPlayer('{{ post.player_uuid or post.player_id }}', '{{ token }}', this)">
+      + Follow
+    </button>
+    {% endif %}
+    <span class="post-npc-count" id="counts-{{ post.id }}">{{ post.npc_likes }} likes · {{ post.npc_comments }} comments</span>
   </div>
 </div>
 {% endmacro %}
@@ -418,6 +423,14 @@
         btn.classList.add('liked');
         btn.textContent = '♥ Liked';
         toast('Liked ♥');
+        // Refresh counts
+        const countEl = document.getElementById('counts-' + postId);
+        if (countEl) {
+          const parts = countEl.textContent.split('·');
+          const likes = (parseInt(parts[0]) || 0) + 1;
+          const comments = parseInt((parts[1] || '0'));
+          countEl.textContent = likes + ' likes · ' + comments + ' comments';
+        }
       }
     } catch(e) { toast('Connection error'); }
   }
@@ -433,11 +446,39 @@
       });
       if (res.ok) {
         toast('Comment posted 💬');
+        // Refresh comment count
+        const countEl = document.getElementById('counts-' + postId);
+        if (countEl) {
+          const parts = countEl.textContent.split('·');
+          const likes = parseInt(parts[0]) || 0;
+          const comments = (parseInt((parts[1] || '0')) || 0) + 1;
+          countEl.textContent = likes + ' likes · ' + comments + ' comments';
+        }
       } else {
         const data = await res.json();
         toast(data.detail || 'Could not comment');
       }
     } catch(e) { toast('Connection error'); }
+  }
+
+  async function followPlayer(playerUuid, token, btn) {
+    if (btn.classList.contains('following')) return;
+    try {
+      const res = await fetch('/social/follow', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: token, following_avatar_uuid: playerUuid })
+      });
+      if (res.ok) {
+        btn.textContent = '✓ Following';
+        btn.classList.add('following');
+        btn.style.color = 'var(--green)';
+        toast('Following ✓');
+      } else {
+        const data = await res.json();
+        toast(data.detail || 'Could not follow');
+      }
+    } catch(e) { toast('Could not follow'); }
   }
 
   // Brand deal follower milestone labels

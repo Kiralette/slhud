@@ -102,6 +102,7 @@ def _format_post(row: dict, include_author: bool = True) -> dict:
     return {
         "id":                    row["id"],
         "player_id":             row["player_id"],
+        "player_uuid":           row.get("avatar_uuid", ""),
         "display_name":          row.get("display_name", ""),
         "content_text":          row["content_text"],
         "category":              row["category"],
@@ -303,7 +304,7 @@ async def get_profile(token: str, db=Depends(get_db)):
         stats_row = await db.fetchrow(
             "SELECT * FROM flare_stats WHERE player_id = $1", player_id)
         posts_rows = await db.fetch(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id = $1
                ORDER BY p.created_at DESC LIMIT 20""",
@@ -316,7 +317,7 @@ async def get_profile(token: str, db=Depends(get_db)):
         ) as cur:
             stats_row = await cur.fetchone()
         async with db.execute(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id = ?
                ORDER BY p.created_at DESC LIMIT 20""",
@@ -388,6 +389,15 @@ async def like_post(body: LikeRequest, db=Depends(get_db)):
             (body.post_id, player_id, ))
         await db.commit()
 
+    # Increment like count on the post
+    if is_postgres():
+        await db.execute(
+            "UPDATE posts SET npc_likes = npc_likes + 1 WHERE id = $1", body.post_id)
+    else:
+        await db.execute(
+            "UPDATE posts SET npc_likes = npc_likes + 1 WHERE id = ?", (body.post_id,))
+        await db.commit()
+
     # Notify post author if it's not their own post
     if post_row["player_id"] != player_id:
         await push_notification(
@@ -399,7 +409,7 @@ async def like_post(body: LikeRequest, db=Depends(get_db)):
             db=db,
         )
 
-    return {"status": "liked"}
+    return {"status": "liked", "new_like_count": None}
 
 
 # ── POST /flare/comment ───────────────────────────────────────────────────────
@@ -440,6 +450,15 @@ async def comment_post(body: CommentRequest, db=Depends(get_db)):
             """INSERT INTO post_engagements (post_id, player_id, type, content)
                VALUES (?, ?, 'comment', ?)""",
             (body.post_id, player_id, content))
+        await db.commit()
+
+    # Increment comment count on the post
+    if is_postgres():
+        await db.execute(
+            "UPDATE posts SET npc_comments = npc_comments + 1 WHERE id = $1", body.post_id)
+    else:
+        await db.execute(
+            "UPDATE posts SET npc_comments = npc_comments + 1 WHERE id = ?", (body.post_id,))
         await db.commit()
 
     if post_row["player_id"] != player_id:
