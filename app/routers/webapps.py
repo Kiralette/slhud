@@ -202,9 +202,8 @@ async def lumen_eats(
     # Nearby vendors (placeholder — populated by LSL zone data in future)
     nearby_vendors = []
 
-    return templates.TemplateResponse("apps/lumen_eats.html", {
-        "request":        request,
-        "token":          token,
+    return templates.TemplateResponse(request, "apps/lumen_eats.html", {
+"token":          token,
         "player":         player,
         "hunger_value":   hunger_value,
         "hunger_zone":    hunger_zone(hunger_value),
@@ -288,9 +287,8 @@ async def vault(
 
     topup_tiers = cfg.get("economy", {}).get("lumen_topup_rates", [])
 
-    return templates.TemplateResponse("apps/vault.html", {
-        "request":      request,
-        "token":        token,
+    return templates.TemplateResponse(request, "apps/vault.html", {
+"token":        token,
         "player":       player,
         "wallet":       wallet,
         "transactions": transactions,
@@ -361,9 +359,8 @@ async def sip(
         for row in log_rows
     ]
 
-    return templates.TemplateResponse("apps/sip.html", {
-        "request":        request,
-        "token":          token,
+    return templates.TemplateResponse(request, "apps/sip.html", {
+"token":          token,
         "player":         player,
         "thirst_value":   thirst_value,
         "thirst_zone":    thirst_zone(thirst_value),
@@ -567,9 +564,8 @@ async def grind(
             "completed_at":  time_ago(r["completed_at"]),
         })
 
-    return templates.TemplateResponse("apps/grind.html", {
-        "request":             request,
-        "token":               token,
+    return templates.TemplateResponse(request, "apps/grind.html", {
+"token":               token,
         "player":              player,
         "wallet_balance":      wallet_balance,
         "employment":          employment,
@@ -666,9 +662,8 @@ async def flare(
 
     categories = cfg.get("flare", {}).get("categories", ["life"])
 
-    return templates.TemplateResponse("apps/flare.html", {
-        "request":       request,
-        "token":         token,
+    return templates.TemplateResponse(request, "apps/flare.html", {
+"token":         token,
         "player":        player,
         "wallet_balance": wallet_balance,
         "feed":          [fmt_post(r) for r in feed_rows],
@@ -726,9 +721,8 @@ async def ping(
     threads = [dict(r) for r in thread_rows]
     total_unread = sum(t["unread_count"] for t in threads if t["unread_count"])
 
-    return templates.TemplateResponse("apps/ping.html", {
-        "request":      request,
-        "token":        token,
+    return templates.TemplateResponse(request, "apps/ping.html", {
+"token":        token,
         "player":       player,
         "threads":      threads,
         "total_unread": total_unread,
@@ -879,9 +873,8 @@ async def ritual(
     holidays_this_month = {k: v["emoji"] for k, v in all_holidays.items()
                            if k.startswith(f"{current_month:02d}-")}
 
-    return templates.TemplateResponse("apps/ritual.html", {
-        "request":              request,
-        "token":                token,
+    return templates.TemplateResponse(request, "apps/ritual.html", {
+"token":                token,
         "player":               player,
         "today":                today.isoformat(),
         "current_year":         current_year,
@@ -922,9 +915,8 @@ async def questionnaire_app(
             "category":    tdef.get("category", ""),
         })
 
-    return templates.TemplateResponse("apps/questionnaire.html", {
-        "request": request,
-        "token":   token,
+    return templates.TemplateResponse(request, "apps/questionnaire.html", {
+"token":   token,
         "player":  player,
         "traits":  traits,
     })
@@ -1013,9 +1005,8 @@ async def canvas(
         "thrill": "🎉", "glow": "✨", "luminary": "🕯",
     }
 
-    return templates.TemplateResponse("apps/canvas.html", {
-        "request":               request,
-        "token":                 token,
+    return templates.TemplateResponse(request, "apps/canvas.html", {
+"token":                 token,
         "player":                player,
         "profile":               profile,
         "stats":                 dict(stats_row) if stats_row else {},
@@ -1081,9 +1072,8 @@ async def recharge(
         for r in log_rows
     ]
 
-    return templates.TemplateResponse("apps/recharge.html", {
-        "request":       request,
-        "token":         token,
+    return templates.TemplateResponse(request, "apps/recharge.html", {
+"token":         token,
         "player":        player,
         "energy_value":  energy_value,
         "energy_zone":   energy_zone(energy_value),
@@ -1142,9 +1132,8 @@ async def thrill(
     ]
     public_events = [dict(r) for r in events_rows]
 
-    return templates.TemplateResponse("apps/thrill.html", {
-        "request":       request,
-        "token":         token,
+    return templates.TemplateResponse(request, "apps/thrill.html", {
+"token":         token,
         "player":        player,
         "fun_value":     fun_value,
         "fun_zone":      fun_zone(fun_value),
@@ -1173,10 +1162,10 @@ async def aura(
         log_rows   = await db.fetch(
             "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = $1 AND need_key = 'social' ORDER BY timestamp DESC LIMIT 20", player_id)
         nearby_rows = await db.fetch(
-            """SELECT p.display_name, p.avatar_uuid, pl.zone_type, pl.entered_at
+            """SELECT p.display_name, p.avatar_uuid, pl.last_zone, pl.last_seen_at
                FROM proximity_log pl JOIN players p ON p.id = pl.nearby_player_id
-               WHERE pl.player_id = $1 AND pl.is_still_nearby = 1
-               ORDER BY pl.entered_at DESC LIMIT 20""", player_id)
+               WHERE pl.player_id = $1
+               ORDER BY pl.last_seen_at DESC LIMIT 20""", player_id)
         follow_count = await db.fetchval("SELECT COUNT(*) FROM follows WHERE follower_id = $1", player_id)
         follower_count = await db.fetchval("SELECT COUNT(*) FROM follows WHERE following_id = $1", player_id)
     else:
@@ -1188,10 +1177,10 @@ async def aura(
             "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = ? AND need_key = 'social' ORDER BY timestamp DESC LIMIT 20", (player_id,)) as cur:
             log_rows = await cur.fetchall()
         async with db.execute(
-            """SELECT p.display_name, p.avatar_uuid, pl.zone_type, pl.entered_at
+            """SELECT p.display_name, p.avatar_uuid, pl.last_zone, pl.last_seen_at
                FROM proximity_log pl JOIN players p ON p.id = pl.nearby_player_id
-               WHERE pl.player_id = ? AND pl.is_still_nearby = 1
-               ORDER BY pl.entered_at DESC LIMIT 20""", (player_id,)) as cur:
+               WHERE pl.player_id = ?
+               ORDER BY pl.last_seen_at DESC LIMIT 20""", (player_id,)) as cur:
             nearby_rows = await cur.fetchall()
         async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE follower_id = ?", (player_id,)) as cur:
             fc = await cur.fetchone(); follow_count = fc["cnt"] if fc else 0
@@ -1214,9 +1203,8 @@ async def aura(
     ]
     nearby = [dict(r) for r in nearby_rows]
 
-    return templates.TemplateResponse("apps/aura.html", {
-        "request":        request,
-        "token":          token,
+    return templates.TemplateResponse(request, "apps/aura.html", {
+"token":          token,
         "player":         player,
         "social_value":   social_value,
         "social_zone":    social_zone(social_value),
@@ -1270,9 +1258,8 @@ async def glow(
         for r in log_rows
     ]
 
-    return templates.TemplateResponse("apps/glow.html", {
-        "request":        request,
-        "token":          token,
+    return templates.TemplateResponse(request, "apps/glow.html", {
+"token":          token,
         "player":         player,
         "hygiene_value":  hygiene_value,
         "hygiene_zone":   hygiene_zone(hygiene_value),
@@ -1353,9 +1340,8 @@ async def luminary(
         k = r["occurrence_key"]
         purpose_occurrences.append({"key": k, "sub_stage": r["sub_stage"]})
 
-    return templates.TemplateResponse("apps/luminary.html", {
-        "request":             request,
-        "token":               token,
+    return templates.TemplateResponse(request, "apps/luminary.html", {
+"token":               token,
         "player":              player,
         "purpose_value":       purpose_value,
         "purpose_zone":        purpose_zone(purpose_value),
@@ -1432,9 +1418,8 @@ async def haul(
     now = datetime.now(timezone.utc)
     days_left = 7 - now.weekday() if now.weekday() <= 6 else 1
 
-    return templates.TemplateResponse("apps/haul.html", {
-        "request":             request,
-        "token":               token,
+    return templates.TemplateResponse(request, "apps/haul.html", {
+"token":               token,
         "player":              player,
         "wallet_balance":      wallet_balance,
         "weekly_specials":     weekly_specials,
@@ -1497,9 +1482,8 @@ async def wavelength_app(
             "is_active":    key == current_station,
         })
 
-    return templates.TemplateResponse("apps/wavelength.html", {
-        "request":         request,
-        "token":           token,
+    return templates.TemplateResponse(request, "apps/wavelength.html", {
+"token":           token,
         "player":          player,
         "wallet_balance":  wallet_balance,
         "stations":        stations,
@@ -1585,9 +1569,8 @@ async def skill_app(
         if desc:
             all_unlocks.append({"level": lv, "desc": desc, "unlocked": level >= lv})
 
-    return templates.TemplateResponse("apps/skill.html", {
-        "request":      request,
-        "token":        token,
+    return templates.TemplateResponse(request, "apps/skill.html", {
+"token":        token,
         "player":       player,
         "skill_key":    skill_key,
         "skill_cfg":    skill_cfg,
@@ -1622,7 +1605,7 @@ async def pulse(
         needs_rows   = await db.fetch("SELECT need_key, value FROM needs WHERE player_id = $1", player_id)
         wallet_row   = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
         vibes_rows   = await db.fetch(
-            "SELECT vibe_key, display_name, is_positive, expires_at FROM vibes WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text) ORDER BY applied_at DESC LIMIT 6", player_id)
+            "SELECT vibe_key, is_negative, expires_at FROM vibes WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text) ORDER BY applied_at DESC LIMIT 6", player_id)
         notif_count  = await db.fetchval(
             "SELECT COUNT(*) FROM notifications WHERE player_id = $1 AND is_read = 0", player_id)
     else:
@@ -1631,7 +1614,7 @@ async def pulse(
         async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
             wallet_row = await cur.fetchone()
         async with db.execute(
-            "SELECT vibe_key, display_name, is_positive, expires_at FROM vibes WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY applied_at DESC LIMIT 6", (player_id,)) as cur:
+            "SELECT vibe_key, is_negative, expires_at FROM vibes WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY applied_at DESC LIMIT 6", (player_id,)) as cur:
             vibes_rows = await cur.fetchall()
         async with db.execute(
             "SELECT COUNT(*) as cnt FROM notifications WHERE player_id = ? AND is_read = 0", (player_id,)) as cur:
@@ -1673,9 +1656,8 @@ async def pulse(
         {"key": "luminary",   "label": "Luminary",    "icon": "🕯️", "need": "purpose"},
     ]
 
-    return templates.TemplateResponse("apps/pulse.html", {
-        "request":        request,
-        "token":          token,
+    return templates.TemplateResponse(request, "apps/pulse.html", {
+"token":          token,
         "player":         player,
         "needs_data":     needs_data,
         "wallet_balance": wallet_balance,
@@ -1707,9 +1689,8 @@ async def guide(
     ]
     trait_defs = cfg.get("traits", {}).get("definitions", {})
 
-    return templates.TemplateResponse("apps/guide.html", {
-        "request":     request,
-        "token":       token,
+    return templates.TemplateResponse(request, "apps/guide.html", {
+"token":       token,
         "player":      player,
         "page":        page,
         "career_list": career_list,

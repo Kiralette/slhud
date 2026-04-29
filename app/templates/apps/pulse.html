@@ -133,8 +133,8 @@
 <div style="padding:0 18px 6px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Active vibes</div>
 <div class="vibes-row">
   {% for vibe in vibes %}
-  <span class="vibe-pill {{ 'positive' if vibe.is_positive else 'negative' }}">
-    {{ vibe.display_name }}
+  <span class="vibe-pill {{ 'negative' if vibe.is_negative else 'positive' }}">
+    {{ vibe.vibe_key | replace('_', ' ') | title }}
   </span>
   {% endfor %}
 </div>

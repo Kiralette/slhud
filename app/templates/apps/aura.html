@@ -127,7 +127,7 @@
       <div class="item-emoji">👤</div>
       <div class="item-info">
         <div class="item-name">{{ person.display_name }}</div>
-        <div class="item-desc" style="font-size:11px;color:var(--ink3);">Nearby · {{ person.zone_type or 'unknown zone' }}</div>
+        <div class="item-desc" style="font-size:11px;color:var(--ink3);">Nearby · {{ person.last_zone or 'unknown zone' }}</div>
       </div>
       <div class="item-right">
         <a href="/app/ping?token={{ token }}" class="item-btn" style="text-decoration:none;">Ping</a>
