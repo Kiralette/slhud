@@ -9,3 +9,4 @@ aiosqlite
 watchfiles
 httpx
 asyncpg
+Jinja2
