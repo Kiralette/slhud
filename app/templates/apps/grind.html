@@ -1,0 +1,607 @@
+{% extends "base.html" %}
+{% block title %}Grind · SL HUD{% endblock %}
+
+{% block extra_style %}
+<style>
+  .job-hero {
+    padding: 22px 18px 18px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--bg);
+  }
+  .job-hero-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .job-icon-wrap {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--bg3); border: 0.5px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .job-info { flex: 1; }
+  .job-title-text {
+    font-family: var(--font-head); font-size: 22px;
+    font-weight: 400; color: var(--ink); line-height: 1.1;
+  }
+  .job-career-name {
+    font-size: 10px; color: var(--ink3);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-top: 3px;
+  }
+  .job-pay {
+    text-align: right;
+  }
+  .job-pay-val {
+    font-size: 18px; font-weight: 600; color: var(--gold);
+  }
+  .job-pay-label {
+    font-size: 9px; color: var(--ink4);
+    letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1px;
+  }
+
+  .grey-area-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--rose);
+    background: var(--rose-light); border-radius: 99px;
+    padding: 3px 10px; margin-bottom: 10px;
+  }
+
+  .shift-card {
+    background: var(--bg2); border: 0.5px solid var(--border2);
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .shift-timer {
+    flex: 1;
+  }
+  .shift-timer-label {
+    font-size: 9px; color: var(--ink4);
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .shift-timer-val {
+    font-family: var(--font-head); font-size: 28px;
+    font-weight: 300; color: var(--ink); letter-spacing: 0.02em;
+  }
+  .shift-timer-val.clocked-in { color: var(--green); }
+  .shift-progress {
+    height: 2px; background: var(--bg4); border-radius: 99px;
+    overflow: hidden; margin-top: 8px;
+  }
+  .shift-progress-fill {
+    height: 100%; background: var(--green); border-radius: 99px;
+    transition: width 1s linear;
+  }
+  .shift-progress-fill.warn { background: var(--amber); }
+  .shift-progress-fill.crit { background: var(--rose); }
+
+  .clockin-btn {
+    flex-shrink: 0;
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: 99px;
+    padding: 10px 20px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font);
+    transition: background .15s;
+  }
+  .clockin-btn:active { background: var(--ink2); }
+  .clockin-btn.out { background: var(--rose-light); color: var(--rose); }
+  .clockin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .tier-bar-wrap {
+    margin-top: 14px;
+  }
+  .tier-bar-label {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--ink3); margin-bottom: 6px;
+  }
+  .tier-dots {
+    display: flex; gap: 5px;
+  }
+  .tier-dot {
+    flex: 1; height: 3px; border-radius: 99px;
+    background: var(--bg4);
+  }
+  .tier-dot.filled { background: var(--gold); }
+
+  .promo-card {
+    margin: 12px 18px 0;
+    background: var(--gold-light); border: 0.5px solid var(--gold2);
+    border-radius: var(--radius); padding: 13px 15px;
+  }
+  .promo-title {
+    font-size: 12px; font-weight: 600; color: var(--gold); margin-bottom: 4px;
+  }
+  .promo-body { font-size: 11px; color: var(--ink2); line-height: 1.6; }
+  .promo-btn {
+    margin-top: 10px;
+    background: var(--gold); color: white;
+    border: none; border-radius: 99px; padding: 7px 18px;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font);
+  }
+  .promo-btn:active { opacity: 0.85; }
+
+  .stats-row {
+    display: flex; padding: 14px 18px; gap: 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .stat-item {
+    flex: 1; text-align: center;
+    border-right: 0.5px solid var(--border);
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-val { font-size: 16px; font-weight: 600; color: var(--ink); }
+  .stat-label { font-size: 9px; color: var(--ink4); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+
+  .odd-slot {
+    display: flex; gap: 6px; padding: 12px 18px; border-bottom: 0.5px solid var(--border);
+  }
+  .odd-slot-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-top: 4px; flex-shrink: 0;
+  }
+  .odd-slot-dot.available { background: var(--green); }
+  .odd-slot-dot.used      { background: var(--bg4); }
+  .odd-slot-info { flex: 1; }
+  .odd-slot-name { font-size: 12px; font-weight: 500; color: var(--ink); }
+  .odd-slot-meta { font-size: 10px; color: var(--ink3); margin-top: 2px; }
+
+  .apply-card {
+    margin: 0 18px 8px;
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 13px 14px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .apply-icon { font-size: 26px; flex-shrink: 0; width: 36px; text-align: center; }
+  .apply-info { flex: 1; min-width: 0; }
+  .apply-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .apply-entry { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .apply-btn {
+    background: var(--bg2); color: var(--ink2);
+    border: 0.5px solid var(--border2); border-radius: 99px;
+    padding: 6px 14px; font-size: 9px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font); flex-shrink: 0;
+    transition: all .15s;
+  }
+  .apply-btn:active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .apply-badge {
+    font-size: 8px; padding: 2px 7px;
+    border-radius: 99px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .apply-badge.grey { background: var(--rose-light); color: var(--rose); }
+
+  .history-entry {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 18px; border-bottom: 0.5px solid var(--border);
+  }
+  .history-entry:last-child { border-bottom: none; }
+  .history-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }
+  .history-body { flex: 1; }
+  .history-title { font-size: 12px; font-weight: 500; color: var(--ink); }
+  .history-meta  { font-size: 10px; color: var(--ink3); margin-top: 2px; }
+  .history-earn  { font-size: 12px; font-weight: 600; color: var(--green); flex-shrink: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Grind</div>
+    <div class="topbar-title">Career & Work</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="tab-career"   onclick="showTab('tab-career')">Career</button>
+  <button class="tab"        data-tab="tab-oddjobs"  onclick="showTab('tab-oddjobs')">Odd Jobs</button>
+  <button class="tab"        data-tab="tab-history"  onclick="showTab('tab-history')">History</button>
+</div>
+
+<!-- ── CAREER TAB ──────────────────────────────────────────── -->
+<div id="tab-career" class="tab-panel active">
+
+{% if employment %}
+
+  <!-- Job hero card -->
+  <div class="job-hero stagger">
+    {% if employment.is_grey_area %}
+    <div class="grey-area-badge">⚠️ Grey Area — No skill XP</div>
+    {% endif %}
+    <div class="job-hero-top">
+      <div class="job-icon-wrap">{{ employment.career_icon }}</div>
+      <div class="job-info">
+        <div class="job-title-text">{{ employment.job_title }}</div>
+        <div class="job-career-name">{{ employment.career_name }} · Tier {{ employment.tier_level }}</div>
+      </div>
+      <div class="job-pay">
+        <div class="job-pay-val">✦{{ employment.daily_pay }}</div>
+        <div class="job-pay-label">Per shift</div>
+      </div>
+    </div>
+
+    <!-- Shift clock -->
+    <div class="shift-card">
+      <div class="shift-timer">
+        <div class="shift-timer-label">
+          {% if employment.is_clocked_in %}Shift in progress{% else %}Not clocked in{% endif %}
+        </div>
+        <div class="shift-timer-val {{ 'clocked-in' if employment.is_clocked_in }}"
+             id="shift-display">
+          {% if employment.is_clocked_in and employment.shift_seconds is not none %}
+            {% set h = (employment.shift_seconds // 3600) %}
+            {% set m = ((employment.shift_seconds % 3600) // 60) %}
+            {% set s = (employment.shift_seconds % 60) %}
+            {{ "%01d:%02d:%02d"|format(h,m,s) }}
+          {% else %}
+            0:00:00
+          {% endif %}
+        </div>
+        {% set max_sec = shift_max_hours * 3600 %}
+        {% set used_sec = employment.shift_seconds if employment.shift_seconds else 0 %}
+        {% set pct = [(used_sec / max_sec * 100), 100]|min %}
+        <div class="shift-progress">
+          <div class="shift-progress-fill {{ 'warn' if pct > 75 else '' }}"
+               id="shift-progress-bar"
+               style="width:{{ pct }}%;"></div>
+        </div>
+      </div>
+      {% if employment.is_clocked_in %}
+      <button class="clockin-btn out" id="clock-btn"
+              onclick="doClock('out', '{{ token }}')">Clock Out</button>
+      {% elif employment.hours_today >= employment.shift_max_hours %}
+      <button class="clockin-btn" disabled>Max reached</button>
+      {% else %}
+      <button class="clockin-btn" id="clock-btn"
+              onclick="doClock('in', '{{ token }}')">Clock In</button>
+      {% endif %}
+    </div>
+
+    <!-- Tier progress dots -->
+    <div class="tier-bar-wrap">
+      <div class="tier-bar-label">
+        <span>{{ employment.days_at_tier }} day{{ 's' if employment.days_at_tier != 1 }}</span>
+        {% if next_tier_info %}
+        <span>{{ next_tier_info.days_required }} days to {{ next_tier_info.title }}</span>
+        {% else %}
+        <span>Max tier reached ✦</span>
+        {% endif %}
+      </div>
+      {% if next_tier_info and next_tier_info.days_required %}
+      {% set pct_days = [(employment.days_at_tier / next_tier_info.days_required * 100), 100]|min %}
+      <div class="tier-dots">
+        {% for i in range(10) %}
+        <div class="tier-dot {{ 'filled' if (i / 10 * 100) < pct_days }}"></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-item">
+      <div class="stat-val">{{ employment.total_days_worked }}</div>
+      <div class="stat-label">Days worked</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">{{ "%.1f"|format(employment.hours_today) }}h</div>
+      <div class="stat-label">Today</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">Tier {{ employment.tier_level }}</div>
+      <div class="stat-label">Current</div>
+    </div>
+  </div>
+
+  {% if promotion_ready %}
+  <!-- Promotion available -->
+  <div class="promo-card">
+    <div class="promo-title">Promotion available 🎉</div>
+    <div class="promo-body">
+      Ready to become <strong>{{ next_tier_info.title }}</strong> — ✦{{ next_tier_info.daily_pay }}/shift.
+    </div>
+    <button class="promo-btn" onclick="doPromote('{{ token }}')">Accept Promotion</button>
+  </div>
+  {% elif next_tier_info %}
+  <!-- Progress toward promotion -->
+  <div class="info-card" style="margin-top:12px;">
+    <p>
+      Next: <strong>{{ next_tier_info.title }}</strong> (✦{{ next_tier_info.daily_pay }}/shift)
+      {% if promotion_missing %}
+       · Needs: {{ promotion_missing|join(', ') }}
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+{% else %}
+  <!-- Not employed -->
+  <div class="empty">
+    <div class="empty-icon">💼</div>
+    <div class="empty-title">No job yet</div>
+    <div class="empty-text">Browse career paths below and apply for a position.</div>
+  </div>
+{% endif %}
+
+  <!-- Browse all careers -->
+  <div class="section-head" style="margin-top:8px;">
+    <div class="section-head-title">Career paths</div>
+    <div class="section-head-sub">Apply to start at Tier 1. Switch anytime.</div>
+  </div>
+
+  <div class="chips-row">
+    <button class="category-chip active" onclick="filterPaths('all', this)">All</button>
+    <button class="category-chip" onclick="filterPaths('legal', this)">Legal</button>
+    <button class="category-chip" onclick="filterPaths('grey', this)">Grey Area</button>
+  </div>
+
+  <div id="paths-list" class="stagger">
+  {% for path in all_paths %}
+  <div class="apply-card" data-grey="{{ 'true' if path.is_grey_area else 'false' }}">
+    <div class="apply-icon">{{ path.icon }}</div>
+    <div class="apply-info">
+      <div class="apply-name">
+        {{ path.name }}
+        {% if path.is_grey_area %}
+        <span class="apply-badge grey">Grey</span>
+        {% endif %}
+      </div>
+      <div class="apply-entry">
+        Starts as {{ path.entry_title }} · ✦{{ path.entry_pay }}/shift
+        {% if path.skill_req %}
+          · Req: {{ path.skill_req|list|join(', ') }}
+        {% endif %}
+      </div>
+    </div>
+    <button class="apply-btn" onclick="doApply('{{ path.key }}', '{{ token }}', '{{ path.name }}')">
+      Apply
+    </button>
+  </div>
+  {% endfor %}
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── ODD JOBS TAB ────────────────────────────────────────── -->
+<div id="tab-oddjobs" class="tab-panel">
+
+  <div class="section-head">
+    <div class="section-head-title">Odd Jobs</div>
+    <div class="section-head-sub">
+      {{ odd_jobs_remaining }} of {{ odd_jobs_limit }} slots available today · resets midnight SLT
+    </div>
+  </div>
+
+  <!-- Slot indicators -->
+  <div style="display:flex;gap:8px;padding:4px 18px 14px;">
+    {% for i in range(odd_jobs_limit) %}
+    <div style="
+      flex:1; height:3px; border-radius:99px;
+      background: {{ 'var(--green)' if i >= odd_jobs_used else 'var(--bg4)' }};
+    "></div>
+    {% endfor %}
+  </div>
+
+  {% for job in odd_jobs_available %}
+  <div class="odd-slot">
+    <div class="odd-slot-dot {{ 'available' if odd_jobs_remaining > 0 else 'used' }}"></div>
+    <div class="odd-slot-info">
+      <div class="odd-slot-name">{{ job.display_name }}</div>
+      <div class="odd-slot-meta">{{ job.how }} · {{ job.min_duration_minutes }} min</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      <div style="font-size:14px;font-weight:600;color:var(--green);">✦{{ job.pay }}</div>
+      {% if odd_jobs_remaining > 0 %}
+      <button class="item-btn" style="margin-top:5px;"
+              onclick="doOddJob('{{ job.key }}', '{{ token }}', '{{ job.display_name }}', {{ job.pay }})">
+        Complete
+      </button>
+      {% else %}
+      <button class="item-btn" disabled style="margin-top:5px;">Done today</button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="info-card" style="margin-top:12px;">
+    <p>Complete odd jobs in-world at designated zones or with other players. The complete button confirms server-side — make sure you've actually done the job!</p>
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── HISTORY TAB ─────────────────────────────────────────── -->
+<div id="tab-history" class="tab-panel">
+
+  {% if career_history %}
+  <div class="section-head">
+    <div class="section-head-title">Career history</div>
+  </div>
+  {% for entry in career_history %}
+  <div class="history-entry">
+    <div class="history-icon">{{ entry.career_icon }}</div>
+    <div class="history-body">
+      <div class="history-title">{{ entry.job_title }}</div>
+      <div class="history-meta">{{ entry.career_name }} · Tier {{ entry.tier_level }} · {{ entry.started_at }}</div>
+    </div>
+    {% if entry.total_earned > 0 %}
+    <div class="history-earn">+✦{{ "%.0f"|format(entry.total_earned) }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if odd_history %}
+  <div class="section-head" style="margin-top:6px;">
+    <div class="section-head-title">Odd job history</div>
+  </div>
+  {% for entry in odd_history %}
+  <div class="history-entry">
+    <div class="history-icon">🧹</div>
+    <div class="history-body">
+      <div class="history-title">{{ entry.display_name }}</div>
+      <div class="history-meta">{{ entry.completed_at }}</div>
+    </div>
+    <div class="history-earn">+✦{{ "%.0f"|format(entry.amount_earned) }}</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if not career_history and not odd_history %}
+  <div class="empty">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title">No history yet</div>
+    <div class="empty-text">Your work history will appear here.</div>
+  </div>
+  {% endif %}
+
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  // Live shift timer
+  {% if employment and employment.is_clocked_in and employment.shift_seconds is not none %}
+  let shiftSec = {{ employment.shift_seconds }};
+  const maxSec = {{ shift_max_hours * 3600 }};
+  const timerEl = document.getElementById('shift-display');
+  const barEl   = document.getElementById('shift-progress-bar');
+
+  function fmtTime(s) {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  setInterval(() => {
+    shiftSec++;
+    if (timerEl) timerEl.textContent = fmtTime(shiftSec);
+    if (barEl) {
+      const pct = Math.min(shiftSec / maxSec * 100, 100);
+      barEl.style.width = pct + '%';
+      barEl.className = 'shift-progress-fill' + (pct > 85 ? ' crit' : pct > 65 ? ' warn' : '');
+    }
+  }, 1000);
+  {% endif %}
+
+  function filterPaths(type, btn) {
+    document.querySelectorAll('.chips-row .category-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#paths-list .apply-card').forEach(el => {
+      if (type === 'all') el.style.display = '';
+      else if (type === 'grey') el.style.display = el.dataset.grey === 'true' ? '' : 'none';
+      else el.style.display = el.dataset.grey === 'false' ? '' : 'none';
+    });
+  }
+
+  async function doClock(direction, token) {
+    const btn = document.getElementById('clock-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '···'; }
+    try {
+      const res = await fetch('/career/clock' + direction, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(direction === 'in' ? 'Clocked in ✓' : `Clocked out — ✦${data.pay_deposited?.toFixed(0) ?? 0} earned`);
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        toast(data.detail || 'Error');
+        if (btn) { btn.disabled = false; btn.textContent = direction === 'in' ? 'Clock In' : 'Clock Out'; }
+      }
+    } catch(e) {
+      toast('Connection error');
+      if (btn) { btn.disabled = false; }
+    }
+  }
+
+  async function doPromote(token) {
+    const btn = event.target;
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/career/promote', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`Promoted to ${data.new_title} 🎉`);
+        setTimeout(() => location.reload(), 1600);
+      } else {
+        toast(data.detail || 'Could not promote');
+        btn.disabled = false; btn.textContent = 'Accept Promotion';
+      }
+    } catch(e) {
+      toast('Connection error');
+      btn.disabled = false;
+    }
+  }
+
+  async function doApply(pathKey, token, pathName) {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/career/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ career_path_key: pathKey })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`Applied — ${data.job_title} ✓`);
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        toast(data.detail || 'Could not apply');
+        btn.disabled = false; btn.textContent = orig;
+      }
+    } catch(e) {
+      toast('Connection error');
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  async function doOddJob(jobKey, token, jobName, pay) {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/career/odd-jobs/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ odd_job_key: jobKey })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`${jobName} — ✦${pay} earned`);
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        toast(data.detail || 'Could not complete job');
+        btn.disabled = false; btn.textContent = orig;
+      }
+    } catch(e) {
+      toast('Connection error');
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+</script>
+{% endblock %}

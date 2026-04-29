@@ -372,3 +372,218 @@ async def sip(
         "thirst_log":     thirst_log,
     })
 
+
+# ── GRIND ─────────────────────────────────────────────────────────────────────
+@router.get("/grind", response_class=HTMLResponse)
+async def grind(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    # Employment row
+    if is_postgres():
+        emp_row = await db.fetchrow(
+            "SELECT * FROM employment WHERE player_id = $1", player_id)
+        wallet_row = await db.fetchrow(
+            "SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        history_rows = await db.fetch(
+            """SELECT career_path_key, tier_level, job_title, started_at, ended_at, total_earned
+               FROM career_history WHERE player_id = $1
+               ORDER BY started_at DESC LIMIT 15""", player_id)
+        odd_rows = await db.fetch(
+            """SELECT odd_job_key, completed_at, amount_earned
+               FROM odd_job_log WHERE player_id = $1
+               ORDER BY completed_at DESC LIMIT 10""", player_id)
+    else:
+        async with db.execute(
+            "SELECT * FROM employment WHERE player_id = ?", (player_id,)
+        ) as cur:
+            emp_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT balance FROM wallets WHERE player_id = ?", (player_id,)
+        ) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            """SELECT career_path_key, tier_level, job_title, started_at, ended_at, total_earned
+               FROM career_history WHERE player_id = ?
+               ORDER BY started_at DESC LIMIT 15""", (player_id,)
+        ) as cur:
+            history_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT odd_job_key, completed_at, amount_earned
+               FROM odd_job_log WHERE player_id = ?
+               ORDER BY completed_at DESC LIMIT 10""", (player_id,)
+        ) as cur:
+            odd_rows = await cur.fetchall()
+
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+    emp = dict(emp_row) if emp_row else None
+
+    # Build employment context
+    employment = None
+    promotion_ready = False
+    promotion_missing = []
+    next_tier_info = None
+    shift_seconds = None
+
+    if emp and emp.get("career_path_key"):
+        path_key  = emp["career_path_key"]
+        tier      = int(emp["tier_level"])
+        path_cfg  = cfg.get("careers", {}).get("paths", {}).get(path_key, {})
+        tier_cfg  = path_cfg.get("tiers", {}).get(tier, {})
+        next_tier_cfg = path_cfg.get("tiers", {}).get(tier + 1)
+
+        # Shift timer
+        if emp.get("is_clocked_in") and emp.get("clocked_in_at"):
+            try:
+                start = datetime.fromisoformat(str(emp["clocked_in_at"]).replace("Z", "+00:00"))
+                if start.tzinfo is None:
+                    start = start.replace(tzinfo=timezone.utc)
+                shift_seconds = int((datetime.now(timezone.utc) - start).total_seconds())
+            except Exception:
+                shift_seconds = 0
+
+        # Skill check for promotion
+        if next_tier_cfg:
+            if is_postgres():
+                skill_rows = await db.fetch(
+                    "SELECT skill_key, level FROM skills WHERE player_id = $1", player_id)
+            else:
+                async with db.execute(
+                    "SELECT skill_key, level FROM skills WHERE player_id = ?", (player_id,)
+                ) as cur:
+                    skill_rows = await cur.fetchall()
+            player_skills = {r["skill_key"]: int(r["level"]) for r in skill_rows}
+
+            skill_reqs = next_tier_cfg.get("skill_req") or {}
+            days_req   = next_tier_cfg.get("days_required") or 0
+            days_ok    = int(emp["days_at_tier"]) >= days_req
+            skills_ok  = all(player_skills.get(k, 0) >= v for k, v in skill_reqs.items())
+            promotion_ready = days_ok and skills_ok
+
+            if not skills_ok:
+                for k, v in skill_reqs.items():
+                    if player_skills.get(k, 0) < v:
+                        promotion_missing.append(f"{k.title()} Lv.{v}")
+
+            next_tier_info = {
+                "title":         next_tier_cfg.get("title"),
+                "daily_pay":     next_tier_cfg.get("daily_pay"),
+                "days_required": days_req,
+            }
+
+        employment = {
+            "career_path_key":  path_key,
+            "career_name":      path_cfg.get("display_name", path_key),
+            "career_icon":      path_cfg.get("icon", "💼"),
+            "is_grey_area":     bool(path_cfg.get("is_grey_area", False)),
+            "tier_level":       tier,
+            "job_title":        emp["job_title"],
+            "daily_pay":        tier_cfg.get("daily_pay", 0),
+            "is_clocked_in":    bool(emp["is_clocked_in"]),
+            "shift_seconds":    shift_seconds,
+            "hours_today":      float(emp["hours_today"]),
+            "days_at_tier":     int(emp["days_at_tier"]),
+            "total_days_worked":int(emp["total_days_worked"]),
+            "shift_max_hours":  float(cfg["careers"]["shift_max_hours"]),
+        }
+
+    # Odd job slots
+    today_start = datetime.now(timezone.utc).strftime("%Y-%m-%d") + " 00:00:00"
+    if is_postgres():
+        odd_today_row = await db.fetchrow(
+            """SELECT COUNT(*) as cnt FROM odd_job_log
+               WHERE player_id = $1 AND completed_at >= $2""",
+            player_id, today_start)
+    else:
+        async with db.execute(
+            """SELECT COUNT(*) as cnt FROM odd_job_log
+               WHERE player_id = ? AND completed_at >= ?""",
+            (player_id, today_start)
+        ) as cur:
+            odd_today_row = await cur.fetchone()
+
+    odd_jobs_used = int(odd_today_row["cnt"]) if odd_today_row else 0
+    odd_jobs_limit = int(cfg["economy"]["odd_jobs"]["daily_limit"])
+    odd_jobs_remaining = max(0, odd_jobs_limit - odd_jobs_used)
+
+    # All career paths for Apply section
+    all_paths = []
+    for pk, pc in cfg.get("careers", {}).get("paths", {}).items():
+        tier1 = pc.get("tiers", {}).get(1, {})
+        all_paths.append({
+            "key":         pk,
+            "name":        pc.get("display_name", pk),
+            "icon":        pc.get("icon", "💼"),
+            "is_grey_area": bool(pc.get("is_grey_area", False)),
+            "entry_title": tier1.get("title", "—"),
+            "entry_pay":   tier1.get("daily_pay", 0),
+            "skill_req":   tier1.get("skill_req"),
+        })
+
+    # Odd jobs config
+    odd_jobs_available = [
+        {
+            "key":         k,
+            "display_name": v.get("display_name", k),
+            "pay":         v.get("pay", 0),
+            "min_duration_minutes": v.get("min_duration_minutes", 15),
+            "how":         v.get("how", ""),
+        }
+        for k, v in cfg["economy"]["odd_jobs"]["jobs"].items()
+    ]
+
+    # Format history
+    paths_cfg_map = cfg.get("careers", {}).get("paths", {})
+    career_history = []
+    for r in history_rows:
+        pk = r["career_path_key"]
+        pi = paths_cfg_map.get(pk, {})
+        career_history.append({
+            "career_name":  pi.get("display_name", pk),
+            "career_icon":  pi.get("icon", "💼"),
+            "job_title":    r["job_title"],
+            "tier_level":   int(r["tier_level"]),
+            "started_at":   time_ago(r["started_at"]),
+            "ended_at":     time_ago(r["ended_at"]) if r["ended_at"] else "Current",
+            "total_earned": float(r["total_earned"]),
+        })
+
+    odd_job_cfg_map = cfg["economy"]["odd_jobs"]["jobs"]
+    odd_history = []
+    for r in odd_rows:
+        jk = r["odd_job_key"]
+        jcfg = odd_job_cfg_map.get(jk, {})
+        odd_history.append({
+            "display_name":  jcfg.get("display_name", jk),
+            "amount_earned": float(r["amount_earned"]),
+            "completed_at":  time_ago(r["completed_at"]),
+        })
+
+    return templates.TemplateResponse("apps/grind.html", {
+        "request":             request,
+        "token":               token,
+        "player":              player,
+        "wallet_balance":      wallet_balance,
+        "employment":          employment,
+        "promotion_ready":     promotion_ready,
+        "promotion_missing":   promotion_missing,
+        "next_tier_info":      next_tier_info,
+        "odd_jobs_remaining":  odd_jobs_remaining,
+        "odd_jobs_used":       odd_jobs_used,
+        "odd_jobs_limit":      odd_jobs_limit,
+        "odd_jobs_available":  odd_jobs_available,
+        "all_paths":           all_paths,
+        "career_history":      career_history,
+        "odd_history":         odd_history,
+        "shift_max_hours":     float(cfg["careers"]["shift_max_hours"]),
+    })
+
+

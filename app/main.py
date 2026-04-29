@@ -10,10 +10,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
 from app.database import init_db
-from app.routers import players, actions, needs, webapps, notifications, shop
+from app.routers import players, actions, needs, webapps, notifications, shop, career
 from app.admin import panel
 from app.services.decay import run_decay_tick
 from app.services.economy import rotate_weekly_specials, bill_subscriptions
+from app.services.career import midnight_reset, auto_clockout_sweep
 
 scheduler = AsyncIOScheduler()
 
@@ -30,6 +31,8 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(run_decay_tick, "interval", seconds=interval, id="decay")
     scheduler.add_job(rotate_weekly_specials, "interval", seconds=60, id="specials_rotation")
     scheduler.add_job(bill_subscriptions, "interval", seconds=60, id="subscription_billing")
+    scheduler.add_job(midnight_reset, "interval", seconds=60, id="midnight_reset")
+    scheduler.add_job(auto_clockout_sweep, "interval", seconds=60, id="auto_clockout")
     scheduler.start()
     print(f"   Decay engine started ✓ (every {interval}s)\n")
     yield
@@ -59,6 +62,7 @@ app.include_router(panel.router)
 app.include_router(webapps.router)
 app.include_router(notifications.router)
 app.include_router(shop.router)
+app.include_router(career.router)
 
 
 @app.get("/", tags=["health"])
