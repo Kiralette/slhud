@@ -223,9 +223,9 @@
 <!-- Config bar -->
 <div class="config-bar">
   <div class="config-label">Server</div>
-  <input class="config-input base-url-input" id="base-url" value="https://slhud.onrender.com" placeholder="http://localhost:8000">
+  <input class="config-input base-url-input" id="base-url" placeholder="auto-detected from page URL">
   <div class="config-label">Token</div>
-  <input class="config-input" id="player-token" value="test_token_session10" placeholder="paste your player token">
+  <input class="config-input" id="player-token" placeholder="paste your player token here">
   <button class="config-btn" onclick="applyConfig()">Connect ✓</button>
 </div>
 
@@ -410,12 +410,16 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let BASE_URL = 'http://localhost:8000';
-let TOKEN = 'test_token_session10';
+// Auto-detect origin so it works both locally and on Render
+let BASE_URL = (window.location.origin && window.location.origin !== 'null')
+  ? window.location.origin
+  : 'https://slhud.onrender.com';
+let TOKEN = '';
 let currentApp = null;
 
 function applyConfig() {
-  BASE_URL = document.getElementById('base-url').value.replace(/\/$/, '');
+  const inputURL = document.getElementById('base-url').value.replace(/\/$/, '');
+  BASE_URL = inputURL || window.location.origin;
   TOKEN = document.getElementById('player-token').value.trim();
   showToast('Connected ✓');
 
@@ -478,7 +482,9 @@ setInterval(updateClock, 30000);
 
 // Auto-connect on load
 window.addEventListener('load', () => {
-  setTimeout(applyConfig, 300);
+  // Set server field to current origin
+  const originInput = document.getElementById('base-url');
+  if (originInput) originInput.placeholder = window.location.origin || 'https://slhud.onrender.com';
 });
 </script>
 
