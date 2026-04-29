@@ -1548,3 +1548,291 @@ questionnaire:
     q7_intense:     [[ambitious, 2], [hot_headed, 2], [resilient, 1]]
     q7_quiet:       [[introvert, 2], [guarded, 2], [bookworm, 1]]
     q7_unpredictable: [[impulsive, 3], [hot_headed, 2], [resilient, -1]]
+
+# ============================================================
+#  ACHIEVEMENTS
+#  Checked after every relevant action.
+#  category: needs / social / career / skill / economy / life / special
+#  icon: emoji shown in Canvas → Legacy tab
+#  xp_reward: flat XP granted to knowledge skill on unlock
+# ============================================================
+
+achievements:
+  # ── NEEDS ───────────────────────────────────────────────
+  well_fed_streak:
+    display_name: "Three Square Meals"
+    description: "Keep Hunger above 50 for 3 days straight."
+    category: needs
+    icon: "🍽️"
+    xp_reward: 50
+    condition: { stat: hunger_days_above_50, gte: 3 }
+
+  hydration_hero:
+    display_name: "Perpetually Hydrated"
+    description: "Keep Thirst above 70 for a full day."
+    category: needs
+    icon: "💧"
+    xp_reward: 30
+    condition: { stat: thirst_days_above_70, gte: 1 }
+
+  beauty_sleep:
+    display_name: "Beauty Sleep"
+    description: "Gain the Well Rested vibe 5 times."
+    category: needs
+    icon: "🌙"
+    xp_reward: 40
+    condition: { stat: well_rested_vibe_count, gte: 5 }
+
+  squeaky_clean:
+    display_name: "Squeaky Clean"
+    description: "Keep Hygiene above 80 for 5 days."
+    category: needs
+    icon: "🛁"
+    xp_reward: 35
+    condition: { stat: hygiene_days_above_80, gte: 5 }
+
+  on_purpose:
+    display_name: "On Purpose"
+    description: "Reach 100 Purpose."
+    category: needs
+    icon: "🕯️"
+    xp_reward: 75
+    condition: { stat: purpose_max_reached, gte: 100 }
+
+  all_green:
+    display_name: "All Green"
+    description: "Have all 7 needs above 70 at the same time."
+    category: needs
+    icon: "✨"
+    xp_reward: 100
+    condition: { stat: all_needs_above_70_event, gte: 1 }
+
+  survivor:
+    display_name: "Survivor"
+    description: "Recover from a Critical need back to above 50."
+    category: needs
+    icon: "🔥"
+    xp_reward: 40
+    condition: { stat: critical_need_recoveries, gte: 1 }
+
+  # ── SOCIAL ──────────────────────────────────────────────
+  first_hello:
+    display_name: "First Hello"
+    description: "Meet your first nearby player."
+    category: social
+    icon: "👋"
+    xp_reward: 25
+    condition: { stat: unique_players_met, gte: 1 }
+
+  social_butterfly:
+    display_name: "Social Butterfly"
+    description: "Meet 10 different players."
+    category: social
+    icon: "🦋"
+    xp_reward: 75
+    condition: { stat: unique_players_met, gte: 10 }
+
+  crowd_favorite:
+    display_name: "Crowd Favorite"
+    description: "Meet 50 different players."
+    category: social
+    icon: "🌟"
+    xp_reward: 200
+    condition: { stat: unique_players_met, gte: 50 }
+
+  flare_debut:
+    display_name: "Flare Debut"
+    description: "Post on Flare for the first time."
+    category: social
+    icon: "✦"
+    xp_reward: 20
+    condition: { stat: total_posts, gte: 1 }
+
+  going_viral:
+    display_name: "Going Viral"
+    description: "Get a Viral Moment vibe."
+    category: social
+    icon: "🔥"
+    xp_reward: 150
+    condition: { stat: viral_moments, gte: 1 }
+
+  influencer:
+    display_name: "Influencer"
+    description: "Reach 1,000 Flare followers."
+    category: social
+    icon: "📱"
+    xp_reward: 200
+    condition: { stat: flare_followers, gte: 1000 }
+
+  first_dm:
+    display_name: "First DM"
+    description: "Send your first Ping message."
+    category: social
+    icon: "💬"
+    xp_reward: 15
+    condition: { stat: messages_sent, gte: 1 }
+
+  # ── CAREER ──────────────────────────────────────────────
+  first_shift:
+    display_name: "Clocking In"
+    description: "Complete your first shift."
+    category: career
+    icon: "⏱️"
+    xp_reward: 50
+    condition: { stat: shifts_completed, gte: 1 }
+
+  grind_mode:
+    display_name: "Grind Mode"
+    description: "Complete 25 shifts."
+    category: career
+    icon: "💼"
+    xp_reward: 150
+    condition: { stat: shifts_completed, gte: 25 }
+
+  first_promotion:
+    display_name: "Moving Up"
+    description: "Earn your first promotion."
+    category: career
+    icon: "📈"
+    xp_reward: 100
+    condition: { stat: promotions_earned, gte: 1 }
+
+  side_hustle:
+    display_name: "Side Hustle"
+    description: "Complete 10 odd jobs."
+    category: career
+    icon: "🔧"
+    xp_reward: 60
+    condition: { stat: odd_jobs_completed, gte: 10 }
+
+  full_week:
+    display_name: "Five Day Week"
+    description: "Work every day for 7 days."
+    category: career
+    icon: "🗓️"
+    xp_reward: 120
+    condition: { stat: work_streak_days, gte: 7 }
+
+  # ── SKILL ───────────────────────────────────────────────
+  first_levelup:
+    display_name: "Getting Better"
+    description: "Level up any skill for the first time."
+    category: skill
+    icon: "📈"
+    xp_reward: 30
+    condition: { stat: skill_levelups, gte: 1 }
+
+  jack_of_trades:
+    display_name: "Jack of All Trades"
+    description: "Reach Level 3 in any 3 different skills."
+    category: skill
+    icon: "🎯"
+    xp_reward: 150
+    condition: { stat: skills_at_level_3_plus, gte: 3 }
+
+  mastery:
+    display_name: "Mastery"
+    description: "Reach Level 10 in any skill."
+    category: skill
+    icon: "🏆"
+    xp_reward: 500
+    condition: { stat: skills_at_level_10, gte: 1 }
+
+  # ── ECONOMY ─────────────────────────────────────────────
+  first_purchase:
+    display_name: "First Purchase"
+    description: "Buy something from the shop."
+    category: economy
+    icon: "🛒"
+    xp_reward: 10
+    condition: { stat: total_purchases, gte: 1 }
+
+  big_spender:
+    display_name: "Big Spender"
+    description: "Spend ✦1,000 total."
+    category: economy
+    icon: "💸"
+    xp_reward: 75
+    condition: { stat: lumens_spent_total, gte: 1000 }
+
+  first_topup:
+    display_name: "Topped Up"
+    description: "Top up your Lumens for the first time."
+    category: economy
+    icon: "✦"
+    xp_reward: 20
+    condition: { stat: topup_count, gte: 1 }
+
+  robbery_survivor:
+    display_name: "Robbery Survivor"
+    description: "Get robbed and survive."
+    category: economy
+    icon: "😱"
+    xp_reward: 30
+    condition: { stat: times_robbed, gte: 1 }
+
+  subscribed:
+    display_name: "Subscribed"
+    description: "Hold an active subscription."
+    category: economy
+    icon: "📅"
+    xp_reward: 25
+    condition: { stat: active_subscription_count, gte: 1 }
+
+  # ── LIFE ────────────────────────────────────────────────
+  day_one:
+    display_name: "Day One"
+    description: "Complete your first day."
+    category: life
+    icon: "🌅"
+    xp_reward: 25
+    condition: { stat: days_alive, gte: 1 }
+
+  one_week:
+    display_name: "One Week In"
+    description: "Survive 7 days."
+    category: life
+    icon: "📅"
+    xp_reward: 75
+    condition: { stat: days_alive, gte: 7 }
+
+  one_month:
+    display_name: "One Month Strong"
+    description: "Survive 30 days."
+    category: life
+    icon: "🗓️"
+    xp_reward: 300
+    condition: { stat: days_alive, gte: 30 }
+
+  first_occurrence:
+    display_name: "Life Happens"
+    description: "Add your first life occurrence."
+    category: life
+    icon: "🌊"
+    xp_reward: 20
+    condition: { stat: occurrences_added, gte: 1 }
+
+  trait_set:
+    display_name: "Know Thyself"
+    description: "Complete the trait questionnaire."
+    category: life
+    icon: "🔮"
+    xp_reward: 50
+    condition: { stat: traits_set, gte: 1 }
+
+  # ── SPECIAL ─────────────────────────────────────────────
+  main_character:
+    display_name: "Main Character Energy"
+    description: "Have the Main Character Energy vibe active."
+    category: special
+    icon: "💫"
+    xp_reward: 50
+    condition: { stat: main_character_vibe_count, gte: 1 }
+
+  no_cap:
+    display_name: "No Cap"
+    description: "Have ✦2,500 in your wallet at once."
+    category: special
+    icon: "💰"
+    xp_reward: 200
+    condition: { stat: wallet_peak_balance, gte: 2500 }

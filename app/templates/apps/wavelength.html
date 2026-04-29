@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Wavelength · SL HUD{% endblock %}
+
+{% block extra_style %}
+<style>
+  .station-card {
+    margin: 6px 18px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color .15s;
+  }
+  .station-card.active {
+    border-color: var(--gold);
+    background: var(--gold-light);
+  }
+  .station-card.locked { opacity: .55; }
+  .station-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--bg4); flex-shrink: 0;
+    transition: background .2s;
+  }
+  .station-card.active .station-dot { background: var(--gold); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .station-info { flex: 1; min-width: 0; }
+  .station-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .station-genre { font-size: 11px; color: var(--ink3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .station-badge {
+    font-size: 9px; padding: 2px 7px; border-radius: 20px;
+    font-weight: 600; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0;
+  }
+  .station-badge.free { background: var(--green-light); color: var(--green); }
+  .station-badge.premium { background: var(--gold-light); color: var(--gold); }
+  .station-badge.locked-badge { background: var(--bg3); color: var(--ink3); }
+  .station-play-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 0.5px solid var(--border2);
+    background: var(--bg);
+    font-family: var(--font); font-size: 11px; font-weight: 500;
+    color: var(--ink); cursor: pointer; flex-shrink: 0;
+    transition: background .15s;
+  }
+  .station-play-btn:hover { background: var(--bg3); }
+  .station-card.active .station-play-btn {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .premium-banner {
+    margin: 12px 18px;
+    background: var(--gold-light);
+    border: 0.5px solid rgba(154,124,78,0.3);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .premium-banner .icon { font-size: 24px; flex-shrink: 0; }
+  .premium-banner .text { flex: 1; }
+  .premium-banner .text strong { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .premium-banner .text p { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .premium-banner .btn {
+    padding: 8px 14px; background: var(--ink); color: var(--bg);
+    border: none; border-radius: var(--radius-sm);
+    font-family: var(--font); font-size: 11px; font-weight: 500; cursor: pointer; flex-shrink: 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Wavelength</div>
+    <div class="topbar-title">Music</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+{% if current_station %}
+<div style="padding:10px 18px;background:var(--bg2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;">
+  <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 1.5s infinite;flex-shrink:0;"></div>
+  <div style="font-size:12px;color:var(--ink2);">Now playing: <strong style="color:var(--ink);">
+    {% for s in stations %}{% if s.key == current_station %}{{ s.display_name }}{% endif %}{% endfor %}
+  </strong></div>
+  <button onclick="stopStation()" style="margin-left:auto;padding:5px 12px;border:0.5px solid var(--border2);border-radius:20px;background:transparent;font-family:var(--font);font-size:11px;cursor:pointer;color:var(--ink2);">Stop</button>
+</div>
+{% endif %}
+
+{% if not is_premium %}
+<div class="premium-banner">
+  <div class="icon">🎵</div>
+  <div class="text">
+    <strong>Go Premium</strong>
+    <p>Unlock all 12 stations · 2× Music XP · ✦{{ premium_cost }}/week</p>
+  </div>
+  <button class="btn" onclick="goPremium()">Subscribe</button>
+</div>
+{% else %}
+<div style="margin:10px 18px;padding:9px 14px;background:var(--green-light);border-radius:var(--radius-sm);font-size:11px;color:var(--green);font-weight:500;">
+  ✓ Premium active — all stations unlocked · 2× Music XP
+</div>
+{% endif %}
+
+<div class="section-head">
+  <div class="section-head-title">Stations</div>
+  <div class="section-head-sub">Music plays via your HUD prim — you hear it IRL.</div>
+</div>
+
+<div id="station-list">
+  {% for station in stations %}
+  <div class="station-card {% if station.is_active %}active{% endif %} {% if station.locked %}locked{% endif %}" id="station-{{ station.key }}">
+    <div class="station-dot"></div>
+    <div class="station-info">
+      <div class="station-name">{{ station.display_name }}</div>
+      <div class="station-genre">{{ station.genre }}</div>
+    </div>
+    {% if station.locked %}
+    <span class="station-badge locked-badge">Premium</span>
+    {% elif station.is_premium %}
+    <span class="station-badge premium">Premium</span>
+    {% else %}
+    <span class="station-badge free">Free</span>
+    {% endif %}
+    {% if not station.locked %}
+    <button class="station-play-btn" onclick="tuneIn('{{ station.key }}', '{{ station.display_name }}', '{{ station.stream_url }}')">
+      {% if station.is_active %}Now playing{% else %}Tune in{% endif %}
+    </button>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="scroll-pad"></div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function tuneIn(key, name, url) {
+  fetch('/wavelength/start', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({token: '{{ token }}', station_key: key})
+  }).then(r => r.json()).then(d => {
+    if (d.error) { showToast('❌ ' + d.error); return; }
+    showToast('🎵 Tuning into ' + name);
+    // Update UI
+    document.querySelectorAll('.station-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.station-play-btn').forEach(b => b.textContent = 'Tune in');
+    const card = document.getElementById('station-' + key);
+    if (card) { card.classList.add('active'); card.querySelector('.station-play-btn').textContent = 'Now playing'; }
+    // llMediaOnFace handled by LSL — stream_url returned for HUD to use
+    if (d.stream_url && window.parent) { window.parent.postMessage({type:'play_station', url: d.stream_url}, '*'); }
+  });
+}
+function stopStation() {
+  fetch('/wavelength/stop', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({token: '{{ token }}'})
+  }).then(() => { showToast('Stopped.'); location.reload(); });
+}
+function goPremium() {
+  window.location.href = '/app/haul?token={{ token }}&tab=subs';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Haul · SL HUD{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Haul</div>
+    <div class="topbar-title">Shop</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="tab-specials" onclick="showTab('tab-specials')">This Week</button>
+  <button class="tab" data-tab="tab-all" onclick="showTab('tab-all')">All Items</button>
+  <button class="tab" data-tab="tab-subs" onclick="showTab('tab-subs')">Subscriptions</button>
+</div>
+
+<!-- ── THIS WEEK TAB ── -->
+<div id="tab-specials" class="tab-panel active">
+  {% if weekly_specials %}
+  <div class="section-head">
+    <div class="section-head-title">Weekly specials</div>
+    <div class="section-head-sub">Rotates every Sunday midnight SLT · {{ specials_days_left }}d left</div>
+  </div>
+  <div class="stagger">
+    {% for item in weekly_specials %}
+    <div class="item-card">
+      <div class="item-emoji">{{ item.emoji }}</div>
+      <div class="item-info">
+        <div class="item-name">{{ item.display_name }}</div>
+        {% if item.was_price %}
+        <div class="item-tags"><span class="item-tag" style="text-decoration:line-through;opacity:.5;">✦{{ item.was_price }}</span><span class="item-tag ok">Sale</span></div>
+        {% endif %}
+      </div>
+      <div class="item-right">
+        <div class="item-price"><span class="sym">✦</span>{{ item.special_price }}</div>
+        <button class="item-btn" onclick="buyItem('{{ item.item_key }}', '{{ token }}', '{{ item.display_name }}', {{ item.special_price }})">Order</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🛍️</div>
+    <div class="empty-title">No specials right now</div>
+    <div class="empty-sub">New specials drop every Sunday midnight SLT. Check back soon.</div>
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── ALL ITEMS TAB ── -->
+<div id="tab-all" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Always available</div>
+    <div class="section-head-sub">Order anytime. Delivery is instant.</div>
+  </div>
+
+  <div class="chips-row">
+    <button class="category-chip active" onclick="filterItems('all', this)">All</button>
+    <button class="category-chip" onclick="filterItems('food', this)">Food</button>
+    <button class="category-chip" onclick="filterItems('drinks', this)">Drinks</button>
+  </div>
+
+  <div id="all-items-list" class="stagger">
+    {% for item in all_items %}
+    <div class="item-card" data-cat="{{ item.category }}">
+      <div class="item-emoji">{{ item.emoji }}</div>
+      <div class="item-info">
+        <div class="item-name">{{ item.display_name }}</div>
+        <div class="item-desc">{{ item.description }}</div>
+        {% if item.vibe_name %}<div class="item-tags"><span class="item-tag vibe">{{ item.vibe_name }}</span></div>{% endif %}
+      </div>
+      <div class="item-right">
+        {% if item.lumen_cost == 0 %}
+        <div class="item-price free">Free</div>
+        <button class="item-btn free-btn" onclick="buyItem('{{ item.item_key }}', '{{ token }}', '{{ item.display_name }}', 0)">Collect</button>
+        {% else %}
+        <div class="item-price"><span class="sym">✦</span>{{ item.lumen_cost }}</div>
+        <button class="item-btn" onclick="buyItem('{{ item.item_key }}', '{{ token }}', '{{ item.display_name }}', {{ item.lumen_cost }})">Order</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── SUBSCRIPTIONS TAB ── -->
+<div id="tab-subs" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Subscriptions</div>
+    <div class="section-head-sub">Billed weekly. Cancel anytime from your wallet.</div>
+  </div>
+  <div class="stagger">
+    {% for sub_key, sub in subscription_display.items() %}
+    <div class="item-card">
+      <div class="item-emoji">{{ sub.icon }}</div>
+      <div class="item-info">
+        <div class="item-name">{{ sub.name }}</div>
+        <div class="item-desc">{{ sub.desc }}</div>
+        {% if sub_key in active_subs %}
+        <div class="item-tags"><span class="item-tag ok">Active</span></div>
+        {% endif %}
+      </div>
+      <div class="item-right">
+        <div class="item-price" style="font-size:10px;color:var(--ink3);">✦{{ sub.cost }}<br><span style="font-size:9px;">/ week</span></div>
+        {% if sub_key in active_subs %}
+        <button class="item-btn" style="background:var(--bg3);color:var(--ink2);" onclick="cancelSub('{{ sub_key }}')">Cancel</button>
+        {% else %}
+        <button class="item-btn" onclick="subscribeTo('{{ sub_key }}', '{{ sub.name }}', {{ sub.cost }})">Subscribe</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function filterItems(cat, btn) {
+  document.querySelectorAll('.category-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#all-items-list .item-card').forEach(card => {
+    const cc = card.dataset.cat || '';
+    card.style.display = (cat === 'all' || cc.includes(cat)) ? '' : 'none';
+  });
+}
+function subscribeTo(key, name, cost) {
+  if (!confirm(`Subscribe to ${name} for ✦${cost}/week?`)) return;
+  fetch('/shop/subscribe', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({token: '{{ token }}', subscription_key: key})
+  }).then(r => r.json()).then(d => {
+    if (d.error) { showToast('❌ ' + d.error); }
+    else { showToast('Subscribed to ' + name + ' ✓'); setTimeout(() => location.reload(), 1200); }
+  });
+}
+function cancelSub(key) {
+  fetch('/shop/unsubscribe', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({token: '{{ token }}', subscription_key: key})
+  }).then(r => r.json()).then(d => {
+    showToast('Subscription cancelled.');
+    setTimeout(() => location.reload(), 1200);
+  });
+}
+</script>
+{% endblock %}

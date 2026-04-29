@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Luminary · SL HUD{% endblock %}
+
+{% block extra_style %}
+<style>
+  .wellbeing-arc {
+    margin: 16px 18px;
+    background: var(--bg2);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+  }
+  .wellbeing-score {
+    font-family: var(--font-head);
+    font-size: 48px;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .wellbeing-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--ink3);
+    margin-top: 4px;
+  }
+  .needs-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 0 18px 12px;
+  }
+  .needs-mini-cell {
+    background: var(--bg2);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .needs-mini-icon { font-size: 14px; }
+  .needs-mini-val { font-size: 12px; font-weight: 500; margin-top: 2px; }
+  .needs-mini-val.ok { color: var(--green); }
+  .needs-mini-val.warn { color: var(--amber); }
+  .needs-mini-val.crit { color: var(--rose); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Luminary</div>
+    <div class="topbar-title">Purpose & Meaning</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+<div class="need-bar-wrap">
+  <div class="need-bar-label">
+    <span class="need-name">🕯️ Purpose</span>
+    <span class="need-val">{{ "%.0f"|format(purpose_value) }}/100</span>
+  </div>
+  <div class="need-bar-track">
+    <div class="need-bar-fill {{ purpose_zone }}" style="width:{{ purpose_value }}%;"></div>
+  </div>
+  {% if purpose_zone == 'ok' %}
+  <span class="status-pill ok"><span class="status-dot"></span>Grounded</span>
+  {% elif purpose_zone == 'warn' %}
+  <span class="status-pill warn"><span class="status-dot"></span>Feeling Lost</span>
+  {% else %}
+  <span class="status-pill crit"><span class="status-dot"></span>Lost — XP heavily reduced</span>
+  {% endif %}
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="tab-purpose" onclick="showTab('tab-purpose')">Purpose</button>
+  <button class="tab" data-tab="tab-reflection" onclick="showTab('tab-reflection')">Reflection</button>
+</div>
+
+<!-- ── PURPOSE TAB ── -->
+<div id="tab-purpose" class="tab-panel active">
+  <div class="section-head">
+    <div class="section-head-title">What fills Purpose</div>
+    <div class="section-head-sub">Purpose rises when your other needs are healthy.</div>
+  </div>
+  <div class="stagger">
+    <div class="item-card">
+      <div class="item-emoji">⚖️</div>
+      <div class="item-info">
+        <div class="item-name">Keep all needs healthy</div>
+        <div class="item-desc">Purpose passively gains when your overall wellbeing score is above 60.</div>
+        <div class="item-tags"><span class="item-tag ok">Passive gain</span></div>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">📈</div>
+      <div class="item-info">
+        <div class="item-name">Level up any skill</div>
+        <div class="item-desc">Every skill level-up gives a flat +5 Purpose bonus immediately.</div>
+        <div class="item-tags"><span class="item-tag">Instant +5</span></div>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">🌊</div>
+      <div class="item-info">
+        <div class="item-name">Life occurrences</div>
+        <div class="item-desc">Active life events can push Purpose up or down depending on their type.</div>
+        <div class="item-tags"><span class="item-tag">Via Canvas</span></div>
+      </div>
+      <div class="item-right">
+        <a href="/app/canvas?token={{ token }}&tab=occurrences" class="item-btn" style="text-decoration:none;">View</a>
+      </div>
+    </div>
+  </div>
+
+  {% if purpose_occurrences %}
+  <div class="section-head" style="margin-top:8px;">
+    <div class="section-head-title">Active occurrences affecting you</div>
+  </div>
+  <div class="stagger">
+    {% for occ in purpose_occurrences %}
+    <div class="item-card">
+      <div class="item-emoji">🌊</div>
+      <div class="item-info">
+        <div class="item-name">{{ occ.key | replace('_',' ') | title }}</div>
+        {% if occ.sub_stage %}<div class="item-desc" style="font-size:11px;color:var(--ink3);">{{ occ.sub_stage | replace('_',' ') | title }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if purpose_log %}
+  <div class="section-head" style="margin-top:8px;">
+    <div class="section-head-title">Recent activity</div>
+  </div>
+  <div class="stagger">
+    {% for entry in purpose_log %}
+    <div class="log-entry">
+      <div class="log-text">{{ entry.action_text }}</div>
+      <div class="log-meta">
+        {% if entry.delta > 0 %}<span style="color:var(--green);">+{{ "%.0f"|format(entry.delta) }}</span>{% else %}<span style="color:var(--rose);">{{ "%.0f"|format(entry.delta) }}</span>{% endif %}
+        · {{ entry.time_ago }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── REFLECTION TAB ── -->
+<div id="tab-reflection" class="tab-panel">
+
+  <div class="wellbeing-arc">
+    <div class="wellbeing-score">{{ "%.0f"|format(wellbeing) }}</div>
+    <div class="wellbeing-label">Overall Wellbeing</div>
+    <div style="font-size:11px;color:var(--ink3);margin-top:6px;">Average of all 7 needs · Purpose passively gains above 60</div>
+  </div>
+
+  <div class="section-head">
+    <div class="section-head-title">All needs at a glance</div>
+  </div>
+  {% set need_icons = {"hunger":"🍞","thirst":"💧","energy":"⚡","fun":"🎉","social":"🫂","hygiene":"🛁","purpose":"🕯️"} %}
+  <div class="needs-mini-grid">
+    {% for key, val in needs_map.items() %}
+    {% set zone = "ok" if val >= 50 else ("warn" if val >= 25 else "crit") %}
+    <div class="needs-mini-cell">
+      <div class="needs-mini-icon">{{ need_icons.get(key, "◦") }}</div>
+      <div class="needs-mini-val {{ zone }}">{{ "%.0f"|format(val) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="section-head" style="margin-top:4px;">
+    <div class="section-head-title">What's helping</div>
+  </div>
+  <div class="stagger">
+    {% set helpers = namespace(found=false) %}
+    {% for key, val in needs_map.items() %}
+    {% if val >= 70 %}{% set helpers.found = true %}
+    <div class="item-card">
+      <div class="item-emoji">{{ need_icons.get(key, "◦") }}</div>
+      <div class="item-info">
+        <div class="item-name">{{ key | title }} is healthy</div>
+        <div class="item-desc">{{ "%.0f"|format(val) }}/100 — contributing to passive Purpose gain.</div>
+        <div class="item-tags"><span class="item-tag ok">Helping</span></div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% if not helpers.found %}
+    <div class="empty-state" style="padding:20px 0;">
+      <div class="empty-sub">No needs above 70 right now. Take care of yourself.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% set drainers = namespace(found=false) %}
+  {% for key, val in needs_map.items() %}{% if val < 40 %}{% set drainers.found = true %}{% endif %}{% endfor %}
+  {% if drainers.found %}
+  <div class="section-head" style="margin-top:4px;">
+    <div class="section-head-title">What's hurting</div>
+  </div>
+  <div class="stagger">
+    {% for key, val in needs_map.items() %}
+    {% if val < 40 %}
+    <div class="item-card">
+      <div class="item-emoji">{{ need_icons.get(key, "◦") }}</div>
+      <div class="item-info">
+        <div class="item-name">{{ key | title }} is low</div>
+        <div class="item-desc">{{ "%.0f"|format(val) }}/100 — dragging your wellbeing score down.</div>
+        <div class="item-tags"><span class="item-tag crit">Hurting</span></div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}

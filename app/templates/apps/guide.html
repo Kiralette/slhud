@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Guide · SL HUD{% endblock %}
+
+{% block extra_style %}
+<style>
+  .guide-nav {
+    display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 18px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .guide-nav-btn {
+    padding: 6px 14px; border-radius: 20px;
+    border: 0.5px solid var(--border2); background: var(--bg2);
+    font-family: var(--font); font-size: 11px; color: var(--ink2);
+    cursor: pointer; text-decoration: none; display: inline-block;
+    transition: background .15s;
+  }
+  .guide-nav-btn.active {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .guide-section { display: none; }
+  .guide-section.active { display: block; }
+  .guide-qa { border-bottom: 0.5px solid var(--border); }
+  .guide-q {
+    padding: 12px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .guide-q::after { content: '+'; color: var(--ink3); font-size: 16px; }
+  .guide-q.open::after { content: '–'; }
+  .guide-a {
+    display: none; padding: 0 18px 14px;
+    font-size: 12px; color: var(--ink2); line-height: 1.7;
+  }
+  .guide-a.open { display: block; }
+  .career-card {
+    margin: 6px 18px; background: var(--bg2);
+    border: 0.5px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .career-card-header {
+    padding: 12px 14px; display: flex; gap: 10px; align-items: center;
+    cursor: pointer;
+  }
+  .career-card-header .icon { font-size: 20px; }
+  .career-card-header .name { font-size: 13px; font-weight: 500; flex: 1; }
+  .career-card-header .badge {
+    font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .career-card-header .badge.legal  { background: var(--green-light); color: var(--green); }
+  .career-card-header .badge.grey   { background: var(--rose-light); color: var(--rose); }
+  .career-tiers { padding: 0 14px 12px; display: none; }
+  .career-tiers.open { display: block; }
+  .career-tier-row {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--ink2); padding: 4px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .career-tier-row:last-child { border: none; }
+  .career-tier-pay { color: var(--gold); font-weight: 500; }
+  .trait-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px 18px;
+  }
+  .trait-chip {
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    font-size: 11px; font-weight: 500;
+    border: 0.5px solid var(--border);
+  }
+  .trait-chip.positive { background: var(--green-light); color: var(--green); }
+  .trait-chip.negative { background: var(--rose-light); color: var(--rose); }
+  .trait-chip.neutral  { background: var(--bg2); color: var(--ink2); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Guide</div>
+    <div class="topbar-title">Help & Info</div>
+  </div>
+</div>
+
+<div class="guide-nav">
+  <a href="?token={{ token }}&page=home"    class="guide-nav-btn {% if page == 'home' %}active{% endif %}">Home</a>
+  <a href="?token={{ token }}&page=faq"     class="guide-nav-btn {% if page == 'faq' %}active{% endif %}">FAQ</a>
+  <a href="?token={{ token }}&page=careers" class="guide-nav-btn {% if page == 'careers' %}active{% endif %}">Careers</a>
+  <a href="?token={{ token }}&page=traits"  class="guide-nav-btn {% if page == 'traits' %}active{% endif %}">Traits</a>
+  <a href="?token={{ token }}&page=economy" class="guide-nav-btn {% if page == 'economy' %}active{% endif %}">Economy</a>
+</div>
+
+<!-- ── HOME ── -->
+<div class="guide-section {% if page == 'home' %}active{% endif %}">
+  <div class="section-head">
+    <div class="section-head-title">Welcome to SL Phone HUD</div>
+    <div class="section-head-sub">A slice-of-life sim for Second Life.</div>
+  </div>
+  <div style="padding:0 18px;font-size:12px;color:var(--ink2);line-height:1.8;">
+    <p>The HUD tracks your character's <strong>7 needs</strong> — Hunger, Thirst, Energy, Fun, Social, Hygiene, and Purpose. Needs decay over time while the HUD is worn. Keep them healthy to earn XP and unlock content.</p>
+    <br>
+    <p>Earn <strong>Lumens (✦)</strong> by working jobs, completing odd jobs, and selling on Flare. Spend them in Haul, Lumen Eats, Sip, and Wavelength.</p>
+    <br>
+    <p>Build <strong>7 skills</strong> by using related objects in-world. Higher skills unlock new interactions, better jobs, and passive bonuses.</p>
+  </div>
+  <div class="section-head" style="margin-top:12px;">
+    <div class="section-head-title">Quick links</div>
+  </div>
+  <div class="stagger" style="padding-bottom:0;">
+    <div class="item-card" onclick="window.location.href='?token={{ token }}&page=faq'">
+      <div class="item-emoji">❓</div>
+      <div class="item-info"><div class="item-name">FAQ</div><div class="item-desc">Common questions answered.</div></div>
+    </div>
+    <div class="item-card" onclick="window.location.href='?token={{ token }}&page=careers'">
+      <div class="item-emoji">💼</div>
+      <div class="item-info"><div class="item-name">Career Guide</div><div class="item-desc">All 17 career paths and their tiers.</div></div>
+    </div>
+    <div class="item-card" onclick="window.location.href='?token={{ token }}&page=traits'">
+      <div class="item-emoji">🔮</div>
+      <div class="item-info"><div class="item-name">Trait Guide</div><div class="item-desc">What each trait does.</div></div>
+    </div>
+    <div class="item-card" onclick="window.location.href='?token={{ token }}&page=economy'">
+      <div class="item-emoji">✦</div>
+      <div class="item-info"><div class="item-name">Economy Guide</div><div class="item-desc">Lumens, top-up rates, and subscriptions.</div></div>
+    </div>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── FAQ ── -->
+<div class="guide-section {% if page == 'faq' %}active{% endif %}">
+  <div class="section-head">
+    <div class="section-head-title">Frequently asked questions</div>
+  </div>
+  {% set faqs = [
+    ("How do needs decay?", "Needs lose points every minute while your HUD is worn. Decay is slower when offline. Purpose is special — it rises and falls based on your overall wellbeing."),
+    ("What are Lumens?", "Lumens (✦) are the in-game currency. You earn them by working shifts, completing odd jobs, and brand deals on Flare. You can also top up by purchasing L$ from a Lumen vendor."),
+    ("What are vibes?", "Vibes are temporary moodlets applied by your actions, traits, and life events. Positive vibes boost XP and decay rates. Negative ones slow you down. Check Canvas → Vibes to see yours."),
+    ("How do skills level up?", "Skills gain XP when you use related objects in-world. Higher levels unlock new interactions and bonuses. Open any skill app from the skill nav to see your progress."),
+    ("What's the difference between Lumen Eats and Haul?", "Lumen Eats is food only. Sip is drinks. Haul is everything else — subscriptions, weekly specials on non-food items, and general shop."),
+    ("What are grey area careers?", "Grey area careers (The Syndicate, Underground Casino, etc.) pay more per shift but give no skill XP and carry future raid risk. They show up in red in Grind."),
+    ("How does Flare work?", "Post to Flare to gain followers. Your follower count grows automatically over time, scaled by your Creativity and Charisma skills. Brand deals unlock at 500, 1k, 5k, 10k, and 50k followers."),
+    ("Can I change my traits?", "Yes, but there's a 14-day cooldown between changes. Edit traits in Canvas → Traits. The questionnaire gives you a guided path, or you can pick manually."),
+    ("What happens when a need hits zero?", "Your HUD says an emote out loud via /me and a mechanical penalty kicks in — XP reduction, blocked actions, or worse. Fill the need ASAP."),
+    ("How do I earn more Purpose?", "Keep all other needs above 60 (passive gain), level up any skill (+5 flat), and resolve negative life occurrences. Check Luminary → Reflection for specifics."),
+  ] %}
+  {% for q, a in faqs %}
+  <div class="guide-qa">
+    <div class="guide-q" onclick="toggleQA(this)">{{ q }}</div>
+    <div class="guide-a">{{ a }}</div>
+  </div>
+  {% endfor %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── CAREERS ── -->
+<div class="guide-section {% if page == 'careers' %}active{% endif %}">
+  <div class="section-head">
+    <div class="section-head-title">Career paths</div>
+    <div class="section-head-sub">17 paths — apply via Grind. Max shift: 4 hours.</div>
+  </div>
+  {% for career in career_list %}
+  <div class="career-card">
+    <div class="career-card-header" onclick="toggleCareer(this)">
+      <div class="icon">{{ career.icon }}</div>
+      <div class="name">{{ career.name }}</div>
+      <div class="badge {% if career.is_grey_area %}grey{% else %}legal{% endif %}">
+        {% if career.is_grey_area %}Grey Area{% else %}Legal{% endif %}
+      </div>
+    </div>
+    <div class="career-tiers">
+      {% for tier in career.tiers %}
+      <div class="career-tier-row">
+        <span>Tier {{ tier.level }} · {{ tier.title }}</span>
+        <span class="career-tier-pay">✦{{ tier.daily_pay }}/shift</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── TRAITS ── -->
+<div class="guide-section {% if page == 'traits' %}active{% endif %}">
+  <div class="section-head">
+    <div class="section-head-title">Traits</div>
+    <div class="section-head-sub">Up to 5 traits. Negative traits give ✦50 each at start. Mechanics are hidden — flavor only.</div>
+  </div>
+  {% set positive_traits = trait_defs | dictsort | selectattr('1.is_negative', 'equalto', False) | list %}
+  {% set negative_traits = trait_defs | dictsort | selectattr('1.is_negative', 'equalto', True) | list %}
+  <div style="padding:8px 18px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--green);">Positive traits</div>
+  <div class="trait-grid">
+    {% for key, tdef in trait_defs.items() %}{% if not tdef.get('is_negative') %}
+    <div class="trait-chip positive">{{ tdef.get('display', key) }}</div>
+    {% endif %}{% endfor %}
+  </div>
+  <div style="padding:8px 18px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--rose);">Negative traits</div>
+  <div class="trait-grid">
+    {% for key, tdef in trait_defs.items() %}{% if tdef.get('is_negative') %}
+    <div class="trait-chip negative">{{ tdef.get('display', key) }}</div>
+    {% endif %}{% endfor %}
+  </div>
+  <div style="padding:8px 18px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Neutral traits</div>
+  <div class="trait-grid">
+    {% for key, tdef in trait_defs.items() %}{% if not tdef.get('is_negative') and tdef.get('category') == 'neutral' %}
+    <div class="trait-chip neutral">{{ tdef.get('display', key) }}</div>
+    {% endif %}{% endfor %}
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── ECONOMY ── -->
+<div class="guide-section {% if page == 'economy' %}active{% endif %}">
+  <div class="section-head">
+    <div class="section-head-title">Lumens economy</div>
+  </div>
+  <div style="padding:0 18px;font-size:12px;line-height:1.8;color:var(--ink2);">
+    <p><strong>Currency:</strong> Lumens (✦) · Starting balance ✦500</p>
+    <br>
+    <p><strong>L$ Top-up rates:</strong></p>
+    <p style="margin-left:12px;">L$250 → ✦50<br>L$500 → ✦150<br>L$1,000 → ✦350<br>L$2,500 → ✦1,000</p>
+    <br>
+    <p><strong>Subscriptions (weekly):</strong></p>
+    <p style="margin-left:12px;">Wavelength Premium — ✦25/week<br>Gym Membership — ✦30/week<br>Flare Verified — ✦20/week</p>
+    <br>
+    <p><strong>Robbery:</strong> There's a small daily chance of being robbed in grey-area zones. Up to 30% of your balance can be stolen. Robbery survivor? Check Canvas → Legacy for the achievement.</p>
+    <br>
+    <p><strong>Odd jobs:</strong> 2 slots per day, reset midnight SLT. Pay ranges from ✦35 to ✦55 per job.</p>
+    <br>
+    <p><strong>Brand deals:</strong> Unlock at 500, 1k, 5k, 10k, and 50k Flare followers. Pays weekly automatically.</p>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function toggleQA(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+function toggleCareer(el) {
+  el.nextElementSibling.classList.toggle('open');
+}
+</script>
+{% endblock %}

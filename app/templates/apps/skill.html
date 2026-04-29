@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.app_name }} · SL HUD{% endblock %}
+
+{% block extra_style %}
+<style>
+  :root {
+    --skill-color: {{ meta.color }};
+    --skill-light: {{ meta.color }}18;
+  }
+  .skill-hero {
+    padding: 20px 18px 16px;
+    background: var(--bg2);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .skill-hero-top {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+  }
+  .skill-icon-big {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: var(--skill-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex-shrink: 0;
+  }
+  .skill-level-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--ink3); margin-bottom: 2px;
+  }
+  .skill-level-num {
+    font-family: var(--font-head); font-size: 36px; font-weight: 300;
+    color: var(--ink); line-height: 1;
+  }
+  .skill-level-max { font-size: 14px; color: var(--ink3); }
+  .xp-track {
+    height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .xp-fill {
+    height: 100%; border-radius: 3px;
+    background: var(--skill-color);
+    transition: width .4s ease;
+  }
+  .xp-meta {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--ink3);
+  }
+  .unlock-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 18px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .unlock-lv {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .unlock-lv.unlocked { background: var(--skill-light); color: var(--skill-color); }
+  .unlock-lv.locked   { background: var(--bg3); color: var(--ink3); }
+  .unlock-desc { font-size: 12px; color: var(--ink2); line-height: 1.5; padding-top: 6px; }
+  .unlock-desc.locked { color: var(--ink3); }
+
+  .skill-nav {
+    display: flex; gap: 6px; overflow-x: auto; padding: 10px 18px;
+    scrollbar-width: none; border-bottom: 0.5px solid var(--border);
+  }
+  .skill-nav::-webkit-scrollbar { display: none; }
+  .skill-nav-btn {
+    padding: 6px 14px; border-radius: 20px; white-space: nowrap;
+    border: 0.5px solid var(--border2); background: var(--bg2);
+    font-family: var(--font); font-size: 11px; color: var(--ink2);
+    cursor: pointer; text-decoration: none; display: inline-block;
+    transition: background .15s;
+  }
+  .skill-nav-btn.current {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .skill-nav-btn:hover:not(.current) { background: var(--bg3); }
+
+  {% if skill_key == 'fitness' %}
+  .workout-day {
+    display: flex; align-items: center; gap: 10px; padding: 8px 18px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .workout-day-name { font-size: 12px; font-weight: 500; width: 70px; flex-shrink: 0; }
+  .workout-day-label { font-size: 11px; color: var(--ink3); flex: 1; }
+  .workout-day-check { font-size: 16px; }
+  {% endif %}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">{{ meta.app_name }}</div>
+    <div class="topbar-title">{{ skill_cfg.display_name }} Skill</div>
+  </div>
+</div>
+
+<!-- Skill nav: switch between skill apps -->
+<div class="skill-nav">
+  {% for sk, sm in skills_list %}
+  <a href="/app/skill/{{ sk }}?token={{ token }}"
+     class="skill-nav-btn {% if sk == skill_key %}current{% endif %}">
+    {{ sm.icon }} {{ sm.app_name }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Level hero -->
+<div class="skill-hero">
+  <div class="skill-hero-top">
+    <div class="skill-icon-big">{{ meta.icon }}</div>
+    <div>
+      <div class="skill-level-label">Level</div>
+      <div class="skill-level-num">{{ level }}<span class="skill-level-max">/{{ max_level }}</span></div>
+    </div>
+  </div>
+  <div class="xp-track">
+    <div class="xp-fill" style="width:{{ xp_pct }}%;"></div>
+  </div>
+  <div class="xp-meta">
+    <span>{{ "%.0f"|format(xp) }} XP</span>
+    {% if xp_needed %}<span>{{ "%.0f"|format(xp_needed) }} to next level</span>
+    {% else %}<span style="color:var(--gold);">Max level ✦</span>{% endif %}
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="tab-unlocks" onclick="showTab('tab-unlocks')">Unlocks</button>
+  <button class="tab" data-tab="tab-log" onclick="showTab('tab-log')">Log</button>
+  {% if skill_key == 'fitness' %}
+  <button class="tab" data-tab="tab-workout" onclick="showTab('tab-workout')">Workout Plan</button>
+  {% endif %}
+</div>
+
+<!-- ── UNLOCKS ── -->
+<div id="tab-unlocks" class="tab-panel active">
+  <div class="section-head">
+    <div class="section-head-title">Level unlocks</div>
+    <div class="section-head-sub">Abilities you gain as {{ skill_cfg.display_name }} grows.</div>
+  </div>
+  {% for unlock in all_unlocks %}
+  <div class="unlock-item">
+    <div class="unlock-lv {% if unlock.unlocked %}unlocked{% else %}locked{% endif %}">
+      Lv{{ unlock.level }}
+    </div>
+    <div class="unlock-desc {% if not unlock.unlocked %}locked{% endif %}">
+      {% if not unlock.unlocked %}🔒 {% endif %}{{ unlock.desc }}
+    </div>
+  </div>
+  {% endfor %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── LOG ── -->
+<div id="tab-log" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Recent XP activity</div>
+  </div>
+  {% if skill_log %}
+  <div class="stagger">
+    {% for entry in skill_log %}
+    <div class="log-entry">
+      <div class="log-text">{{ entry.action_text }}</div>
+      <div class="log-meta">
+        {% if entry.delta > 0 %}<span style="color:var(--skill-color);">+{{ "%.0f"|format(entry.delta) }} XP</span>
+        {% else %}<span style="color:var(--rose);">{{ "%.0f"|format(entry.delta) }}</span>{% endif %}
+        · {{ entry.time_ago }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">{{ meta.icon }}</div>
+    <div class="empty-title">No activity yet</div>
+    <div class="empty-sub">Use {{ skill_cfg.display_name }}-related objects to earn XP.</div>
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+{% if skill_key == 'fitness' %}
+<!-- ── WORKOUT PLAN (Stride only) ── -->
+<div id="tab-workout" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Workout plan</div>
+    <div class="section-head-sub">Set gym days to get reminders and track your streak.</div>
+  </div>
+  {% set days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] %}
+  {% set day_keys = ["mon","tue","wed","thu","fri","sat","sun"] %}
+  {% set plan = workout_plan or {} %}
+  {% for i in range(7) %}
+  {% set dk = day_keys[i] %}
+  <div class="workout-day">
+    <div class="workout-day-name">{{ days[i] }}</div>
+    <div class="workout-day-label">{{ plan.get(dk + '_focus', 'Rest') if plan else 'Rest' }}</div>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" id="day-{{ dk }}" {% if plan and plan.get(dk + '_active') %}checked{% endif %}
+             onchange="updateWorkout()" style="width:16px;height:16px;accent-color:var(--skill-color);">
+    </label>
+  </div>
+  {% endfor %}
+  <div style="padding:14px 18px;">
+    <button onclick="saveWorkout()" style="width:100%;padding:12px;background:var(--ink);color:var(--bg);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;">Save workout plan</button>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+{% if skill_key == 'fitness' %}
+function saveWorkout() {
+  const days = ['mon','tue','wed','thu','fri','sat','sun'];
+  const plan = {};
+  days.forEach(d => plan[d + '_active'] = document.getElementById('day-' + d)?.checked || false);
+  fetch('/skill/workout-plan', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({token: '{{ token }}', plan})
+  }).then(() => showToast('Workout plan saved ✓'));
+}
+{% endif %}
+</script>
+{% endblock %}

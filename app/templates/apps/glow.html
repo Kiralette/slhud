@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Glow · SL HUD{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Glow</div>
+    <div class="topbar-title">Hygiene & Self-care</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+<div class="need-bar-wrap">
+  <div class="need-bar-label">
+    <span class="need-name">🛁 Hygiene</span>
+    <span class="need-val">{{ "%.0f"|format(hygiene_value) }}/100</span>
+  </div>
+  <div class="need-bar-track">
+    <div class="need-bar-fill {{ hygiene_zone }}" style="width:{{ hygiene_value }}%;"></div>
+  </div>
+  {% if hygiene_zone == 'ok' %}
+  <span class="status-pill ok"><span class="status-dot"></span>Fresh</span>
+  {% elif hygiene_zone == 'warn' %}
+  <span class="status-pill warn"><span class="status-dot"></span>Could Use a Wash</span>
+  {% else %}
+  <span class="status-pill crit"><span class="status-dot"></span>Very Unhygienic — Social gains reduced</span>
+  {% endif %}
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="tab-hygiene" onclick="showTab('tab-hygiene')">Hygiene</button>
+  <button class="tab" data-tab="tab-facilities" onclick="showTab('tab-facilities')">Facilities</button>
+</div>
+
+<!-- ── HYGIENE TAB ── -->
+<div id="tab-hygiene" class="tab-panel active">
+
+  <div style="margin:12px 18px;padding:11px 14px;background:var(--green-light);border:0.5px solid rgba(74,124,95,0.25);border-radius:var(--radius);">
+    <div style="font-size:11px;color:var(--green);font-weight:600;">✓ Hygiene is always free.</div>
+    <div style="font-size:11px;color:var(--green);margin-top:2px;">Use any shower, bath, or hygiene object to fill your Hygiene at no cost.</div>
+  </div>
+
+  <div class="section-head">
+    <div class="section-head-title">Ways to freshen up</div>
+  </div>
+  <div class="stagger">
+    <div class="item-card">
+      <div class="item-emoji">🚿</div>
+      <div class="item-info">
+        <div class="item-name">Shower</div>
+        <div class="item-desc">Fast and full restore. Find shower objects at home or public facilities.</div>
+        <div class="item-tags"><span class="item-tag ok">Full restore</span><span class="item-tag">Free</span></div>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">🛁</div>
+      <div class="item-info">
+        <div class="item-name">Bath</div>
+        <div class="item-desc">Slower than a shower but also restores a small amount of Energy.</div>
+        <div class="item-tags"><span class="item-tag ok">+Energy</span><span class="item-tag">Free</span></div>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">🪥</div>
+      <div class="item-info">
+        <div class="item-name">Quick freshen-up</div>
+        <div class="item-desc">Sink or mirror objects give a partial Hygiene boost. Good in a pinch.</div>
+        <div class="item-tags"><span class="item-tag">Partial restore</span><span class="item-tag">Free</span></div>
+      </div>
+    </div>
+  </div>
+
+  {% if hygiene_log %}
+  <div class="section-head" style="margin-top:8px;">
+    <div class="section-head-title">Recent activity</div>
+  </div>
+  <div class="stagger">
+    {% for entry in hygiene_log %}
+    <div class="log-entry">
+      <div class="log-text">{{ entry.action_text }}</div>
+      <div class="log-meta">
+        {% if entry.delta > 0 %}<span style="color:var(--green);">+{{ "%.0f"|format(entry.delta) }}</span>{% else %}<span style="color:var(--rose);">{{ "%.0f"|format(entry.delta) }}</span>{% endif %}
+        · {{ entry.time_ago }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── FACILITIES TAB ── -->
+<div id="tab-facilities" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Nearby facilities</div>
+    <div class="section-head-sub">Hygiene objects detected within 20m.</div>
+  </div>
+  <div class="empty-state">
+    <div class="empty-icon">📡</div>
+    <div class="empty-title">Scanning…</div>
+    <div class="empty-sub">Move around to detect hygiene objects nearby.</div>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}

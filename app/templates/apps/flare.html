@@ -171,6 +171,35 @@
 {% endblock %}
 
 {% block content %}
+
+<!-- Post card macro -->
+{% macro _render_post(post, token) %}
+<div class="post-card">
+  <div class="post-header">
+    <div>
+      <div class="post-author">{{ post.display_name or 'Unknown' }}</div>
+      <div class="post-meta">{{ post.created_at[:10] if post.created_at else '' }}</div>
+    </div>
+    {% if post.quality_tier > 0 %}
+    <span class="post-quality q{{ post.quality_tier }}">
+      {% if post.quality_tier == 1 %}Good{% elif post.quality_tier == 2 %}Great{% else %}✦ Exceptional{% endif %}
+    </span>
+    {% endif %}
+  </div>
+  <div class="post-cat">{{ post.category|title }}</div>
+  <div class="post-content">{{ post.content_text }}</div>
+  <div class="post-actions">
+    <button class="post-action-btn" onclick="likePost({{ post.id }}, '{{ token }}', this)">
+      ♡ Like
+    </button>
+    <button class="post-action-btn" onclick="commentPost({{ post.id }}, '{{ token }}')">
+      💬 Comment
+    </button>
+    <span class="post-npc-count">{{ post.npc_likes }} likes · {{ post.npc_comments }} comments</span>
+  </div>
+</div>
+{% endmacro %}
+
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="topbar-left">
@@ -334,33 +363,6 @@
   <div class="scroll-pad"></div>
 </div>
 
-<!-- Post card macro -->
-{% macro _render_post(post, token) %}
-<div class="post-card">
-  <div class="post-header">
-    <div>
-      <div class="post-author">{{ post.display_name or 'Unknown' }}</div>
-      <div class="post-meta">{{ post.created_at[:10] if post.created_at else '' }}</div>
-    </div>
-    {% if post.quality_tier > 0 %}
-    <span class="post-quality q{{ post.quality_tier }}">
-      {% if post.quality_tier == 1 %}Good{% elif post.quality_tier == 2 %}Great{% else %}✦ Exceptional{% endif %}
-    </span>
-    {% endif %}
-  </div>
-  <div class="post-cat">{{ post.category|title }}</div>
-  <div class="post-content">{{ post.content_text }}</div>
-  <div class="post-actions">
-    <button class="post-action-btn" onclick="likePost({{ post.id }}, '{{ token }}', this)">
-      ♡ Like
-    </button>
-    <button class="post-action-btn" onclick="commentPost({{ post.id }}, '{{ token }}')">
-      💬 Comment
-    </button>
-    <span class="post-npc-count">{{ post.npc_likes }} likes · {{ post.npc_comments }} comments</span>
-  </div>
-</div>
-{% endmacro %}
 {% endblock %}
 
 {% block extra_script %}

@@ -1032,3 +1032,686 @@ async def canvas(
         "app_icons":             app_icons,
         "days_until_trait_edit": days_until_trait_edit,
     })
+
+
+# ── RECHARGE ──────────────────────────────────────────────────────────────────
+@router.get("/recharge", response_class=HTMLResponse)
+async def recharge(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        need_row    = await db.fetchrow("SELECT value FROM needs WHERE player_id = $1 AND need_key = 'energy'", player_id)
+        wallet_row  = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        log_rows    = await db.fetch(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = $1 AND need_key = 'energy' ORDER BY timestamp DESC LIMIT 20", player_id)
+        settings_row = await db.fetchrow("SELECT * FROM player_settings WHERE player_id = $1", player_id)
+    else:
+        async with db.execute("SELECT value FROM needs WHERE player_id = ? AND need_key = 'energy'", (player_id,)) as cur:
+            need_row = await cur.fetchone()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = ? AND need_key = 'energy' ORDER BY timestamp DESC LIMIT 20", (player_id,)) as cur:
+            log_rows = await cur.fetchall()
+        async with db.execute("SELECT * FROM player_settings WHERE player_id = ?", (player_id,)) as cur:
+            settings_row = await cur.fetchone()
+
+    energy_value = float(need_row["value"]) if need_row else 100.0
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+    settings = dict(settings_row) if settings_row else {}
+
+    def energy_zone(v):
+        if v >= 50: return "ok"
+        elif v >= 25: return "warn"
+        return "crit"
+
+    energy_log = [
+        {"action_text": r["action_text"], "delta": float(r["delta"]),
+         "value_after": float(r["value_after"]) if r["value_after"] else None,
+         "time_ago": time_ago(r["timestamp"])}
+        for r in log_rows
+    ]
+
+    return templates.TemplateResponse("apps/recharge.html", {
+        "request":       request,
+        "token":         token,
+        "player":        player,
+        "energy_value":  energy_value,
+        "energy_zone":   energy_zone(energy_value),
+        "wallet_balance": wallet_balance,
+        "energy_log":    energy_log,
+        "settings":      settings,
+    })
+
+
+# ── THRILL ────────────────────────────────────────────────────────────────────
+@router.get("/thrill", response_class=HTMLResponse)
+async def thrill(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        need_row   = await db.fetchrow("SELECT value FROM needs WHERE player_id = $1 AND need_key = 'fun'", player_id)
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        log_rows   = await db.fetch(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = $1 AND need_key = 'fun' ORDER BY timestamp DESC LIMIT 20", player_id)
+        events_rows = await db.fetch(
+            "SELECT * FROM calendar_events WHERE is_public = 1 AND event_date_slt >= now()::text ORDER BY event_date_slt ASC LIMIT 10")
+    else:
+        async with db.execute("SELECT value FROM needs WHERE player_id = ? AND need_key = 'fun'", (player_id,)) as cur:
+            need_row = await cur.fetchone()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = ? AND need_key = 'fun' ORDER BY timestamp DESC LIMIT 20", (player_id,)) as cur:
+            log_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT * FROM calendar_events WHERE is_public = 1 AND event_date_slt >= date('now') ORDER BY event_date_slt ASC LIMIT 10") as cur:
+            events_rows = await cur.fetchall()
+
+    fun_value = float(need_row["value"]) if need_row else 100.0
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+
+    def fun_zone(v):
+        if v >= 50: return "ok"
+        elif v >= 25: return "warn"
+        return "crit"
+
+    fun_log = [
+        {"action_text": r["action_text"], "delta": float(r["delta"]),
+         "value_after": float(r["value_after"]) if r["value_after"] else None,
+         "time_ago": time_ago(r["timestamp"])}
+        for r in log_rows
+    ]
+    public_events = [dict(r) for r in events_rows]
+
+    return templates.TemplateResponse("apps/thrill.html", {
+        "request":       request,
+        "token":         token,
+        "player":        player,
+        "fun_value":     fun_value,
+        "fun_zone":      fun_zone(fun_value),
+        "wallet_balance": wallet_balance,
+        "fun_log":       fun_log,
+        "public_events": public_events,
+    })
+
+
+# ── AURA ──────────────────────────────────────────────────────────────────────
+@router.get("/aura", response_class=HTMLResponse)
+async def aura(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+
+    if is_postgres():
+        need_row   = await db.fetchrow("SELECT value FROM needs WHERE player_id = $1 AND need_key = 'social'", player_id)
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        log_rows   = await db.fetch(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = $1 AND need_key = 'social' ORDER BY timestamp DESC LIMIT 20", player_id)
+        nearby_rows = await db.fetch(
+            """SELECT p.display_name, p.avatar_uuid, pl.zone_type, pl.entered_at
+               FROM proximity_log pl JOIN players p ON p.id = pl.nearby_player_id
+               WHERE pl.player_id = $1 AND pl.is_still_nearby = 1
+               ORDER BY pl.entered_at DESC LIMIT 20""", player_id)
+        follow_count = await db.fetchval("SELECT COUNT(*) FROM follows WHERE follower_id = $1", player_id)
+        follower_count = await db.fetchval("SELECT COUNT(*) FROM follows WHERE following_id = $1", player_id)
+    else:
+        async with db.execute("SELECT value FROM needs WHERE player_id = ? AND need_key = 'social'", (player_id,)) as cur:
+            need_row = await cur.fetchone()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = ? AND need_key = 'social' ORDER BY timestamp DESC LIMIT 20", (player_id,)) as cur:
+            log_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT p.display_name, p.avatar_uuid, pl.zone_type, pl.entered_at
+               FROM proximity_log pl JOIN players p ON p.id = pl.nearby_player_id
+               WHERE pl.player_id = ? AND pl.is_still_nearby = 1
+               ORDER BY pl.entered_at DESC LIMIT 20""", (player_id,)) as cur:
+            nearby_rows = await cur.fetchall()
+        async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE follower_id = ?", (player_id,)) as cur:
+            fc = await cur.fetchone(); follow_count = fc["cnt"] if fc else 0
+        async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE following_id = ?", (player_id,)) as cur:
+            fc2 = await cur.fetchone(); follower_count = fc2["cnt"] if fc2 else 0
+
+    social_value = float(need_row["value"]) if need_row else 100.0
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+
+    def social_zone(v):
+        if v >= 50: return "ok"
+        elif v >= 25: return "warn"
+        return "crit"
+
+    social_log = [
+        {"action_text": r["action_text"], "delta": float(r["delta"]),
+         "value_after": float(r["value_after"]) if r["value_after"] else None,
+         "time_ago": time_ago(r["timestamp"])}
+        for r in log_rows
+    ]
+    nearby = [dict(r) for r in nearby_rows]
+
+    return templates.TemplateResponse("apps/aura.html", {
+        "request":        request,
+        "token":          token,
+        "player":         player,
+        "social_value":   social_value,
+        "social_zone":    social_zone(social_value),
+        "wallet_balance": wallet_balance,
+        "social_log":     social_log,
+        "nearby":         nearby,
+        "follow_count":   follow_count,
+        "follower_count": follower_count,
+    })
+
+
+# ── GLOW ──────────────────────────────────────────────────────────────────────
+@router.get("/glow", response_class=HTMLResponse)
+async def glow(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+
+    if is_postgres():
+        need_row   = await db.fetchrow("SELECT value FROM needs WHERE player_id = $1 AND need_key = 'hygiene'", player_id)
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        log_rows   = await db.fetch(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = $1 AND need_key = 'hygiene' ORDER BY timestamp DESC LIMIT 20", player_id)
+    else:
+        async with db.execute("SELECT value FROM needs WHERE player_id = ? AND need_key = 'hygiene'", (player_id,)) as cur:
+            need_row = await cur.fetchone()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = ? AND need_key = 'hygiene' ORDER BY timestamp DESC LIMIT 20", (player_id,)) as cur:
+            log_rows = await cur.fetchall()
+
+    hygiene_value = float(need_row["value"]) if need_row else 100.0
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+
+    def hygiene_zone(v):
+        if v >= 50: return "ok"
+        elif v >= 25: return "warn"
+        return "crit"
+
+    hygiene_log = [
+        {"action_text": r["action_text"], "delta": float(r["delta"]),
+         "value_after": float(r["value_after"]) if r["value_after"] else None,
+         "time_ago": time_ago(r["timestamp"])}
+        for r in log_rows
+    ]
+
+    return templates.TemplateResponse("apps/glow.html", {
+        "request":        request,
+        "token":          token,
+        "player":         player,
+        "hygiene_value":  hygiene_value,
+        "hygiene_zone":   hygiene_zone(hygiene_value),
+        "wallet_balance": wallet_balance,
+        "hygiene_log":    hygiene_log,
+    })
+
+
+# ── LUMINARY ──────────────────────────────────────────────────────────────────
+@router.get("/luminary", response_class=HTMLResponse)
+async def luminary(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+
+    if is_postgres():
+        need_row    = await db.fetchrow("SELECT value FROM needs WHERE player_id = $1 AND need_key = 'purpose'", player_id)
+        wallet_row  = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        all_needs   = await db.fetch("SELECT need_key, value FROM needs WHERE player_id = $1", player_id)
+        log_rows    = await db.fetch(
+            """SELECT action_text, delta, value_after, timestamp FROM event_log
+               WHERE player_id = $1 AND need_key = 'purpose'
+               ORDER BY timestamp DESC LIMIT 20""", player_id)
+        occ_rows    = await db.fetch(
+            """SELECT occurrence_key, sub_stage FROM player_occurrences
+               WHERE player_id = $1 AND is_resolved = 0""", player_id)
+        weekly_rows = await db.fetch(
+            """SELECT need_key, AVG(value_after) as avg_val, date(timestamp) as day
+               FROM event_log WHERE player_id = $1
+               AND timestamp >= (now() - interval '7 days')::text
+               GROUP BY need_key, date(timestamp) ORDER BY day ASC""", player_id)
+    else:
+        async with db.execute("SELECT value FROM needs WHERE player_id = ? AND need_key = 'purpose'", (player_id,)) as cur:
+            need_row = await cur.fetchone()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute("SELECT need_key, value FROM needs WHERE player_id = ?", (player_id,)) as cur:
+            all_needs = await cur.fetchall()
+        async with db.execute(
+            "SELECT action_text, delta, value_after, timestamp FROM event_log WHERE player_id = ? AND need_key = 'purpose' ORDER BY timestamp DESC LIMIT 20", (player_id,)) as cur:
+            log_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT occurrence_key, sub_stage FROM player_occurrences WHERE player_id = ? AND is_resolved = 0", (player_id,)) as cur:
+            occ_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT need_key, AVG(value_after) as avg_val, date(timestamp) as day
+               FROM event_log WHERE player_id = ?
+               AND timestamp >= datetime('now', '-7 days')
+               GROUP BY need_key, date(timestamp) ORDER BY day ASC""", (player_id,)) as cur:
+            weekly_rows = await cur.fetchall()
+
+    purpose_value = float(need_row["value"]) if need_row else 100.0
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+    needs_map = {r["need_key"]: float(r["value"]) for r in all_needs}
+    wellbeing = sum(needs_map.values()) / max(len(needs_map), 1)
+
+    def purpose_zone(v):
+        if v >= 50: return "ok"
+        elif v >= 25: return "warn"
+        return "crit"
+
+    purpose_log = [
+        {"action_text": r["action_text"], "delta": float(r["delta"]),
+         "value_after": float(r["value_after"]) if r["value_after"] else None,
+         "time_ago": time_ago(r["timestamp"])}
+        for r in log_rows
+    ]
+
+    # Occurrences affecting purpose
+    purpose_occurrences = []
+    for r in occ_rows:
+        k = r["occurrence_key"]
+        purpose_occurrences.append({"key": k, "sub_stage": r["sub_stage"]})
+
+    return templates.TemplateResponse("apps/luminary.html", {
+        "request":             request,
+        "token":               token,
+        "player":              player,
+        "purpose_value":       purpose_value,
+        "purpose_zone":        purpose_zone(purpose_value),
+        "wallet_balance":      wallet_balance,
+        "purpose_log":         purpose_log,
+        "wellbeing":           round(wellbeing, 1),
+        "needs_map":           needs_map,
+        "purpose_occurrences": purpose_occurrences,
+    })
+
+
+# ── HAUL ──────────────────────────────────────────────────────────────────────
+@router.get("/haul", response_class=HTMLResponse)
+async def haul(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        specials_rows = await db.fetch(
+            "SELECT * FROM weekly_specials WHERE available_until > now()::text ORDER BY is_pinned DESC, created_at DESC LIMIT 6")
+        sub_rows = await db.fetch(
+            "SELECT * FROM subscriptions WHERE player_id = $1", player_id)
+    else:
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT * FROM weekly_specials WHERE available_until > datetime('now') ORDER BY is_pinned DESC, created_at DESC LIMIT 6") as cur:
+            specials_rows = await cur.fetchall()
+        async with db.execute("SELECT * FROM subscriptions WHERE player_id = ?", (player_id,)) as cur:
+            sub_rows = await cur.fetchall()
+
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+
+    emoji_map = {
+        "water": "💧", "basic_snack": "🥨", "basic_meal": "🍱",
+        "good_meal": "🍝", "nice_meal": "🍽️", "coffee": "☕",
+        "juice": "🧃", "energy_drink": "⚡", "specialty_drink": "🧋",
+    }
+    weekly_specials = []
+    for row in specials_rows:
+        ik = row["item_key"]
+        base = cfg["shop_items"].get(ik, {})
+        weekly_specials.append({
+            "item_key": ik,
+            "display_name": row["display_name_override"] or base.get("display_name", ik),
+            "special_price": int(row["special_price"]),
+            "was_price": int(base.get("lumen_cost", 0)) if row["special_price"] < base.get("lumen_cost", 9999) else None,
+            "emoji": emoji_map.get(ik, "🛍️"),
+        })
+
+    # All shop items (non-food shown in Haul, food cross-listed)
+    all_items = build_shop_items(cfg)
+
+    # Subscription definitions from config
+    sub_defs = cfg.get("subscriptions", []) if isinstance(cfg.get("subscriptions"), list) else list(cfg.get("subscriptions", {}).keys())
+    active_subs = {r["subscription_key"] for r in sub_rows if r.get("is_active")}
+
+    subscription_display = {
+        "wavelength_premium": {"name": "Wavelength Premium", "icon": "🎵", "desc": "All 12 stations · 2× Music XP", "cost": cfg["wavelength"]["premium_cost_weekly"]},
+        "gym_membership":     {"name": "Gym Membership",     "icon": "💪", "desc": "Fitness XP +15% per session",   "cost": 30},
+        "flare_verified":     {"name": "Flare Verified",     "icon": "✦",  "desc": "Social gains +10% · Verified badge", "cost": 20},
+    }
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    days_left = 7 - now.weekday() if now.weekday() <= 6 else 1
+
+    return templates.TemplateResponse("apps/haul.html", {
+        "request":             request,
+        "token":               token,
+        "player":              player,
+        "wallet_balance":      wallet_balance,
+        "weekly_specials":     weekly_specials,
+        "specials_days_left":  days_left,
+        "all_items":           all_items,
+        "subscription_display": subscription_display,
+        "active_subs":         active_subs,
+    })
+
+
+# ── WAVELENGTH ────────────────────────────────────────────────────────────────
+@router.get("/wavelength", response_class=HTMLResponse)
+async def wavelength_app(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        sub_row    = await db.fetchrow(
+            "SELECT * FROM subscriptions WHERE player_id = $1 AND subscription_key = 'wavelength_premium' AND is_active = 1", player_id)
+        session_row = await db.fetchrow(
+            "SELECT * FROM streaming_sessions WHERE player_id = $1 AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1", player_id)
+    else:
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT * FROM subscriptions WHERE player_id = ? AND subscription_key = 'wavelength_premium' AND is_active = 1", (player_id,)) as cur:
+            sub_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT * FROM streaming_sessions WHERE player_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1", (player_id,)) as cur:
+            session_row = await cur.fetchone()
+
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+    is_premium = bool(sub_row)
+    wave_cfg = cfg.get("wavelength", {})
+    free_station_keys = set(wave_cfg.get("free_tier_stations", []))
+    stations_cfg = wave_cfg.get("stations", {})
+    premium_cost = wave_cfg.get("premium_cost_weekly", 25)
+
+    current_station = dict(session_row)["station_key"] if session_row else None
+
+    stations = []
+    for key, sc in stations_cfg.items():
+        locked = sc.get("is_premium", False) and not is_premium
+        stations.append({
+            "key":          key,
+            "display_name": sc.get("display_name", key),
+            "genre":        sc.get("genre", ""),
+            "stream_url":   sc.get("stream_url", ""),
+            "is_premium":   sc.get("is_premium", False),
+            "locked":       locked,
+            "is_active":    key == current_station,
+        })
+
+    return templates.TemplateResponse("apps/wavelength.html", {
+        "request":         request,
+        "token":           token,
+        "player":          player,
+        "wallet_balance":  wallet_balance,
+        "stations":        stations,
+        "is_premium":      is_premium,
+        "premium_cost":    premium_cost,
+        "current_station": current_station,
+    })
+
+
+# ── SKILL APPS (7 dynamic) ────────────────────────────────────────────────────
+SKILL_APP_META = {
+    "cooking":    {"app_name": "Craft",   "icon": "🍳", "color": "#993c1d"},
+    "creativity": {"app_name": "Flow",    "icon": "🎨", "color": "#ba7517"},
+    "charisma":   {"app_name": "Charm",   "icon": "💬", "color": "#1d9e75"},
+    "fitness":    {"app_name": "Stride",  "icon": "💪", "color": "#534ab7"},
+    "gaming":     {"app_name": "Play",    "icon": "🎮", "color": "#4a7c5f"},
+    "music":      {"app_name": "Strings", "icon": "🎵", "color": "#9c5050"},
+    "knowledge":  {"app_name": "Pages",   "icon": "📚", "color": "#5f5e5a"},
+}
+
+@router.get("/skill/{skill_key}", response_class=HTMLResponse)
+async def skill_app(
+    skill_key: str,
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    cfg = get_config()
+    if skill_key not in cfg.get("skills", {}):
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Unknown skill.</h2>", status_code=404)
+
+    player_id = player["id"]
+    skill_cfg = cfg["skills"][skill_key]
+    meta = SKILL_APP_META.get(skill_key, {"app_name": skill_key.title(), "icon": "⭐", "color": "#9a7c4e"})
+
+    if is_postgres():
+        skill_row = await db.fetchrow(
+            "SELECT level, xp FROM skills WHERE player_id = $1 AND skill_key = $2", player_id, skill_key)
+        log_rows  = await db.fetch(
+            """SELECT action_text, delta, value_after, timestamp FROM event_log
+               WHERE player_id = $1 AND need_key = $2
+               ORDER BY timestamp DESC LIMIT 20""", player_id, skill_key)
+        workout_row = await db.fetchrow(
+            "SELECT * FROM workout_plans WHERE player_id = $1 ORDER BY created_at DESC LIMIT 1", player_id) if skill_key == "fitness" else None
+    else:
+        async with db.execute(
+            "SELECT level, xp FROM skills WHERE player_id = ? AND skill_key = ?", (player_id, skill_key)) as cur:
+            skill_row = await cur.fetchone()
+        async with db.execute(
+            """SELECT action_text, delta, value_after, timestamp FROM event_log
+               WHERE player_id = ? AND need_key = ?
+               ORDER BY timestamp DESC LIMIT 20""", (player_id, skill_key)) as cur:
+            log_rows = await cur.fetchall()
+        workout_row = None
+        if skill_key == "fitness":
+            async with db.execute(
+                "SELECT * FROM workout_plans WHERE player_id = ? ORDER BY created_at DESC LIMIT 1", (player_id,)) as cur:
+                workout_row = await cur.fetchone()
+
+    level = int(skill_row["level"]) if skill_row else 1
+    xp    = float(skill_row["xp"])  if skill_row else 0.0
+    max_level = skill_cfg.get("max_level", 10)
+    xp_levels = skill_cfg.get("xp_per_level", [100] * max_level)
+    xp_needed = xp_levels[min(level - 1, len(xp_levels) - 1)] if level < max_level else None
+    xp_pct = int(min(100, (xp / xp_needed * 100))) if xp_needed else 100
+    level_unlocks = skill_cfg.get("level_unlocks", {})
+
+    skill_log = [
+        {"action_text": r["action_text"], "delta": float(r["delta"]),
+         "value_after": float(r["value_after"]) if r["value_after"] else None,
+         "time_ago": time_ago(r["timestamp"])}
+        for r in log_rows
+    ]
+
+    # Build unlock list: all levels annotated with locked/unlocked
+    all_unlocks = []
+    for lv in range(1, max_level + 1):
+        desc = level_unlocks.get(lv)
+        if desc:
+            all_unlocks.append({"level": lv, "desc": desc, "unlocked": level >= lv})
+
+    return templates.TemplateResponse("apps/skill.html", {
+        "request":      request,
+        "token":        token,
+        "player":       player,
+        "skill_key":    skill_key,
+        "skill_cfg":    skill_cfg,
+        "meta":         meta,
+        "level":        level,
+        "xp":           xp,
+        "xp_needed":    xp_needed,
+        "xp_pct":       xp_pct,
+        "max_level":    max_level,
+        "all_unlocks":  all_unlocks,
+        "skill_log":    skill_log,
+        "workout_plan": dict(workout_row) if workout_row else None,
+        "skills_list":  list(SKILL_APP_META.items()),
+    })
+
+
+# ── PULSE (home widget) ───────────────────────────────────────────────────────
+@router.get("/pulse", response_class=HTMLResponse)
+async def pulse(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        needs_rows   = await db.fetch("SELECT need_key, value FROM needs WHERE player_id = $1", player_id)
+        wallet_row   = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        vibes_rows   = await db.fetch(
+            "SELECT vibe_key, display_name, is_positive, expires_at FROM vibes WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text) ORDER BY applied_at DESC LIMIT 6", player_id)
+        notif_count  = await db.fetchval(
+            "SELECT COUNT(*) FROM notifications WHERE player_id = $1 AND is_read = 0", player_id)
+    else:
+        async with db.execute("SELECT need_key, value FROM needs WHERE player_id = ?", (player_id,)) as cur:
+            needs_rows = await cur.fetchall()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT vibe_key, display_name, is_positive, expires_at FROM vibes WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY applied_at DESC LIMIT 6", (player_id,)) as cur:
+            vibes_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT COUNT(*) as cnt FROM notifications WHERE player_id = ? AND is_read = 0", (player_id,)) as cur:
+            nc = await cur.fetchone(); notif_count = nc["cnt"] if nc else 0
+
+    needs_cfg = cfg.get("needs", {})
+    needs_data = []
+    for r in needs_rows:
+        k = r["need_key"]
+        v = float(r["value"])
+        nc = needs_cfg.get(k, {})
+        warn = nc.get("warn_threshold", 40)
+        crit = nc.get("crit_threshold", 20)
+        zone = "ok" if v >= warn else ("warn" if v >= crit else "crit")
+        needs_data.append({
+            "key":          k,
+            "display_name": nc.get("display_name", k.title()),
+            "icon":         nc.get("icon", ""),
+            "color":        nc.get("color", "#9a7c4e"),
+            "value":        v,
+            "zone":         zone,
+        })
+
+    # Sort: standard order
+    order = ["hunger", "thirst", "energy", "fun", "social", "hygiene", "purpose"]
+    needs_data.sort(key=lambda x: order.index(x["key"]) if x["key"] in order else 99)
+
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+    vibes = [dict(r) for r in vibes_rows]
+
+    # App nav links for pulse
+    app_links = [
+        {"key": "lumen-eats", "label": "Lumen Eats", "icon": "🍞", "need": "hunger"},
+        {"key": "sip",        "label": "Sip",         "icon": "💧", "need": "thirst"},
+        {"key": "recharge",   "label": "Recharge",    "icon": "⚡", "need": "energy"},
+        {"key": "thrill",     "label": "Thrill",      "icon": "🎉", "need": "fun"},
+        {"key": "aura",       "label": "Aura",        "icon": "🫂", "need": "social"},
+        {"key": "glow",       "label": "Glow",        "icon": "🛁", "need": "hygiene"},
+        {"key": "luminary",   "label": "Luminary",    "icon": "🕯️", "need": "purpose"},
+    ]
+
+    return templates.TemplateResponse("apps/pulse.html", {
+        "request":        request,
+        "token":          token,
+        "player":         player,
+        "needs_data":     needs_data,
+        "wallet_balance": wallet_balance,
+        "vibes":          vibes,
+        "notif_count":    notif_count,
+        "app_links":      app_links,
+    })
+
+
+# ── GUIDE ─────────────────────────────────────────────────────────────────────
+@router.get("/guide", response_class=HTMLResponse)
+async def guide(
+    request: Request,
+    token: str = Query(""),
+    page: str = Query("home"),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    cfg = get_config()
+    careers = cfg.get("careers", {}).get("paths", {})
+    career_list = [
+        {"key": k, "name": v.get("display_name", k), "icon": v.get("icon", "💼"),
+         "is_grey_area": v.get("is_grey_area", False),
+         "tiers": [{"level": lv, **td} for lv, td in v.get("tiers", {}).items()]}
+        for k, v in careers.items()
+    ]
+    trait_defs = cfg.get("traits", {}).get("definitions", {})
+
+    return templates.TemplateResponse("apps/guide.html", {
+        "request":     request,
+        "token":       token,
+        "player":      player,
+        "page":        page,
+        "career_list": career_list,
+        "trait_defs":  trait_defs,
+    })

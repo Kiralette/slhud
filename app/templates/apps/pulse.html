@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Pulse · SL HUD{% endblock %}
+
+{% block extra_style %}
+<style>
+  .pulse-grid {
+    padding: 14px 18px;
+  }
+  .pulse-need-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pulse-need-icon {
+    font-size: 18px; width: 28px; text-align: center; flex-shrink: 0;
+  }
+  .pulse-need-info { flex: 1; min-width: 0; }
+  .pulse-need-header {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--ink2); font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .pulse-need-val {
+    font-size: 11px; color: var(--ink3);
+  }
+  .pulse-bar-track {
+    height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden;
+  }
+  .pulse-bar-fill {
+    height: 100%; border-radius: 3px; transition: width .4s ease;
+  }
+  .pulse-bar-fill.ok   { background: var(--green); }
+  .pulse-bar-fill.warn { background: var(--amber); }
+  .pulse-bar-fill.crit { background: var(--rose); animation: crit-pulse 1.5s infinite; }
+  @keyframes crit-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  .wallet-banner {
+    margin: 0 18px 14px;
+    background: var(--gold-light);
+    border: 0.5px solid rgba(154,124,78,.25);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .wallet-banner-label { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); }
+  .wallet-banner-amount { font-family: var(--font-head); font-size: 26px; font-weight: 400; color: var(--ink); line-height: 1; }
+  .wallet-banner-sub { font-size: 10px; color: var(--ink3); margin-top: 1px; }
+
+  .vibes-row {
+    padding: 0 18px 12px;
+    display: flex; gap: 7px; flex-wrap: wrap;
+  }
+  .vibe-pill {
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 500;
+    background: var(--bg2); color: var(--ink2);
+    border: 0.5px solid var(--border);
+  }
+  .vibe-pill.positive { background: var(--green-light); color: var(--green); border-color: rgba(74,124,95,.2); }
+  .vibe-pill.negative { background: var(--rose-light); color: var(--rose); border-color: rgba(156,80,80,.2); }
+
+  .quick-apps {
+    display: grid; grid-template-columns: repeat(4,1fr); gap: 8px;
+    padding: 0 18px 16px;
+  }
+  .quick-app {
+    background: var(--bg2); border-radius: var(--radius-sm);
+    padding: 10px 6px; text-align: center; text-decoration: none;
+    cursor: pointer; border: 0.5px solid var(--border);
+    transition: background .15s;
+  }
+  .quick-app:hover { background: var(--bg3); }
+  .quick-app-icon { font-size: 20px; margin-bottom: 4px; }
+  .quick-app-label { font-size: 9px; color: var(--ink3); text-transform: uppercase; letter-spacing: .08em; }
+
+  .notif-badge {
+    display: inline-block; background: var(--rose); color: white;
+    font-size: 9px; font-weight: 700; border-radius: 20px;
+    padding: 1px 6px; margin-left: 4px; vertical-align: top;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Minimal topbar for home -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">SL Phone HUD</div>
+    <div class="topbar-title">{{ player.display_name }}</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    {% if notif_count > 0 %}
+    <a href="/app/canvas?token={{ token }}&tab=notifications" style="text-decoration:none;font-size:12px;padding:5px 10px;background:var(--rose);color:white;border-radius:20px;font-weight:600;">
+      {{ notif_count }}
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Wallet -->
+<div class="wallet-banner">
+  <div>
+    <div class="wallet-banner-label">Lumens</div>
+    <div class="wallet-banner-amount">✦{{ "%.0f"|format(wallet_balance) }}</div>
+    <div class="wallet-banner-sub">Tap to open Vault</div>
+  </div>
+  <a href="/app/vault?token={{ token }}" style="font-size:22px;text-decoration:none;">💰</a>
+</div>
+
+<!-- Needs -->
+<div class="pulse-grid">
+  <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-bottom:10px;">Needs</div>
+  {% for need in needs_data %}
+  <a href="/app/{{ app_links | selectattr('need', 'equalto', need.key) | map(attribute='key') | first | default(need.key) }}?token={{ token }}"
+     class="pulse-need-row" style="text-decoration:none;">
+    <div class="pulse-need-icon">{{ need.icon }}</div>
+    <div class="pulse-need-info">
+      <div class="pulse-need-header">
+        <span>{{ need.display_name }}</span>
+        <span class="pulse-need-val">{{ "%.0f"|format(need.value) }}</span>
+      </div>
+      <div class="pulse-bar-track">
+        <div class="pulse-bar-fill {{ need.zone }}" style="width:{{ need.value }}%;background:{{ need.color }};"></div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Active vibes -->
+{% if vibes %}
+<div style="padding:0 18px 6px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Active vibes</div>
+<div class="vibes-row">
+  {% for vibe in vibes %}
+  <span class="vibe-pill {{ 'positive' if vibe.is_positive else 'negative' }}">
+    {{ vibe.display_name }}
+  </span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Quick app links -->
+<div style="padding:0 18px 8px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Apps</div>
+<div class="quick-apps">
+  <a href="/app/lumen-eats?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">🍽️</div>
+    <div class="quick-app-label">Eats</div>
+  </a>
+  <a href="/app/grind?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">💼</div>
+    <div class="quick-app-label">Grind</div>
+  </a>
+  <a href="/app/flare?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">✦</div>
+    <div class="quick-app-label">Flare</div>
+  </a>
+  <a href="/app/canvas?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">🪞</div>
+    <div class="quick-app-label">Canvas</div>
+  </a>
+  <a href="/app/wavelength?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">🎵</div>
+    <div class="quick-app-label">Wavelength</div>
+  </a>
+  <a href="/app/ritual?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">🗓️</div>
+    <div class="quick-app-label">Ritual</div>
+  </a>
+  <a href="/app/haul?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">🛍️</div>
+    <div class="quick-app-label">Haul</div>
+  </a>
+  <a href="/app/guide?token={{ token }}" class="quick-app">
+    <div class="quick-app-icon">📖</div>
+    <div class="quick-app-label">Guide</div>
+  </a>
+</div>
+
+<div class="scroll-pad"></div>
+
+{% endblock %}

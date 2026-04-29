@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Aura · SL HUD{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Aura</div>
+    <div class="topbar-title">Social & Connection</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+<div class="need-bar-wrap">
+  <div class="need-bar-label">
+    <span class="need-name">🫂 Social</span>
+    <span class="need-val">{{ "%.0f"|format(social_value) }}/100</span>
+  </div>
+  <div class="need-bar-track">
+    <div class="need-bar-fill {{ social_zone }}" style="width:{{ social_value }}%;"></div>
+  </div>
+  {% if social_zone == 'ok' %}
+  <span class="status-pill ok"><span class="status-dot"></span>Connected</span>
+  {% elif social_zone == 'warn' %}
+  <span class="status-pill warn"><span class="status-dot"></span>Feeling Isolated</span>
+  {% else %}
+  <span class="status-pill crit"><span class="status-dot"></span>Isolated — XP reduced</span>
+  {% endif %}
+</div>
+
+<!-- Social counts -->
+<div style="display:flex;gap:1px;padding:0 18px 12px;">
+  <div style="flex:1;background:var(--bg2);border-radius:var(--radius-sm) 0 0 var(--radius-sm);padding:10px 14px;text-align:center;">
+    <div style="font-size:18px;font-family:var(--font-head);font-weight:400;">{{ follow_count }}</div>
+    <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;">Following</div>
+  </div>
+  <div style="flex:1;background:var(--bg2);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:10px 14px;text-align:center;">
+    <div style="font-size:18px;font-family:var(--font-head);font-weight:400;">{{ follower_count }}</div>
+    <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;">Followers</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="tab-social" onclick="showTab('tab-social')">Social</button>
+  <button class="tab" data-tab="tab-nearby" onclick="showTab('tab-nearby')">Who's Around</button>
+</div>
+
+<!-- ── SOCIAL TAB ── -->
+<div id="tab-social" class="tab-panel active">
+  <div class="section-head">
+    <div class="section-head-title">Build your Social</div>
+    <div class="section-head-sub">Interactions with HUD wearers fill Social fastest.</div>
+  </div>
+  <div class="stagger">
+    <div class="item-card">
+      <div class="item-emoji">💬</div>
+      <div class="item-info">
+        <div class="item-name">Talk to people</div>
+        <div class="item-desc">Proximity to other HUD wearers passively fills Social. Higher Charisma = more gain.</div>
+        <div class="item-tags"><span class="item-tag">Charisma XP</span></div>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">✦</div>
+      <div class="item-info">
+        <div class="item-name">Post on Flare</div>
+        <div class="item-desc">Sharing and getting engagement fills Social. Posting streaks give bonus gains.</div>
+        <div class="item-tags"><span class="item-tag">Via Flare</span></div>
+      </div>
+      <div class="item-right">
+        <a href="/app/flare?token={{ token }}" class="item-btn" style="text-decoration:none;">Open</a>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">💌</div>
+      <div class="item-info">
+        <div class="item-name">Ping someone</div>
+        <div class="item-desc">Sending a message gives a small Social boost. Receiving replies gives more.</div>
+        <div class="item-tags"><span class="item-tag">Via Ping</span></div>
+      </div>
+      <div class="item-right">
+        <a href="/app/ping?token={{ token }}" class="item-btn" style="text-decoration:none;">Open</a>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">🤝</div>
+      <div class="item-info">
+        <div class="item-name">Check In</div>
+        <div class="item-desc">Check in on a nearby player to fill their Social and yours a little.</div>
+        <div class="item-tags"><span class="item-tag ok">Mutual boost</span></div>
+      </div>
+    </div>
+  </div>
+
+  {% if social_log %}
+  <div class="section-head" style="margin-top:8px;">
+    <div class="section-head-title">Recent activity</div>
+  </div>
+  <div class="stagger">
+    {% for entry in social_log %}
+    <div class="log-entry">
+      <div class="log-text">{{ entry.action_text }}</div>
+      <div class="log-meta">
+        {% if entry.delta > 0 %}<span style="color:var(--green);">+{{ "%.0f"|format(entry.delta) }}</span>{% else %}<span style="color:var(--rose);">{{ "%.0f"|format(entry.delta) }}</span>{% endif %}
+        · {{ entry.time_ago }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── WHO'S AROUND TAB ── -->
+<div id="tab-nearby" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Who's around</div>
+    <div class="section-head-sub">HUD wearers within 20m of you right now.</div>
+  </div>
+  {% if nearby %}
+  <div class="stagger">
+    {% for person in nearby %}
+    <div class="item-card">
+      <div class="item-emoji">👤</div>
+      <div class="item-info">
+        <div class="item-name">{{ person.display_name }}</div>
+        <div class="item-desc" style="font-size:11px;color:var(--ink3);">Nearby · {{ person.zone_type or 'unknown zone' }}</div>
+      </div>
+      <div class="item-right">
+        <a href="/app/ping?token={{ token }}" class="item-btn" style="text-decoration:none;">Ping</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">👥</div>
+    <div class="empty-title">Nobody nearby</div>
+    <div class="empty-sub">HUD wearers within 20m will appear here automatically.</div>
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Thrill · SL HUD{% endblock %}
+
+{% block content %}
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Thrill</div>
+    <div class="topbar-title">Fun & Entertainment</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(wallet_balance) }}
+    <span>Balance</span>
+  </div>
+</div>
+
+<div class="need-bar-wrap">
+  <div class="need-bar-label">
+    <span class="need-name">🎉 Fun</span>
+    <span class="need-val">{{ "%.0f"|format(fun_value) }}/100</span>
+  </div>
+  <div class="need-bar-track">
+    <div class="need-bar-fill {{ fun_zone }}" style="width:{{ fun_value }}%;"></div>
+  </div>
+  {% if fun_zone == 'ok' %}
+  <span class="status-pill ok"><span class="status-dot"></span>Entertained</span>
+  {% elif fun_zone == 'warn' %}
+  <span class="status-pill warn"><span class="status-dot"></span>Getting Bored</span>
+  {% else %}
+  <span class="status-pill crit"><span class="status-dot"></span>Very Bored — XP reduced</span>
+  {% endif %}
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="tab-fun" onclick="showTab('tab-fun')">Fun</button>
+  <button class="tab" data-tab="tab-events" onclick="showTab('tab-events')">What's On</button>
+  <button class="tab" data-tab="tab-activity" onclick="showTab('tab-activity')">Activity</button>
+</div>
+
+<!-- ── FUN TAB ── -->
+<div id="tab-fun" class="tab-panel active">
+  <div class="section-head">
+    <div class="section-head-title">Ways to have fun</div>
+    <div class="section-head-sub">Any interactive object around you counts.</div>
+  </div>
+  <div class="stagger">
+    <div class="item-card">
+      <div class="item-emoji">🎮</div>
+      <div class="item-info">
+        <div class="item-name">Games & Arcade</div>
+        <div class="item-desc">Interact with game objects. More Fun per session with higher Gaming skill.</div>
+        <div class="item-tags"><span class="item-tag">Gaming XP</span></div>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">🎨</div>
+      <div class="item-info">
+        <div class="item-name">Creative Activities</div>
+        <div class="item-desc">Art, music, crafts — all fill Fun and grant Creativity XP.</div>
+        <div class="item-tags"><span class="item-tag">Creativity XP</span></div>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">🎵</div>
+      <div class="item-info">
+        <div class="item-name">Wavelength</div>
+        <div class="item-desc">Listening to music slows Fun decay. Premium stations have better bonuses.</div>
+        <div class="item-tags"><span class="item-tag">Via Wavelength</span></div>
+      </div>
+      <div class="item-right">
+        <a href="/app/wavelength?token={{ token }}" class="item-btn" style="text-decoration:none;">Open</a>
+      </div>
+    </div>
+    <div class="item-card">
+      <div class="item-emoji">🎲</div>
+      <div class="item-info">
+        <div class="item-name">Random Fun</div>
+        <div class="item-desc">Interact with any entertainment object in-world for a spontaneous Fun boost.</div>
+        <div class="item-tags"><span class="item-tag ok">Instant boost</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── WHAT'S ON TAB ── -->
+<div id="tab-events" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">What's on</div>
+    <div class="section-head-sub">Upcoming public community events.</div>
+  </div>
+  {% if public_events %}
+  <div class="stagger">
+    {% for ev in public_events %}
+    <div class="item-card">
+      <div class="item-emoji">📅</div>
+      <div class="item-info">
+        <div class="item-name">{{ ev.title }}</div>
+        <div class="item-desc" style="font-size:11px;color:var(--ink3);">{{ ev.event_date_slt }}{% if ev.location %} · {{ ev.location }}{% endif %}</div>
+        {% if ev.description %}<div class="item-desc">{{ ev.description }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📅</div>
+    <div class="empty-title">Nothing on right now</div>
+    <div class="empty-sub">Check Ritual to add or browse community events.</div>
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── ACTIVITY TAB ── -->
+<div id="tab-activity" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Recent fun activity</div>
+  </div>
+  {% if fun_log %}
+  <div class="stagger">
+    {% for entry in fun_log %}
+    <div class="log-entry">
+      <div class="log-text">{{ entry.action_text }}</div>
+      <div class="log-meta">
+        {% if entry.delta > 0 %}<span style="color:var(--green);">+{{ "%.0f"|format(entry.delta) }}</span>{% else %}<span style="color:var(--rose);">{{ "%.0f"|format(entry.delta) }}</span>{% endif %}
+        {% if entry.value_after %} → {{ "%.0f"|format(entry.value_after) }}{% endif %}
+        · {{ entry.time_ago }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🎉</div>
+    <div class="empty-title">No activity yet</div>
+    <div class="empty-sub">Go have some fun and it'll show up here.</div>
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+{% endblock %}
