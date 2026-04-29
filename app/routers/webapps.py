@@ -587,3 +587,149 @@ async def grind(
     })
 
 
+
+# ── FLARE ─────────────────────────────────────────────────────────────────────
+@router.get("/flare", response_class=HTMLResponse)
+async def flare(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    # Wallet
+    if is_postgres():
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        stats_row  = await db.fetchrow("SELECT * FROM flare_stats WHERE player_id = $1", player_id)
+        following_count = await db.fetchval("SELECT COUNT(*) FROM follows WHERE follower_id = $1", player_id)
+        feed_rows  = await db.fetch(
+            """SELECT p.*, pl.display_name FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               WHERE p.player_id IN (SELECT following_id FROM follows WHERE follower_id = $1)
+                  OR p.player_id = $1
+               ORDER BY p.created_at DESC LIMIT 40""", player_id)
+        discover_rows = await db.fetch(
+            """SELECT p.*, pl.display_name FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""")
+        profile_posts_rows = await db.fetch(
+            """SELECT p.*, pl.display_name FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               WHERE p.player_id = $1
+               ORDER BY p.created_at DESC LIMIT 20""", player_id)
+    else:
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute("SELECT * FROM flare_stats WHERE player_id = ?", (player_id,)) as cur:
+            stats_row = await cur.fetchone()
+        async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE follower_id = ?", (player_id,)) as cur:
+            fc = await cur.fetchone()
+        following_count = fc["cnt"] if fc else 0
+        async with db.execute(
+            """SELECT p.*, pl.display_name FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               WHERE p.player_id IN (SELECT following_id FROM follows WHERE follower_id = ?)
+                  OR p.player_id = ?
+               ORDER BY p.created_at DESC LIMIT 40""", (player_id, player_id)) as cur:
+            feed_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT p.*, pl.display_name FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""") as cur:
+            discover_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT p.*, pl.display_name FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               WHERE p.player_id = ?
+               ORDER BY p.created_at DESC LIMIT 20""", (player_id,)) as cur:
+            profile_posts_rows = await cur.fetchall()
+
+    def fmt_post(row):
+        d = dict(row)
+        d["content_text"] = d.get("content_text", "")
+        return d
+
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+    fs = dict(stats_row) if stats_row else {}
+    flare_stats = {
+        "follower_count":  fs.get("follower_count", 0),
+        "following_count": following_count,
+        "weekly_posts":    fs.get("weekly_post_count", 0),
+        "post_streak":     fs.get("post_streak_days", 0),
+        "active_deal":     fs.get("active_brand_deal_key"),
+    }
+
+    categories = cfg.get("flare", {}).get("categories", ["life"])
+
+    return templates.TemplateResponse("apps/flare.html", {
+        "request":       request,
+        "token":         token,
+        "player":        player,
+        "wallet_balance": wallet_balance,
+        "feed":          [fmt_post(r) for r in feed_rows],
+        "discover":      [fmt_post(r) for r in discover_rows],
+        "profile_posts": [fmt_post(r) for r in profile_posts_rows],
+        "flare_stats":   flare_stats,
+        "categories":    categories,
+    })
+
+
+# ── PING ──────────────────────────────────────────────────────────────────────
+@router.get("/ping", response_class=HTMLResponse)
+async def ping(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+
+    if is_postgres():
+        thread_rows = await db.fetch(
+            """SELECT
+                 mt.id,
+                 mt.last_message_at,
+                 CASE WHEN mt.player_a_id = $1 THEN mt.unread_count_a ELSE mt.unread_count_b END AS unread_count,
+                 CASE WHEN mt.player_a_id = $1 THEN pb.display_name ELSE pa.display_name END AS other_name,
+                 CASE WHEN mt.player_a_id = $1 THEN pb.avatar_uuid  ELSE pa.avatar_uuid  END AS other_uuid
+               FROM message_threads mt
+               JOIN players pa ON pa.id = mt.player_a_id
+               JOIN players pb ON pb.id = mt.player_b_id
+               WHERE mt.player_a_id = $1 OR mt.player_b_id = $1
+               ORDER BY mt.last_message_at DESC NULLS LAST""",
+            player_id)
+    else:
+        async with db.execute(
+            """SELECT
+                 mt.id,
+                 mt.last_message_at,
+                 CASE WHEN mt.player_a_id = ? THEN mt.unread_count_a ELSE mt.unread_count_b END AS unread_count,
+                 CASE WHEN mt.player_a_id = ? THEN pb.display_name ELSE pa.display_name END AS other_name,
+                 CASE WHEN mt.player_a_id = ? THEN pb.avatar_uuid  ELSE pa.avatar_uuid  END AS other_uuid
+               FROM message_threads mt
+               JOIN players pa ON pa.id = mt.player_a_id
+               JOIN players pb ON pb.id = mt.player_b_id
+               WHERE mt.player_a_id = ? OR mt.player_b_id = ?
+               ORDER BY mt.last_message_at DESC""",
+            (player_id, player_id, player_id, player_id, player_id)
+        ) as cur:
+            thread_rows = await cur.fetchall()
+
+    threads = [dict(r) for r in thread_rows]
+    total_unread = sum(t["unread_count"] for t in threads if t["unread_count"])
+
+    return templates.TemplateResponse("apps/ping.html", {
+        "request":      request,
+        "token":        token,
+        "player":       player,
+        "threads":      threads,
+        "total_unread": total_unread,
+    })

@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Ping{% endblock %}
+
+{% block extra_style %}
+<style>
+  /* ── Thread list ── */
+  .thread-card {
+    display: flex; align-items: center; gap: 13px;
+    padding: 14px 18px; border-bottom: 0.5px solid var(--border);
+    cursor: pointer; transition: background .1s;
+    text-decoration: none; color: inherit;
+    background: var(--bg);
+  }
+  .thread-card:active { background: var(--bg2); }
+  .thread-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--bg3); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .thread-body { flex: 1; min-width: 0; }
+  .thread-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .thread-preview {
+    font-size: 11px; color: var(--ink4);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .thread-meta { text-align: right; flex-shrink: 0; }
+  .thread-time { font-size: 10px; color: var(--ink4); }
+  .unread-dot {
+    display: inline-block; background: var(--rose);
+    color: #fff; font-size: 9px; font-weight: 700;
+    border-radius: 99px; padding: 1px 6px;
+    margin-top: 4px; letter-spacing: 0;
+  }
+
+  /* ── Message view ── */
+  .msg-header {
+    position: sticky; top: 57px; z-index: 90;
+    background: rgba(250,249,247,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+    padding: 11px 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .msg-back {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: var(--ink2); padding: 0; line-height: 1;
+  }
+  .msg-title {
+    font-family: var(--font-head);
+    font-size: 18px; font-weight: 400; color: var(--ink);
+  }
+
+  .messages-wrap {
+    padding: 12px 18px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .bubble-row { display: flex; }
+  .bubble-row.mine  { justify-content: flex-end; }
+  .bubble-row.theirs { justify-content: flex-start; }
+  .bubble {
+    max-width: 75%; padding: 10px 13px;
+    border-radius: 16px; font-size: 13px;
+    line-height: 1.5;
+  }
+  .bubble.mine {
+    background: var(--ink); color: var(--bg);
+    border-bottom-right-radius: 4px;
+  }
+  .bubble.theirs {
+    background: var(--bg3); color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble-meta {
+    font-size: 9px; color: var(--ink4);
+    margin-top: 3px; padding: 0 4px;
+  }
+  .bubble-row.mine  .bubble-meta { text-align: right; }
+  .bubble-row.theirs .bubble-meta { text-align: left; }
+
+  /* ── Compose bar ── */
+  .compose-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(250,249,247,0.97);
+    backdrop-filter: blur(12px);
+    border-top: 0.5px solid var(--border);
+    padding: 10px 14px;
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  .compose-input {
+    flex: 1; background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: 20px; padding: 9px 14px;
+    font-family: var(--font); font-size: 13px;
+    color: var(--ink); outline: none; resize: none;
+    max-height: 100px; overflow-y: auto; line-height: 1.5;
+  }
+  .compose-input::placeholder { color: var(--ink4); }
+  .send-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    border: none; cursor: pointer; flex-shrink: 0;
+    font-size: 16px; display: flex;
+    align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .send-btn:active { background: var(--ink2); }
+  .send-btn:disabled { background: var(--ink4); }
+
+  /* ── New DM ── */
+  .new-dm-wrap { padding: 14px 18px; }
+  .new-dm-input {
+    width: 100%;
+    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: var(--font); font-size: 13px;
+    color: var(--ink); outline: none;
+  }
+  .new-dm-input::placeholder { color: var(--ink4); }
+  .new-dm-btn {
+    margin-top: 8px; width: 100%;
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: 99px;
+    padding: 10px 0; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font);
+  }
+  .new-dm-btn:active { background: var(--ink2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">SL HUD</div>
+    <div class="topbar-title">Ping 💬</div>
+  </div>
+  {% if total_unread > 0 %}
+  <div class="topbar-lumen">
+    {{ total_unread }} unread
+    <span>messages</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" data-tab="tab-threads" onclick="showTab('tab-threads')">Messages</button>
+  <button class="tab"        data-tab="tab-new"     onclick="showTab('tab-new')">New DM</button>
+</div>
+
+<!-- ── THREADS TAB ── -->
+<div id="tab-threads" class="tab-panel active">
+
+  <!-- Thread view (hidden by default, shown when thread clicked) -->
+  <div id="thread-view" style="display:none;">
+    <div class="msg-header">
+      <button class="msg-back" onclick="closeThread()">‹</button>
+      <div class="msg-title" id="thread-title">—</div>
+    </div>
+    <div class="messages-wrap stagger" id="messages-wrap"></div>
+    <div style="height:80px;"></div>
+    <div class="compose-bar">
+      <textarea class="compose-input" id="msg-input"
+        placeholder="Message…"
+        rows="1"
+        onkeydown="handleMsgKey(event)"></textarea>
+      <button class="send-btn" onclick="sendMessage()" id="send-btn">↑</button>
+    </div>
+  </div>
+
+  <!-- Thread list (shown by default) -->
+  <div id="thread-list">
+    {% if threads %}
+      {% for t in threads %}
+      <div class="thread-card" onclick="openThread({{ t.id }}, '{{ t.other_name }}', '{{ t.other_uuid }}')">
+        <div class="thread-avatar">💬</div>
+        <div class="thread-body">
+          <div class="thread-name">{{ t.other_name }}</div>
+          <div class="thread-preview">
+            {% if t.last_message_at %}Tap to view conversation{% else %}No messages yet{% endif %}
+          </div>
+        </div>
+        <div class="thread-meta">
+          <div class="thread-time">{{ t.last_message_at[:10] if t.last_message_at else '' }}</div>
+          {% if t.unread_count > 0 %}
+          <span class="unread-dot">{{ t.unread_count }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">💬</div>
+        <div class="empty-title">No messages yet</div>
+        <div class="empty-text">Start a DM from the New DM tab — enter the avatar UUID of who you'd like to reach.</div>
+      </div>
+    {% endif %}
+    <div class="scroll-pad"></div>
+  </div>
+</div>
+
+<!-- ── NEW DM TAB ── -->
+<div id="tab-new" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">New DM</div>
+    <div class="section-head-sub">Enter the recipient's avatar UUID</div>
+  </div>
+  <div class="new-dm-wrap">
+    <input class="new-dm-input" type="text" id="new-dm-uuid"
+      placeholder="Avatar UUID (e.g. 8f2a1b3c-…)" />
+    <input class="new-dm-input" type="text" id="new-dm-msg"
+      placeholder="Your first message…" style="margin-top:8px;" />
+    <button class="new-dm-btn" onclick="startDM()">Send Message</button>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN       = "{{ token }}";
+  const PLAYER_ID   = {{ player.id }};
+  let activeThreadId   = null;
+  let activeRecipUUID  = null;
+
+  // ── Thread open/close ──────────────────────────────────────
+
+  async function openThread(threadId, name, recipUUID) {
+    activeThreadId  = threadId;
+    activeRecipUUID = recipUUID;
+    document.getElementById('thread-title').textContent = name;
+    document.getElementById('thread-list').style.display = 'none';
+    document.getElementById('thread-view').style.display = 'block';
+    await loadMessages(threadId);
+  }
+
+  function closeThread() {
+    activeThreadId = null;
+    document.getElementById('thread-view').style.display = 'none';
+    document.getElementById('thread-list').style.display = 'block';
+    // Reload to update unread counts in list
+    location.reload();
+  }
+
+  async function loadMessages(threadId) {
+    try {
+      const res = await fetch(`/messages/thread/${threadId}?token=${TOKEN}`);
+      const data = await res.json();
+      renderMessages(data.messages || []);
+    } catch(e) {
+      toast('Could not load messages');
+    }
+  }
+
+  function renderMessages(msgs) {
+    const wrap = document.getElementById('messages-wrap');
+    if (!msgs.length) {
+      wrap.innerHTML = '<div class="empty"><div class="empty-icon">✉️</div><div class="empty-title">No messages yet</div><div class="empty-text">Say hello!</div></div>';
+      return;
+    }
+    wrap.innerHTML = msgs.map(m => {
+      const mine = m.sender_id === PLAYER_ID;
+      return `
+        <div class="bubble-row ${mine ? 'mine' : 'theirs'}">
+          <div>
+            <div class="bubble ${mine ? 'mine' : 'theirs'}">${escHtml(m.content)}</div>
+            <div class="bubble-meta">${m.sent_at ? m.sent_at.slice(11,16) : ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function handleMsgKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  // ── Send message ───────────────────────────────────────────
+
+  async function sendMessage() {
+    const input   = document.getElementById('msg-input');
+    const content = input.value.trim();
+    if (!content || !activeRecipUUID) return;
+
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/messages/send', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN,
+          recipient_avatar_uuid: activeRecipUUID,
+          content: content
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        input.value = '';
+        await loadMessages(activeThreadId);
+      } else {
+        toast(data.detail || 'Could not send');
+      }
+    } catch(e) {
+      toast('Connection error');
+    }
+    btn.disabled = false;
+  }
+
+  // ── New DM ─────────────────────────────────────────────────
+
+  async function startDM() {
+    const uuid = document.getElementById('new-dm-uuid').value.trim();
+    const msg  = document.getElementById('new-dm-msg').value.trim();
+    if (!uuid || !msg) { toast('Fill in both fields'); return; }
+
+    try {
+      const res = await fetch('/messages/send', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN,
+          recipient_avatar_uuid: uuid,
+          content: msg
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Message sent ✓');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        toast(data.detail || 'Could not send');
+      }
+    } catch(e) {
+      toast('Connection error');
+    }
+  }
+</script>
+{% endblock %}

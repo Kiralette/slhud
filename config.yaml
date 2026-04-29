@@ -1005,3 +1005,52 @@ wavelength:
       xp_effect: { music: 0.05 }
       musician_passive: true
       is_premium: true
+
+# ============================================================
+#  FLARE — SOCIAL FEED
+# ============================================================
+
+flare:
+  # Post quality tiers — calculated from creativity + charisma skill avg
+  # tier 0 = raw post, tier 3 = viral potential
+  quality_tiers:
+    0: { label: "Standard",    follower_gain_mult: 1.0,  npc_engagement_mult: 1.0  }
+    1: { label: "Good",        follower_gain_mult: 1.5,  npc_engagement_mult: 1.5  }
+    2: { label: "Great",       follower_gain_mult: 2.5,  npc_engagement_mult: 2.5  }
+    3: { label: "Exceptional", follower_gain_mult: 5.0,  npc_engagement_mult: 5.0  }
+
+  # Skill thresholds to reach each quality tier
+  # avg of (creativity_level + charisma_level) / 2
+  quality_skill_thresholds:
+    0: 0    # below 3 avg → tier 0
+    1: 3    # 3–5 avg → tier 1
+    2: 5    # 5–7 avg → tier 2
+    3: 7    # 7+ avg → tier 3
+
+  # NPC follower growth — runs every 10 minutes
+  follower_engine:
+    base_gain_per_tick: 2       # base NPCs gained every 10 min while active
+    post_bonus_hours: 4         # hours after posting that growth is boosted
+    post_bonus_mult: 2.0        # multiplier during boost window
+    viral_threshold_tier: 3     # quality tier that can trigger viral event
+    viral_chance: 0.05          # 5% chance per tick if exceptional post exists
+    viral_gain: 500             # followers gained on viral event
+
+  # Brand deals — checked Sunday midnight
+  brand_deals:
+    500:   { key: "micro_deal",  weekly_pay: 30,  display: "Micro Deal" }
+    1000:  { key: "small_deal",  weekly_pay: 60,  display: "Small Deal" }
+    5000:  { key: "mid_deal",    weekly_pay: 120, display: "Mid Deal"   }
+    10000: { key: "major_deal",  weekly_pay: 200, display: "Major Deal" }
+    50000: { key: "elite_deal",  weekly_pay: 400, display: "Elite Deal" }
+
+  # Post categories
+  categories:
+    - life
+    - food
+    - fashion
+    - fitness
+    - music
+    - gaming
+    - art
+    - career
