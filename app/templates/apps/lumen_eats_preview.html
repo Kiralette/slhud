@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lumen Eats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #faf9f7;
+      --bg2:         #f4f2ee;
+      --bg3:         #ede9e3;
+      --bg4:         #e4dfd7;
+      --ink:         #1c1814;
+      --ink2:        #4a4540;
+      --ink3:        #8c8580;
+      --ink4:        #b8b3ad;
+      --gold:        #9a7c4e;
+      --gold2:       #c4a265;
+      --gold-light:  #f5ede0;
+      --green:       #4a7c5f;
+      --green-light: #e8f0eb;
+      --amber:       #b8732a;
+      --amber-light: #fdf0dc;
+      --rose:        #9c5050;
+      --rose-light:  #f5eaea;
+      --border:      rgba(28,24,20,0.08);
+      --border2:     rgba(28,24,20,0.14);
+      --shadow:      0 1px 3px rgba(28,24,20,0.05),0 4px 16px rgba(28,24,20,0.04);
+      --radius:      12px;
+      --radius-sm:   7px;
+      --font:        'Jost', sans-serif;
+      --font-head:   'Cormorant Garamond', serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(250,249,247,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 0.5px solid var(--border);
+      padding: 11px 18px;
+      display: flex; align-items: flex-end; justify-content: space-between;
+    }
+    .topbar-left {}
+    .topbar-eyebrow {
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink4); margin-bottom: 1px;
+    }
+    .topbar-title {
+      font-family: var(--font-head);
+      font-size: 21px; font-weight: 400;
+      color: var(--ink); line-height: 1;
+    }
+    .topbar-lumen {
+      font-size: 12px; font-weight: 500;
+      color: var(--gold); letter-spacing: 0.02em;
+      text-align: right; padding-bottom: 2px;
+    }
+    .topbar-lumen span { font-size: 9px; color: var(--ink4); display: block; text-align: right; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    .need-bar-wrap {
+      padding: 13px 18px;
+      background: var(--bg);
+      border-bottom: 0.5px solid var(--border);
+    }
+    .need-bar-label { display: flex; justify-content: space-between; margin-bottom: 7px; align-items: center; }
+    .need-bar-label .need-name {
+      font-size: 9px; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink3);
+    }
+    .need-bar-label .need-val { font-size: 12px; font-weight: 500; color: var(--ink2); }
+    .need-bar-track { height: 2px; background: var(--bg4); border-radius: 99px; overflow: hidden; }
+    .need-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+    .need-bar-fill.ok   { background: var(--green); }
+    .need-bar-fill.warn { background: var(--amber); }
+    .need-bar-fill.crit { background: var(--rose); animation: crit-pulse 2s ease infinite; }
+    @keyframes crit-pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 500; letter-spacing: 0.04em;
+      padding: 4px 10px; border-radius: 99px; margin-top: 9px;
+    }
+    .status-pill.ok   { background: var(--green-light); color: var(--green); }
+    .status-pill.warn { background: var(--amber-light); color: var(--amber); }
+    .status-pill.crit { background: var(--rose-light);  color: var(--rose); }
+    .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    .tabs {
+      display: flex; padding: 0 10px;
+      border-bottom: 0.5px solid var(--border);
+      background: var(--bg);
+      position: sticky; top: 57px; z-index: 90;
+    }
+    .tab {
+      padding: 10px 8px 9px; flex: 1;
+      font-size: 10px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--ink4); cursor: pointer;
+      border: none; background: none;
+      border-bottom: 1.5px solid transparent;
+      margin-bottom: -0.5px; transition: all .2s;
+      text-align: center;
+    }
+    .tab.active { color: var(--ink); border-bottom-color: var(--gold); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .section-head { padding: 18px 18px 8px; }
+    .section-head-title {
+      font-family: var(--font-head);
+      font-size: 19px; font-weight: 400; font-style: italic;
+      color: var(--ink); line-height: 1;
+    }
+    .section-head-sub {
+      font-size: 10px; color: var(--ink4);
+      letter-spacing: 0.04em; margin-top: 3px;
+    }
+
+    .item-card {
+      margin: 0 18px 8px;
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      display: flex; align-items: center;
+      gap: 13px; padding: 13px 14px;
+      box-shadow: var(--shadow);
+      transition: all .15s ease;
+    }
+    .item-card:active { background: var(--bg2); transform: scale(.99); }
+    .item-emoji { font-size: 28px; width: 40px; text-align: center; flex-shrink: 0; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+    .item-desc { font-size: 11px; color: var(--ink3); line-height: 1.4; }
+    .item-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+    .item-tag {
+      font-size: 9px; padding: 2px 7px;
+      border-radius: 99px; font-weight: 500; letter-spacing: 0.03em;
+    }
+    .item-tag.hunger { background: var(--amber-light); color: var(--amber); }
+    .item-tag.vibe   { background: var(--gold-light);  color: var(--gold); }
+    .item-tag.thirst { background: #e8f0f5; color: #3a6a8c; }
+    .item-right { text-align: right; flex-shrink: 0; }
+    .item-price { font-size: 14px; font-weight: 600; color: var(--ink2); }
+    .item-price .sym { color: var(--gold); }
+    .item-price.free { color: var(--green); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+    .item-btn {
+      margin-top: 7px;
+      background: var(--ink); color: var(--bg);
+      border: none; border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; font-family: var(--font);
+      transition: background .15s;
+    }
+    .item-btn:active { background: var(--ink2); }
+    .item-btn:disabled { background: var(--ink4); cursor: not-allowed; }
+    .item-btn.free-btn { background: var(--green-light); color: var(--green); }
+
+    .specials-strip {
+      display: flex; gap: 10px;
+      overflow-x: auto; padding: 4px 18px 14px;
+      scrollbar-width: none;
+    }
+    .specials-strip::-webkit-scrollbar { display: none; }
+    .special-card {
+      flex-shrink: 0; width: 136px;
+      background: var(--bg); border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 14px 12px; text-align: center;
+      box-shadow: var(--shadow); transition: all .15s;
+    }
+    .special-card:active { transform: scale(.97); }
+    .special-badge {
+      display: inline-block;
+      font-size: 8px; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--gold); border: 0.5px solid var(--gold2);
+      border-radius: 99px; padding: 2px 8px; margin-bottom: 8px;
+    }
+    .special-card-emoji { font-size: 28px; margin-bottom: 7px; }
+    .special-card-name { font-size: 11px; font-weight: 500; color: var(--ink); margin-bottom: 4px; line-height: 1.3; }
+    .special-card-price { font-size: 12px; font-weight: 600; color: var(--ink2); }
+    .special-card-was { font-size: 10px; color: var(--ink4); text-decoration: line-through; margin-right: 2px; }
+    .special-card-btn {
+      margin-top: 10px; width: 100%;
+      background: var(--ink); color: var(--bg);
+      border: none; border-radius: 99px; padding: 6px 0;
+      font-size: 9px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; font-family: var(--font);
+    }
+    .special-card-btn:active { background: var(--ink2); }
+
+    .chips-row {
+      display: flex; padding: 8px 18px;
+      overflow-x: auto; scrollbar-width: none; gap: 6px;
+    }
+    .chips-row::-webkit-scrollbar { display: none; }
+    .category-chip {
+      display: inline-block; font-size: 10px; font-weight: 500;
+      letter-spacing: 0.05em; padding: 5px 14px; border-radius: 99px;
+      border: 0.5px solid var(--border2); color: var(--ink3);
+      cursor: pointer; transition: all .15s; white-space: nowrap; background: var(--bg);
+    }
+    .category-chip.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+    .week-label {
+      font-size: 10px; color: var(--ink4);
+      letter-spacing: 0.04em; padding: 0 18px; margin-bottom: 6px;
+    }
+
+    .log-entry {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 18px; border-bottom: 0.5px solid var(--border);
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-delta { font-size: 12px; font-weight: 600; min-width: 42px; }
+    .log-delta.pos { color: var(--green); }
+    .log-delta.neg { color: var(--rose); }
+    .log-text { flex: 1; font-size: 11px; color: var(--ink2); }
+    .log-time { font-size: 10px; color: var(--ink4); }
+
+    .info-card {
+      margin: 0 18px 10px;
+      background: var(--bg2); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 13px 15px;
+    }
+    .info-card p { font-size: 11px; color: var(--ink2); line-height: 1.8; }
+
+    .vendor-card {
+      margin: 0 18px 10px;
+      background: var(--bg); border: 0.5px solid var(--border);
+      border-radius: var(--radius); padding: 13px 15px;
+      display: flex; gap: 12px; align-items: flex-start;
+      box-shadow: var(--shadow);
+    }
+    .vendor-icon { font-size: 24px; }
+    .vendor-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+    .vendor-meta { font-size: 11px; color: var(--ink3); }
+    .vendor-note { font-size: 10px; color: var(--ink4); margin-top: 3px; }
+
+    .empty { padding: 52px 18px; text-align: center; }
+    .empty-icon { font-size: 30px; margin-bottom: 12px; opacity: 0.35; }
+    .empty-title { font-family: var(--font-head); font-size: 18px; font-style: italic; color: var(--ink2); margin-bottom: 5px; }
+    .empty-text { font-size: 12px; color: var(--ink4); line-height: 1.7; }
+
+    #toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: var(--ink); color: var(--bg);
+      padding: 10px 22px; border-radius: 99px;
+      font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
+      z-index: 999; transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none; white-space: nowrap;
+      box-shadow: 0 6px 28px rgba(28,24,20,0.18);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    .scroll-pad { height: 40px; }
+    .divider { height: 0.5px; background: var(--border); margin: 4px 18px; }
+
+    /* Page enter */
+    .stagger > * {
+      animation: fadeUp .3s ease both;
+    }
+    .stagger > *:nth-child(1){animation-delay:.03s}
+    .stagger > *:nth-child(2){animation-delay:.07s}
+    .stagger > *:nth-child(3){animation-delay:.11s}
+    .stagger > *:nth-child(4){animation-delay:.15s}
+    .stagger > *:nth-child(5){animation-delay:.19s}
+    .stagger > *:nth-child(6){animation-delay:.23s}
+    .stagger > *:nth-child(7){animation-delay:.27s}
+    .stagger > *:nth-child(8){animation-delay:.31s}
+    @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+  
+<style>
+  .hero {
+    padding: 22px 18px 16px;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .hero-greeting {
+    font-size: 10px; font-weight: 400;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink4); margin-bottom: 3px;
+  }
+  .hero-name {
+    font-family: var(--font-head);
+    font-size: 26px; font-weight: 300; font-style: italic;
+    color: var(--ink); line-height: 1; margin-bottom: 14px;
+  }
+  .hero-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hero-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 500;
+    padding: 6px 12px; border-radius: 99px;
+    border: 0.5px solid var(--border2); color: var(--ink2);
+    background: var(--bg);
+  }
+  .hero-chip .sym { color: var(--gold); font-weight: 600; }
+  .hero-chip.crit { background: var(--rose-light); border-color: var(--rose); color: var(--rose); }
+  .hero-chip.warn { background: var(--amber-light); border-color: var(--amber); color: var(--amber); }
+</style>
+
+</head>
+<body>
+  
+
+<!-- Header -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Lumen Eats</div>
+    <div class="topbar-title">Seraphine</div>
+  </div>
+  <div class="topbar-lumen">
+    <span>Balance</span>
+    <span class="sym">✦</span>350
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-greeting">How are you feeling?</div>
+  <div class="hero-name">
+    Satisfied 🌿
+    
+  </div>
+  <div class="hero-chips">
+    <div class="hero-chip ok">
+      <span>Hunger</span>
+      <strong>98</strong>
+    </div>
+    <div class="hero-chip">
+      <span class="sym">✦</span>
+      <span>350 available</span>
+    </div>
+  </div>
+</div>
+
+<!-- Need bar -->
+<div class="need-bar-wrap">
+  <div class="need-bar-label">
+    <span class="need-name">Hunger</span>
+    <span class="need-val">98 / 100</span>
+  </div>
+  <div class="need-bar-track">
+    <div class="need-bar-fill ok" style="width:98.24%"></div>
+  </div>
+  <div class="status-pill ok">
+    <span class="status-dot"></span>
+    Well fed
+    
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="order" onclick="showTab('order')">Order</button>
+  <button class="tab" data-tab="market" onclick="showTab('market')">Market</button>
+  <button class="tab" data-tab="log" onclick="showTab('log')">Activity</button>
+</div>
+
+<!-- ORDER TAB -->
+<div id="order" class="tab-panel active">
+
+  
+
+  <div class="section-head">
+    <div>
+      <div class="section-head-title">Always available</div>
+      <div class="section-head-sub">Base menu · items always in stock</div>
+    </div>
+  </div>
+
+  <div class="chips-row">
+    <span class="category-chip active" onclick="filterCat(this,'all')">All</span>
+    <span class="category-chip" onclick="filterCat(this,'free')">Free</span>
+    <span class="category-chip" onclick="filterCat(this,'snacks')">Snacks</span>
+    <span class="category-chip" onclick="filterCat(this,'meals')">Meals</span>
+    <span class="category-chip" onclick="filterCat(this,'drinks')">Drinks</span>
+  </div>
+
+  <div id="item-list" class="stagger">
+    
+    <div class="item-card" data-category="free">
+      <div class="item-emoji">💧</div>
+      <div class="item-info">
+        <div class="item-name">Glass of Water</div>
+        <div class="item-desc">Crisp and free. Always.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+0 Hunger</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price free">
+          
+            Free
+          
+        </div>
+        <button class="item-btn free-btn"
+          onclick="buyItem('water','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Glass of Water',0)">
+          Collect
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="snacks">
+      <div class="item-emoji">🥨</div>
+      <div class="item-info">
+        <div class="item-name">Basic Snack</div>
+        <div class="item-desc">Quick bite, light hunger fill.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+15 Hunger</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>5
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('basic_snack','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Basic Snack',5)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="meals">
+      <div class="item-emoji">🍱</div>
+      <div class="item-info">
+        <div class="item-name">Basic Meal</div>
+        <div class="item-desc">Simple, filling, affordable.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+40 Hunger</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>15
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('basic_meal','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Basic Meal',15)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="meals">
+      <div class="item-emoji">🍝</div>
+      <div class="item-info">
+        <div class="item-name">Good Meal</div>
+        <div class="item-desc">A proper meal. Hits the spot.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+65 Hunger</span>
+          
+          <span class="item-tag vibe">Well Fed ✨</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>25
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('good_meal','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Good Meal',25)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="meals">
+      <div class="item-emoji">🍽️</div>
+      <div class="item-info">
+        <div class="item-name">Nice Restaurant Meal</div>
+        <div class="item-desc">Restaurant quality. Worth it.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+85 Hunger</span>
+          
+          <span class="item-tag vibe">Well Fed ✨</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>35
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('nice_meal','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Nice Restaurant Meal',35)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="drinks">
+      <div class="item-emoji">☕</div>
+      <div class="item-info">
+        <div class="item-name">Coffee</div>
+        <div class="item-desc">The essential. Buzzing vibe.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+0 Hunger</span>
+          
+          <span class="item-tag vibe">Buzzing ☕</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>8
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('coffee','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Coffee',8)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="drinks">
+      <div class="item-emoji">🧃</div>
+      <div class="item-info">
+        <div class="item-name">Fresh Juice</div>
+        <div class="item-desc">Fresh pressed. Light thirst fill.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+0 Hunger</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>6
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('juice','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Fresh Juice',6)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="drinks">
+      <div class="item-emoji">⚡</div>
+      <div class="item-info">
+        <div class="item-name">Energy Drink</div>
+        <div class="item-desc">Big energy. Use wisely.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+0 Hunger</span>
+          
+          <span class="item-tag vibe">Buzzing ☕</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>10
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('energy_drink','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Energy Drink',10)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+    <div class="item-card" data-category="drinks">
+      <div class="item-emoji">🧋</div>
+      <div class="item-info">
+        <div class="item-name">Specialty Drink</div>
+        <div class="item-desc">Something special. Fun +5.</div>
+        <div class="item-tags">
+          <span class="item-tag hunger">+0 Hunger</span>
+          
+          <span class="item-tag vibe">Buzzing ☕</span>
+          
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="item-price ">
+          
+            <span class="sym">✦</span>15
+          
+        </div>
+        <button class="item-btn "
+          onclick="buyItem('specialty_drink','8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad','Specialty Drink',15)">
+          Order
+        </button>
+      </div>
+    </div>
+    
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- MARKET TAB -->
+<div id="market" class="tab-panel">
+  <div class="section-head">
+    <div>
+      <div class="section-head-title">Nearby vendors</div>
+      <div class="section-head-sub">In-world food objects within range</div>
+    </div>
+  </div>
+
+  
+  <div class="empty">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">Nothing nearby</div>
+    <div class="empty-text">No food vendors detected in range.<br>Order directly from the Order tab instead.</div>
+  </div>
+  
+
+  <div class="info-card" style="margin-top:8px;">
+    <p>
+      🏷️ Vendors often price below the Order tab<br>
+      🌟 Exclusive items sometimes only available in-world<br>
+      🫂 Eating near other players gives a Social bonus
+    </p>
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ACTIVITY TAB -->
+<div id="log" class="tab-panel">
+  <div class="section-head">
+    <div>
+      <div class="section-head-title">Hunger activity</div>
+      <div class="section-head-sub">Last 20 entries</div>
+    </div>
+  </div>
+
+  
+  <div class="empty">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title">No activity yet</div>
+    <div class="empty-text">Your hunger changes will appear here.</div>
+  </div>
+  
+
+  <div class="scroll-pad"></div>
+</div>
+
+
+  <div id="toast"></div>
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-tab="'+id+'"]').classList.add('active');
+      document.getElementById(id).classList.add('active');
+    }
+    function toast(msg, d=2500) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), d);
+    }
+    async function buyItem(itemKey, token, itemName, price) {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = '···';
+      try {
+        const res = await fetch('/shop/buy', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body: JSON.stringify({item_key: itemKey})
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast(price === 0 ? itemName+' — collected' : itemName+' — ✦'+price+' spent');
+          setTimeout(() => location.reload(), 1400);
+        } else {
+          toast(data.detail || 'Could not complete purchase');
+          btn.disabled = false; btn.textContent = orig;
+        }
+      } catch(e) {
+        toast('Connection error');
+        btn.disabled = false; btn.textContent = orig;
+      }
+    }
+  </script>
+  
+<script>
+  const token = "8c39af4b38afc65bf6cfda23fb1a528298818a154d7713bcbfcc0668205754ad";
+  function filterCat(el, cat) {
+    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#item-list .item-card').forEach(card => {
+      if (cat === 'all') {
+        card.style.display = 'flex';
+      } else if (cat === 'free') {
+        card.style.display = card.querySelector('.item-price.free') ? 'flex' : 'none';
+      } else {
+        card.style.display = card.dataset.category.includes(cat) ? 'flex' : 'none';
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
