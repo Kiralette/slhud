@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from app.database import get_db, is_postgres
 from app.services.notifications import push_notification
+from app.services.achievements import increment_stat
 
 router = APIRouter(prefix="/social", tags=["social"])
 
@@ -243,6 +244,7 @@ async def update_proximity(body: ProximityUpdate, db=Depends(get_db)):
                     priority="low",
                     db=db,
                 )
+                await increment_stat(player_id, "total_players_met")
             await db.commit()
 
         encountered.append(nearby["display_name"])

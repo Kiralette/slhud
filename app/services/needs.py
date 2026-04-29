@@ -5,6 +5,7 @@ Compatible with both SQLite and PostgreSQL.
 
 from datetime import datetime
 from app.config import get_config
+from app.services.achievements import increment_stat
 from app.database import is_postgres
 
 
@@ -157,6 +158,7 @@ async def award_skill_xp(player_id: int, skill_key: str, xp_amount: float, db):
 
     current_level = row["level"]
     current_xp = row["xp"] + xp_amount
+    start_level = current_level
 
     if current_level == 0:
         current_level = 1
@@ -171,6 +173,10 @@ async def award_skill_xp(player_id: int, skill_key: str, xp_amount: float, db):
                 f"{skill_cfg['display_name']} reached level {current_level}! +{purpose_bonus} Purpose")
         else:
             break
+
+    # Track levelups for achievements
+    if current_level > start_level:
+        await increment_stat(player_id, "total_skill_levelups", current_level - start_level)
 
     if is_postgres():
         await db.execute("UPDATE skills SET level = $1, xp = $2 WHERE player_id = $3 AND skill_key = $4",

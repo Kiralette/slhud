@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 
 from app.database import get_db, is_postgres
+from app.services.achievements import increment_stat
 from app.services.traits import (
     score_answers, pick_traits, apply_traits_to_player, award_negative_bonuses
 )
@@ -170,6 +171,8 @@ async def submit_questionnaire(body: QuestionnaireSubmit, db=Depends(get_db)):
     trait_defs = cfg.get("traits", {}).get("definitions", {})
     display_names = [trait_defs.get(k, {}).get("display", k) for k in selected]
 
+    await increment_stat(player_id, "traits_set_count")
+
     return {
         "status":        "complete",
         "traits_applied": selected,
@@ -222,6 +225,8 @@ async def build_traits(body: BuildSubmit, db=Depends(get_db)):
 
     await apply_traits_to_player(player_id, selected, db, source="manual")
     bonus = await award_negative_bonuses(player_id, selected, db)
+
+    await increment_stat(player_id, "traits_set_count")
 
     return {
         "status":        "applied",

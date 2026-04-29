@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.database import get_db, is_postgres
+from app.services.achievements import increment_stat
 
 router = APIRouter(prefix="/occurrences", tags=["occurrences"])
 
@@ -204,6 +205,7 @@ async def add_occurrence(body: AddOccurrence, db=Depends(get_db)):
         await db.commit()
 
     display = OCCURRENCE_DISPLAY.get(key, (key, "unknown"))
+    await increment_stat(player_id, "total_occurrences_added")
     return {"status": "added", "occurrence_id": occ_id, "display": display[0]}
 
 

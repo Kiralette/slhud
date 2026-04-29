@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from app.database import get_db, is_postgres
 from app.config import get_config
 from app.services.notifications import push_notification
+from app.services.achievements import increment_stat, set_stat_if_greater
 
 router = APIRouter(tags=["shop"])
 
@@ -249,6 +250,12 @@ async def buy_item(
     
     if not is_postgres():
         await db.commit()
+
+    # ── Achievement stat tracking ─────────────────────────────────────────────
+    await increment_stat(player_id, "total_purchases")
+    if actual_cost > 0:
+        await increment_stat(player_id, "lumens_spent_total", actual_cost)
+    await set_stat_if_greater(player_id, "max_wallet_balance", new_balance)
 
     return {
         "ok": True,

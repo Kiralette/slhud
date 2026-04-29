@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from app.database import get_db, is_postgres
 from app.services.notifications import push_notification
+from app.services.achievements import increment_stat
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
@@ -298,4 +299,5 @@ async def send_message(body: SendMessage, db=Depends(get_db)):
         db=db,
     )
 
+    await increment_stat(player_id, "total_messages_sent")
     return {"status": "sent", "thread_id": thread_id}
