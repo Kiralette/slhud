@@ -1,162 +1,113 @@
 """
-Notifications service.
+Notification endpoints.
 
-Every meaningful server-side event calls push_notification().
-The HUD polls /notifications/unread-count every 60s for red dot data.
-Urgent notifications are also delivered via /notifications/urgent-toast.
-
-Priority levels:
-  low    — Canvas history only, no red dot
-  normal — red dot on app icon
-  urgent — red dot + HUD toast via llOwnerSay
+GET  /notifications/unread-count   — HUD polls every 60s for red dot data
+GET  /notifications/urgent-toast   — HUD polls every 60s for llOwnerSay messages
+GET  /notifications                — Canvas history tab
+PUT  /notifications/read           — mark all read
+PUT  /notifications/read/{app}     — mark one app's notifications read
 """
 
-from app.database import is_postgres
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from app.services.auth import get_current_player
+from app.database import get_db, is_postgres
+from app.services.notifications import (
+    get_unread_counts,
+    get_urgent_toasts,
+    mark_app_read,
+    mark_all_read,
+    get_recent_notifications,
+)
+
+router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
-async def push_notification(
-    player_id: int,
-    app_source: str,
-    title: str,
-    body: str = "",
-    priority: str = "normal",   # low | normal | urgent
-    action_url: str | None = None,
-    db = None,
-) -> None:
+@router.get("/unread-count")
+async def unread_count(
+    player: dict = Depends(get_current_player),
+    db = Depends(get_db)
+):
     """
-    Write a notification row for this player.
-    Called by decay engine, career service, shop service, etc.
+    Lightweight endpoint — HUD polls this every 60s.
+    Returns which app icons need a red dot and total count.
+
+    LSL usage:
+      llHTTPRequest(SERVER + "/notifications/unread-count", [HTTP_METHOD,"GET",
+        HTTP_CUSTOM_HEADER,"Authorization","Bearer " + token], "");
+    Response: {"total": 3, "by_app": {"lumen_eats": 1, "grind": 2}}
     """
-    if db is None:
-        return
-
-    if is_postgres():
-        await db.execute(
-            """INSERT INTO notifications
-               (player_id, app_source, title, body, priority, action_url)
-               VALUES ($1, $2, $3, $4, $5, $6)""",
-            player_id, app_source, title, body, priority, action_url
-        )
-    else:
-        await db.execute(
-            """INSERT INTO notifications
-               (player_id, app_source, title, body, priority, action_url)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (player_id, app_source, title, body, priority, action_url)
-        )
-        await db.commit()
+    counts = await get_unread_counts(player["id"], db)
+    return counts
 
 
-async def get_unread_counts(player_id: int, db) -> dict:
+@router.get("/urgent-toast")
+async def urgent_toast(
+    player: dict = Depends(get_current_player),
+    db = Depends(get_db)
+):
     """
-    Returns total unread count and per-app breakdown.
-    Used by the HUD heartbeat to know which app dots to show.
+    Returns urgent undelivered notifications for HUD toast display.
+    Marks them as toasted so they won't repeat.
+
+    LSL usage: poll every 60s. If list non-empty, llOwnerSay each message.
+    Response: [{"app_source": "grind", "title": "Shift complete", "body": "✦60 deposited"}]
     """
-    if is_postgres():
-        rows = await db.fetch(
-            """SELECT app_source, COUNT(*) as cnt
-               FROM notifications
-               WHERE player_id = $1 AND is_read = 0
-               GROUP BY app_source""",
-            player_id
-        )
-    else:
-        async with db.execute(
-            """SELECT app_source, COUNT(*) as cnt
-               FROM notifications
-               WHERE player_id = ? AND is_read = 0
-               GROUP BY app_source""",
-            (player_id,)
-        ) as cur:
-            rows = await cur.fetchall()
-
-    by_app = {row["app_source"]: row["cnt"] for row in rows}
-    total = sum(by_app.values())
-    return {"total": total, "by_app": by_app}
+    toasts = await get_urgent_toasts(player["id"], db)
+    return {"toasts": toasts}
 
 
-async def get_urgent_toasts(player_id: int, db) -> list[dict]:
-    """
-    Returns urgent untoasted notifications for HUD llOwnerSay delivery.
-    Marks them as toasted so they don't repeat.
-    """
-    if is_postgres():
-        rows = await db.fetch(
-            """SELECT id, app_source, title, body
-               FROM notifications
-               WHERE player_id = $1 AND priority = 'urgent' AND is_toasted = 0
-               ORDER BY created_at ASC LIMIT 5""",
-            player_id
-        )
-        ids = [row["id"] for row in rows]
-        if ids:
-            await db.execute(
-                f"UPDATE notifications SET is_toasted = 1 WHERE id = ANY($1::int[])",
-                ids
-            )
-    else:
-        async with db.execute(
-            """SELECT id, app_source, title, body
-               FROM notifications
-               WHERE player_id = ? AND priority = 'urgent' AND is_toasted = 0
-               ORDER BY created_at ASC LIMIT 5""",
-            (player_id,)
-        ) as cur:
-            rows = await cur.fetchall()
-        ids = [row["id"] for row in rows]
-        if ids:
-            placeholders = ",".join("?" * len(ids))
-            await db.execute(
-                f"UPDATE notifications SET is_toasted = 1 WHERE id IN ({placeholders})",
-                ids
-            )
-            await db.commit()
-
-    return [{"app_source": r["app_source"], "title": r["title"], "body": r["body"]} for r in rows]
+@router.get("")
+async def get_notifications(
+    player: dict = Depends(get_current_player),
+    db = Depends(get_db)
+):
+    """Full notification history for Canvas notifications tab."""
+    notifs = await get_recent_notifications(player["id"], db)
+    return {"notifications": notifs}
 
 
-async def mark_app_read(player_id: int, app_source: str, db) -> None:
-    """Mark all notifications from an app as read. Called when player opens that app's webapp."""
-    if is_postgres():
-        await db.execute(
-            "UPDATE notifications SET is_read = 1 WHERE player_id = $1 AND app_source = $2",
-            player_id, app_source
-        )
-    else:
-        await db.execute(
-            "UPDATE notifications SET is_read = 1 WHERE player_id = ? AND app_source = ?",
-            (player_id, app_source)
-        )
-        await db.commit()
-
-
-async def mark_all_read(player_id: int, db) -> None:
+@router.put("/read")
+async def mark_read_all(
+    player: dict = Depends(get_current_player),
+    db = Depends(get_db)
+):
     """Mark all notifications as read."""
+    await mark_all_read(player["id"], db)
+    return {"ok": True}
+
+
+@router.put("/read/{app_source}")
+async def mark_read_app(
+    app_source: str,
+    player: dict = Depends(get_current_player),
+    db = Depends(get_db)
+):
+    """
+    Mark one app's notifications as read.
+    Called automatically when player opens that app's webapp.
+    """
+    await mark_app_read(player["id"], app_source, db)
+    return {"ok": True, "app": app_source}
+
+class MarkReadRequest(BaseModel):
+    token: str
+    notification_id: int
+
+@router.post("/mark-read")
+async def mark_single_read(body: MarkReadRequest, db=Depends(get_db)):
+    """Mark a single notification as read by ID. Used by Canvas JS."""
+    from app.routers.webapps import get_player_by_token as _get_player
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
     if is_postgres():
         await db.execute(
-            "UPDATE notifications SET is_read = 1 WHERE player_id = $1", player_id)
+            "UPDATE notifications SET is_read = 1, is_toasted = 1 WHERE id = $1 AND player_id = $2",
+            body.notification_id, player["id"])
     else:
         await db.execute(
-            "UPDATE notifications SET is_read = 1 WHERE player_id = ?", (player_id,))
+            "UPDATE notifications SET is_read = 1, is_toasted = 1 WHERE id = ? AND player_id = ?",
+            (body.notification_id, player["id"]))
         await db.commit()
-
-
-async def get_recent_notifications(player_id: int, db, limit: int = 50) -> list[dict]:
-    """Fetch recent notifications for Canvas history tab."""
-    if is_postgres():
-        rows = await db.fetch(
-            """SELECT id, app_source, title, body, priority, is_read, is_toasted, action_url, created_at
-               FROM notifications WHERE player_id = $1
-               ORDER BY created_at DESC LIMIT $2""",
-            player_id, limit
-        )
-    else:
-        async with db.execute(
-            """SELECT id, app_source, title, body, priority, is_read, is_toasted, action_url, created_at
-               FROM notifications WHERE player_id = ?
-               ORDER BY created_at DESC LIMIT ?""",
-            (player_id, limit)
-        ) as cur:
-            rows = await cur.fetchall()
-
-    return [dict(r) for r in rows]
+    return {"ok": True}
