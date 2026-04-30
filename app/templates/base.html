@@ -207,14 +207,24 @@
 
     /* ── Dock (sticky so SL browser click targets align correctly) ── */
     .nav-bar {
-      position: fixed; bottom: 0px;
-      width: fit-content; margin: 16px auto;
-      background: rgba(250,249,247,0.98);
-      border: 0.5px solid rgba(28,24,20,0.12);
-      border-radius: 24px; padding: 8px 14px;
-      display: flex; gap: 14px; align-items: center;
-      box-shadow: 0 4px 24px rgba(28,24,20,0.12);
-      z-index: 300;
+  position: fixed;
+  bottom: 16px;
+
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: fit-content;
+  margin: 0;
+
+  background: rgba(250,249,247,0.98);
+  border: 0.5px solid rgba(28,24,20,0.12);
+  border-radius: 24px;
+  padding: 8px 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 4px 24px rgba(28,24,20,0.12);
+  z-index: 300;
     }
     .nav-dock-icon {
       width: 44px; height: 44px; border-radius: 11px;
