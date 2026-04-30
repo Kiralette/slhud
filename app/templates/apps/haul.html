@@ -136,7 +136,7 @@ function filterItems(cat, btn) {
 }
 function subscribeTo(key, name, cost) {
   if (!confirm(`Subscribe to ${name} for ✦${cost}/week?`)) return;
-  fetch('/shop/subscribe', {
+  fetch('/subscribe', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({token: '{{ token }}', subscription_key: key})
@@ -146,7 +146,7 @@ function subscribeTo(key, name, cost) {
   });
 }
 function cancelSub(key) {
-  fetch('/shop/unsubscribe', {
+  fetch('/unsubscribe', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({token: '{{ token }}', subscription_key: key})

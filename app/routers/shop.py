@@ -527,7 +527,7 @@ class SubscribeRequest(BaseModel):
 
 @router.post("/subscribe")
 async def subscribe(body: SubscribeRequest, db=Depends(get_db)):
-    player = await _get_player(body.token, db)
+    player = await _get_player_by_token(body.token, db)
     if not player:
         raise HTTPException(status_code=401, detail="Invalid token.")
 
@@ -599,7 +599,7 @@ class UnsubscribeRequest(BaseModel):
 
 @router.post("/unsubscribe")
 async def unsubscribe(body: UnsubscribeRequest, db=Depends(get_db)):
-    player = await _get_player(body.token, db)
+    player = await _get_player_by_token(body.token, db)
     if not player:
         raise HTTPException(status_code=401, detail="Invalid token.")
 
