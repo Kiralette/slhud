@@ -1,24 +1,31 @@
 {% extends "base.html" %}
 {% block title %}Home · SL HUD{% endblock %}
 
+{% block status_bar %}{% endblock %}
+{% block nav_bar %}{% endblock %}
+
 {% block extra_style %}
 <style>
-  html { background: var(--bg); }
-  body {
+  /* ── Exact simulator CSS, adapted for standalone page ── */
+
+  html, body {
     background: var(--bg);
-    width: 100%; margin: 0; padding: 0;
-    overflow-x: hidden; min-height: 100vh;
+    margin: 0; padding: 0;
+    overflow-x: hidden;
   }
 
-  /* ── Dynamic Island ── */
+  /* Dynamic island */
   .dynamic-island {
-    position: relative; top: 0; left: 50%; transform: translateX(-50%);
+    position: relative;
+    left: 50%; transform: translateX(-50%);
     width: 120px; height: 34px;
-    background: #000; border-radius: 20px;
-    margin: 12px auto 0;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: #000;
+    border-radius: 20px;
+    margin-top: 12px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px;
     box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
-    z-index: 10;
+    z-index: 200;
   }
   .di-camera {
     width: 10px; height: 10px; border-radius: 50%;
@@ -30,7 +37,7 @@
   }
   .di-sensor { width: 28px; height: 7px; border-radius: 4px; background: #111; }
 
-  /* ── Status bar ── */
+  /* Status bar */
   .status-bar {
     padding: 10px 22px 6px;
     display: flex; justify-content: space-between; align-items: center;
@@ -58,61 +65,45 @@
   .battery-fill { height: 100%; width: 75%; background: var(--ink); border-radius: 1px; }
   .battery-tip { width: 2px; height: 5px; background: var(--ink); border-radius: 0 1px 1px 0; }
 
-  /* ── Greeting ── */
+  /* iOS Banner */
+  .ios-banner {
+    position: fixed;
+    top: 12px; left: 12px; right: 12px;
+    max-width: 406px; margin: 0 auto;
+    background: rgba(248,248,248,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px; padding: 12px 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08);
+    z-index: 500;
+    transform: translateY(-120px);
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    cursor: pointer;
+  }
+  .ios-banner.show { transform: translateY(0); }
+  .ios-banner-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .ios-banner-content { flex: 1; min-width: 0; }
+  .ios-banner-app   { font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px; }
+  .ios-banner-title { font-size: 13px; font-weight: 600; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ios-banner-body  { font-size: 12px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ios-banner-time  { font-size: 11px; color: var(--ink3); flex-shrink: 0; margin-top: 2px; }
+
+  /* Home screen */
+  .home-screen {
+    width: 100%;
+    background: var(--bg);
+    overflow-y: auto;
+    padding: 8px 0 100px;
+  }
   .home-greeting {
-    padding: 16px 20px 10px;
+    padding: 24px 24px 16px;
     font-family: var(--font-head);
     font-size: 28px; font-weight: 400; font-style: italic;
     color: var(--ink);
   }
   .home-greeting span { color: var(--gold); }
 
-  /* ── Lumens badge ── */
-  .lumens-badge {
-    padding: 0 20px 10px;
-    font-size: 13px; font-weight: 500; color: var(--ink2); letter-spacing: 0.02em;
-  }
-  .lumens-badge .sym { color: var(--gold); margin-right: 1px; }
-
-  /* ── Needs strip ── */
-  .needs-strip {
-    padding: 0 20px 10px;
-    display: flex; gap: 8px; align-items: flex-end;
-    border-bottom: 0.5px solid var(--border);
-  }
-  .need-pip {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-    text-decoration: none; -webkit-tap-highlight-color: transparent;
-  }
-  .need-pip-icon { font-size: 13px; line-height: 1; }
-  .need-pip-track { width: 100%; height: 4px; background: var(--bg4); border-radius: 99px; overflow: hidden; }
-  .need-pip-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
-  .need-pip-fill.ok   { background: var(--green); }
-  .need-pip-fill.warn { background: var(--amber); }
-  .need-pip-fill.crit { background: var(--rose); animation: crit-pulse 1.5s infinite; }
-  @keyframes crit-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-  /* ── Vibes strip ── */
-  .vibes-strip {
-    padding: 6px 20px 10px;
-    display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
-    min-height: 30px; align-items: center;
-    border-bottom: 0.5px solid var(--border);
-  }
-  .vibes-strip::-webkit-scrollbar { display: none; }
-  .vibe-chip { flex-shrink: 0; font-size: 10px; font-weight: 500; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
-  .vibe-chip.positive { background: var(--green-light); color: var(--green); }
-  .vibe-chip.negative { background: var(--rose-light); color: var(--rose); }
-  .no-vibes { font-size: 10px; color: var(--ink4); font-style: italic; }
-
-  /* ── Section title ── */
-  .section-title {
-    padding: 12px 20px 6px;
-    font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
-    color: var(--ink3); font-weight: 500;
-  }
-
-  /* ── App grid ── */
+  /* App grid — exact simulator values */
   .app-grid {
     display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 12px; padding: 0 20px 16px;
@@ -137,16 +128,24 @@
     width: 56px;
   }
 
-  /* ── Red dot ── */
+  /* Notification dots */
   .notif-dot {
     position: absolute; top: 0; right: 4px;
-    width: 9px; height: 9px; border-radius: 50%;
-    background: var(--rose); border: 1.5px solid var(--bg);
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--rose);
+    border: 2px solid var(--bg);
     display: none;
   }
   .notif-dot.show { display: block; }
 
-  /* ── Dock ── */
+  /* Section title */
+  .section-title {
+    padding: 12px 20px 6px;
+    font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--ink3); font-weight: 500;
+  }
+
+  /* Dock — exact simulator values */
   .dock {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     background: rgba(250,249,247,0.95);
@@ -158,44 +157,12 @@
     z-index: 200;
   }
   .dock .app-icon-bubble { width: 44px; height: 44px; border-radius: 11px; font-size: 20px; }
-
-  /* ── iOS notification banner ── */
-  .ios-banner {
-    position: fixed; top: 12px; left: 12px; right: 12px;
-    max-width: 406px; margin: 0 auto;
-    background: rgba(248,248,246,0.94);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-radius: 16px; padding: 12px 14px;
-    display: flex; align-items: flex-start; gap: 10px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.06);
-    z-index: 500;
-    transform: translateY(-140px);
-    transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
-    cursor: pointer;
-  }
-  .ios-banner.show { transform: translateY(0); }
-  .ios-banner-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-  .ios-banner-content { flex: 1; min-width: 0; }
-  .ios-banner-app   { font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px; }
-  .ios-banner-title { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ios-banner-body  { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ios-banner-time  { font-size: 11px; color: var(--ink4); flex-shrink: 0; margin-top: 2px; }
-
-  .scroll-pad { height: 110px; }
 </style>
-{% endblock %}
-
-{% block nav_bar %}
-{# Home has its own dock — suppress base nav bar #}
-{% endblock %}
-
-{% block status_bar %}
-{# Home renders its own dynamic island + status bar #}
 {% endblock %}
 
 {% block content %}
 
-<!-- Notification banner -->
+<!-- iOS notification banner -->
 <div class="ios-banner" id="ios-banner" onclick="dismissBanner()">
   <div class="ios-banner-icon" id="banner-icon">✦</div>
   <div class="ios-banner-content">
@@ -228,167 +195,137 @@
   </div>
 </div>
 
-<!-- Greeting -->
-<div class="home-greeting">Hello, <span>{{ player.display_name }}</span>.</div>
+<!-- Home screen -->
+<div class="home-screen" id="home-screen">
+  <div class="home-greeting">Hello, <span>{{ player.display_name }}</span>.</div>
 
-<!-- Lumens -->
-<div class="lumens-badge"><span class="sym">✦</span>{{ "%.0f"|format(wallet_balance) }}</div>
+  <div class="section-title">Needs</div>
+  <div class="app-grid">
+    <a class="app-icon" href="/app/pulse?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
+      <div class="app-icon-label">Pulse</div>
+    </a>
+    <a class="app-icon" href="/app/lumen-eats?token={{ token }}">
+      <div class="notif-dot" id="hdot-lumen_eats"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f5e0c0)">🍽️</div>
+      <div class="app-icon-label">Lumen Eats</div>
+    </a>
+    <a class="app-icon" href="/app/sip?token={{ token }}">
+      <div class="notif-dot" id="hdot-sip"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#d0e4d8)">💧</div>
+      <div class="app-icon-label">Sip</div>
+    </a>
+    <a class="app-icon" href="/app/recharge?token={{ token }}">
+      <div class="notif-dot" id="hdot-recharge"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">⚡</div>
+      <div class="app-icon-label">Recharge</div>
+    </a>
+    <a class="app-icon" href="/app/thrill?token={{ token }}">
+      <div class="notif-dot" id="hdot-thrill"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#fae0b0)">🎉</div>
+      <div class="app-icon-label">Thrill</div>
+    </a>
+    <a class="app-icon" href="/app/aura?token={{ token }}">
+      <div class="notif-dot" id="hdot-aura"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">🫂</div>
+      <div class="app-icon-label">Aura</div>
+    </a>
+    <a class="app-icon" href="/app/glow?token={{ token }}">
+      <div class="notif-dot" id="hdot-glow"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e8e4dc)">🛁</div>
+      <div class="app-icon-label">Glow</div>
+    </a>
+    <a class="app-icon" href="/app/luminary?token={{ token }}">
+      <div class="notif-dot" id="hdot-luminary"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#d8d0ec)">🕯️</div>
+      <div class="app-icon-label">Luminary</div>
+    </a>
+  </div>
 
-<!-- Needs strip -->
-<div class="needs-strip">
-  {% for need in needs_data %}
-  <a class="need-pip" href="/app/{{ need.app_key }}?token={{ token }}" title="{{ need.display_name }}">
-    <div class="need-pip-icon">{{ need.icon }}</div>
-    <div class="need-pip-track">
-      <div class="need-pip-fill {{ need.zone }}" style="width:{{ need.value }}%"></div>
-    </div>
-  </a>
-  {% endfor %}
-</div>
+  <div class="section-title">Life</div>
+  <div class="app-grid">
+    <a class="app-icon" href="/app/canvas?token={{ token }}">
+      <div class="notif-dot" id="hdot-canvas"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
+      <div class="app-icon-label">Canvas</div>
+    </a>
+    <a class="app-icon" href="/app/ritual?token={{ token }}">
+      <div class="notif-dot" id="hdot-ritual"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🗓️</div>
+      <div class="app-icon-label">Ritual</div>
+    </a>
+    <a class="app-icon" href="/app/grind?token={{ token }}">
+      <div class="notif-dot" id="hdot-grind"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e0dcd4)">💼</div>
+      <div class="app-icon-label">Grind</div>
+    </a>
+    <a class="app-icon" href="/app/vault?token={{ token }}">
+      <div class="notif-dot" id="hdot-vault"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8d8b8)">💰</div>
+      <div class="app-icon-label">Vault</div>
+    </a>
+  </div>
 
-<!-- Vibes -->
-<div class="vibes-strip">
-  {% if vibes %}
-    {% for v in vibes %}
-    <span class="vibe-chip {{ 'negative' if v.is_negative else 'positive' }}">{{ v.vibe_key | replace('_',' ') | title }}</span>
-    {% endfor %}
-  {% else %}
-    <span class="no-vibes">No active vibes</span>
-  {% endif %}
-</div>
+  <div class="section-title">Social & Media</div>
+  <div class="app-grid">
+    <a class="app-icon" href="/app/flare?token={{ token }}">
+      <div class="notif-dot" id="hdot-flare"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
+      <div class="app-icon-label">Flare</div>
+    </a>
+    <a class="app-icon" href="/app/ping?token={{ token }}">
+      <div class="notif-dot" id="hdot-ping"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
+      <div class="app-icon-label">Ping</div>
+    </a>
+    <a class="app-icon" href="/app/wavelength?token={{ token }}">
+      <div class="notif-dot" id="hdot-wavelength"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#e8d0d0)">🎵</div>
+      <div class="app-icon-label">Wavelength</div>
+    </a>
+    <a class="app-icon" href="/app/haul?token={{ token }}">
+      <div class="notif-dot" id="hdot-haul"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🛍️</div>
+      <div class="app-icon-label">Haul</div>
+    </a>
+  </div>
 
-<!-- NEEDS -->
-<div class="section-title">Needs</div>
-<div class="app-grid">
-  <a class="app-icon" href="/app/pulse?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
-    <div class="app-icon-label">Pulse</div>
-  </a>
-  <a class="app-icon" href="/app/lumen-eats?token={{ token }}">
-    <div class="notif-dot" id="dot-lumen_eats"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f5e0c0)">🍽️</div>
-    <div class="app-icon-label">Lumen Eats</div>
-  </a>
-  <a class="app-icon" href="/app/sip?token={{ token }}">
-    <div class="notif-dot" id="dot-sip"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#d0e4d8)">💧</div>
-    <div class="app-icon-label">Sip</div>
-  </a>
-  <a class="app-icon" href="/app/recharge?token={{ token }}">
-    <div class="notif-dot" id="dot-recharge"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">⚡</div>
-    <div class="app-icon-label">Recharge</div>
-  </a>
-  <a class="app-icon" href="/app/thrill?token={{ token }}">
-    <div class="notif-dot" id="dot-thrill"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#fae0b0)">🎉</div>
-    <div class="app-icon-label">Thrill</div>
-  </a>
-  <a class="app-icon" href="/app/aura?token={{ token }}">
-    <div class="notif-dot" id="dot-aura"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">🫂</div>
-    <div class="app-icon-label">Aura</div>
-  </a>
-  <a class="app-icon" href="/app/glow?token={{ token }}">
-    <div class="notif-dot" id="dot-glow"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e8e4dc)">🛁</div>
-    <div class="app-icon-label">Glow</div>
-  </a>
-  <a class="app-icon" href="/app/luminary?token={{ token }}">
-    <div class="notif-dot" id="dot-luminary"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#d8d0ec)">🕯️</div>
-    <div class="app-icon-label">Luminary</div>
-  </a>
-</div>
-
-<!-- LIFE -->
-<div class="section-title">Life</div>
-<div class="app-grid">
-  <a class="app-icon" href="/app/canvas?token={{ token }}">
-    <div class="notif-dot" id="dot-canvas"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
-    <div class="app-icon-label">Canvas</div>
-  </a>
-  <a class="app-icon" href="/app/ritual?token={{ token }}">
-    <div class="notif-dot" id="dot-ritual"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🗓️</div>
-    <div class="app-icon-label">Ritual</div>
-  </a>
-  <a class="app-icon" href="/app/grind?token={{ token }}">
-    <div class="notif-dot" id="dot-grind"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e0dcd4)">💼</div>
-    <div class="app-icon-label">Grind</div>
-  </a>
-  <a class="app-icon" href="/app/vault?token={{ token }}">
-    <div class="notif-dot" id="dot-vault"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8d8b8)">💰</div>
-    <div class="app-icon-label">Vault</div>
-  </a>
-</div>
-
-<!-- SOCIAL & MEDIA -->
-<div class="section-title">Social & Media</div>
-<div class="app-grid">
-  <a class="app-icon" href="/app/flare?token={{ token }}">
-    <div class="notif-dot" id="dot-flare"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
-    <div class="app-icon-label">Flare</div>
-  </a>
-  <a class="app-icon" href="/app/ping?token={{ token }}">
-    <div class="notif-dot" id="dot-ping"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
-    <div class="app-icon-label">Ping</div>
-  </a>
-  <a class="app-icon" href="/app/wavelength?token={{ token }}">
-    <div class="notif-dot" id="dot-wavelength"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#e8d0d0)">🎵</div>
-    <div class="app-icon-label">Wavelength</div>
-  </a>
-  <a class="app-icon" href="/app/haul?token={{ token }}">
-    <div class="notif-dot" id="dot-haul"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🛍️</div>
-    <div class="app-icon-label">Haul</div>
-  </a>
-</div>
-
-<!-- SKILLS -->
-<div class="section-title">Skills</div>
-<div class="app-grid">
-  <a class="app-icon" href="/app/skill/cooking?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f5e0c0)">🍳</div>
-    <div class="app-icon-label">Craft</div>
-  </a>
-  <a class="app-icon" href="/app/skill/creativity?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8d8b0)">🎨</div>
-    <div class="app-icon-label">Flow</div>
-  </a>
-  <a class="app-icon" href="/app/skill/charisma?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💫</div>
-    <div class="app-icon-label">Charm</div>
-  </a>
-  <a class="app-icon" href="/app/skill/fitness?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">💪</div>
-    <div class="app-icon-label">Stride</div>
-  </a>
-  <a class="app-icon" href="/app/skill/gaming?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8dcc8)">🎮</div>
-    <div class="app-icon-label">Play</div>
-  </a>
-  <a class="app-icon" href="/app/skill/music?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🎵</div>
-    <div class="app-icon-label">Strings</div>
-  </a>
-  <a class="app-icon" href="/app/skill/knowledge?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e8e4dc)">📚</div>
-    <div class="app-icon-label">Pages</div>
-  </a>
-  <a class="app-icon" href="/app/guide?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#ddd8d0)">📖</div>
-    <div class="app-icon-label">Guide</div>
-  </a>
-</div>
-
-<div class="scroll-pad"></div>
+  <div class="section-title">Skills</div>
+  <div class="app-grid">
+    <a class="app-icon" href="/app/skill/cooking?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f5e0c0)">🍳</div>
+      <div class="app-icon-label">Craft</div>
+    </a>
+    <a class="app-icon" href="/app/skill/creativity?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8d8b0)">🎨</div>
+      <div class="app-icon-label">Flow</div>
+    </a>
+    <a class="app-icon" href="/app/skill/charisma?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💫</div>
+      <div class="app-icon-label">Charm</div>
+    </a>
+    <a class="app-icon" href="/app/skill/fitness?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">💪</div>
+      <div class="app-icon-label">Stride</div>
+    </a>
+    <a class="app-icon" href="/app/skill/gaming?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8dcc8)">🎮</div>
+      <div class="app-icon-label">Play</div>
+    </a>
+    <a class="app-icon" href="/app/skill/music?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🎵</div>
+      <div class="app-icon-label">Strings</div>
+    </a>
+    <a class="app-icon" href="/app/skill/knowledge?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e8e4dc)">📚</div>
+      <div class="app-icon-label">Pages</div>
+    </a>
+    <a class="app-icon" href="/app/guide?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#ddd8d0)">📖</div>
+      <div class="app-icon-label">Guide</div>
+    </a>
+  </div>
+</div><!-- /home-screen -->
 
 <!-- Dock -->
 <div class="dock">
@@ -396,15 +333,15 @@
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
   </a>
   <a class="app-icon" href="/app/ping?token={{ token }}">
-    <div class="notif-dot" id="dock-dot-ping"></div>
+    <div class="notif-dot" id="dot-ping"></div>
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
   </a>
   <a class="app-icon" href="/app/flare?token={{ token }}">
-    <div class="notif-dot" id="dock-dot-flare"></div>
+    <div class="notif-dot" id="dot-flare"></div>
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
   </a>
   <a class="app-icon" href="/app/canvas?token={{ token }}">
-    <div class="notif-dot" id="dock-dot-canvas"></div>
+    <div class="notif-dot" id="dot-canvas"></div>
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
   </a>
 </div>
@@ -414,8 +351,11 @@
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
-  const PAGE_TOKEN = TOKEN;
+  const DOT_APPS = ['ping','flare','canvas'];
+  const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',system:'✦',aura:'🫂',recharge:'⚡',wavelength:'🎵',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️' };
+  const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',system:'SL HUD',glow:'Glow',thrill:'Thrill',luminary:'Luminary' };
 
+  // Live clock
   function updateClock() {
     const now = new Date();
     let h = now.getHours() % 12 || 12;
@@ -425,9 +365,7 @@
   updateClock();
   setInterval(updateClock, 30000);
 
-  const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',aura:'🫂',recharge:'⚡',wavelength:'🎵',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️',system:'✦' };
-  const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',glow:'Glow',thrill:'Thrill',luminary:'Luminary',system:'SL HUD' };
-
+  // Notifications
   let shownNotifIds = new Set(), bannerTimeout = null;
 
   async function pollNotifications() {
@@ -437,19 +375,19 @@
       if (res.ok) {
         const data = await res.json();
         const unseen = (data.notifications || []).filter(n => !n.is_read && !shownNotifIds.has(n.id));
-        if (unseen.length > 0) {
-          shownNotifIds.add(unseen[0].id);
-          showBanner(unseen[0]);
-        }
+        if (unseen.length > 0) { shownNotifIds.add(unseen[0].id); showBanner(unseen[0]); }
       }
     } catch(_) {}
     try {
       const res2 = await fetch('/notifications/unread-count', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
       if (!res2.ok) return;
       const byApp = (await res2.json()).by_app || {};
-      document.querySelectorAll('.notif-dot').forEach(dot => {
-        const appKey = dot.id.replace('dock-dot-','').replace('dot-','');
-        dot.classList.toggle('show', (byApp[appKey] || 0) > 0);
+      DOT_APPS.forEach(app => {
+        const has = (byApp[app] || 0) > 0;
+        ['dot-','hdot-'].forEach(pre => {
+          const el = document.getElementById(pre + app);
+          if (el) el.classList.toggle('show', has);
+        });
       });
     } catch(_) {}
   }
@@ -473,13 +411,13 @@
     if (banner.dataset.notifId && TOKEN) {
       fetch('/notifications/mark-read', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: TOKEN, notification_id: parseInt(banner.dataset.notifId) })
       }).catch(() => {});
     }
   }
 
   pollNotifications();
-  setInterval(pollNotifications, 60000);
+  setInterval(pollNotifications, 8000);
 </script>
 {% endblock %}
