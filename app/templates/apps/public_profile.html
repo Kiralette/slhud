@@ -112,9 +112,12 @@
 <div class="profile-header-row">
   <div>
     <div class="profile-name">{{ target.display_name }}</div>
-    {% if post_streak > 0 %}
-    <div class="profile-sub">🔥 {{ post_streak }}-day post streak</div>
-    {% endif %}
+    <div class="profile-sub" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+      {% if target_profile.pronouns %}<span>{{ target_profile.pronouns }}</span>{% endif %}
+      {% if target_profile.age_group %}<span>· {{ target_profile.age_group }}</span>{% endif %}
+      {% if target_profile.zodiac %}<span>· {{ target_profile.zodiac | title }}</span>{% endif %}
+      {% if post_streak > 0 %}<span>· 🔥 {{ post_streak }}-day streak</span>{% endif %}
+    </div>
   </div>
   {% if not is_own_profile %}
   <button class="follow-btn {% if viewer_following %}following{% endif %}"

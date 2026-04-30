@@ -41,6 +41,26 @@
   .needs-mini-val.ok { color: var(--green); }
   .needs-mini-val.warn { color: var(--amber); }
   .needs-mini-val.crit { color: var(--rose); }
+  .horoscope-card {
+    margin: 14px 18px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .horoscope-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .horoscope-symbol {
+    font-size: 28px; line-height: 1;
+  }
+  .horoscope-meta { flex: 1; }
+  .horoscope-sign { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .horoscope-date { font-size: 10px; color: var(--ink3); margin-top: 1px; }
+  .horoscope-text {
+    font-size: 13px; color: var(--ink2); line-height: 1.7;
+    font-style: italic;
+  }
 </style>
 {% endblock %}
 
@@ -73,6 +93,19 @@
   <span class="status-pill crit"><span class="status-dot"></span>Lost — XP heavily reduced</span>
   {% endif %}
 </div>
+
+{% if horoscope %}
+<div class="horoscope-card">
+  <div class="horoscope-header">
+    <div class="horoscope-symbol" style="color:{{ horoscope.color }}">{{ horoscope.symbol }}</div>
+    <div class="horoscope-meta">
+      <div class="horoscope-sign">{{ horoscope.zodiac }} · Daily Horoscope</div>
+      <div class="horoscope-date">{{ horoscope.date }}</div>
+    </div>
+  </div>
+  <div class="horoscope-text">"{{ horoscope.text }}"</div>
+</div>
+{% endif %}
 
 <div class="tabs">
   <button class="tab active" data-tab="tab-purpose" onclick="showTab('tab-purpose')">Purpose</button>

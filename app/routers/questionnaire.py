@@ -41,7 +41,8 @@ class QuestionnaireSubmit(BaseModel):
     gender_expression: str | None = None
     age_group: str | None = None
     sexuality: str | None = None
-    # Questionnaire answer keys (7 answers, one per question)
+    zodiac: str | None = None
+    # Questionnaire answer keys (one per scoring question)
     answers: list[str]
 
 
@@ -130,6 +131,13 @@ async def submit_questionnaire(body: QuestionnaireSubmit, db=Depends(get_db)):
     if body.sexuality and body.sexuality in VALID_SEXUALITY:
         profile_data["sexuality"] = body.sexuality
 
+    VALID_ZODIACS = ["aries","taurus","gemini","cancer","leo","virgo",
+                     "libra","scorpio","sagittarius","capricorn","aquarius","pisces"]
+    zodiac_sign = None
+    if body.zodiac and body.zodiac.lower() in VALID_ZODIACS:
+        zodiac_sign = body.zodiac.lower()
+        profile_data["zodiac"] = zodiac_sign
+
     await _update_profile(player_id, profile_data, db)
 
     # ── Score answers ──
@@ -141,6 +149,29 @@ async def submit_questionnaire(body: QuestionnaireSubmit, db=Depends(get_db)):
 
     await apply_traits_to_player(player_id, selected, db)
     bonus = await award_negative_bonuses(player_id, selected, db)
+
+    # Apply zodiac trait if provided
+    zodiac_trait_display = None
+    if zodiac_sign:
+        zodiac_trait_key = f"zodiac_{zodiac_sign}"
+        if is_postgres():
+            await db.execute(
+                """INSERT INTO player_traits (player_id, trait_key, source)
+                   VALUES ($1, $2, 'zodiac') ON CONFLICT (player_id, trait_key) DO NOTHING""",
+                player_id, zodiac_trait_key)
+        else:
+            await db.execute(
+                """INSERT OR IGNORE INTO player_traits (player_id, trait_key, source)
+                   VALUES (?, ?, 'zodiac')""",
+                (player_id, zodiac_trait_key))
+            await db.commit()
+        ZODIAC_DISPLAY = {
+            "aries": "Aries ♈", "taurus": "Taurus ♉", "gemini": "Gemini ♊",
+            "cancer": "Cancer ♋", "leo": "Leo ♌", "virgo": "Virgo ♍",
+            "libra": "Libra ♎", "scorpio": "Scorpio ♏", "sagittarius": "Sagittarius ♐",
+            "capricorn": "Capricorn ♑", "aquarius": "Aquarius ♒", "pisces": "Pisces ♓",
+        }
+        zodiac_trait_display = ZODIAC_DISPLAY.get(zodiac_sign, zodiac_sign.title())
 
     # ── Auto-apply cycle trait if eligible biology ──
     if body.biology_agab in ("female", "intersex"):
@@ -181,6 +212,7 @@ async def submit_questionnaire(body: QuestionnaireSubmit, db=Depends(get_db)):
         "traits_applied": selected,
         "trait_displays": display_names,
         "lumen_bonus":   bonus,
+        "zodiac_trait":  zodiac_trait_display,
     }
 
 

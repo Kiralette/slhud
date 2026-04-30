@@ -126,6 +126,7 @@ async def _init_sqlite():
                 gender_expression           TEXT    DEFAULT '',
                 questionnaire_completed_at  TEXT,
                 questionnaire_last_edited_at TEXT,
+                zodiac                      TEXT,
                 is_mental_health_opted_in   INTEGER NOT NULL DEFAULT 0
             )
         """)
@@ -532,6 +533,7 @@ async def _init_postgres():
                 gender_expression           TEXT    DEFAULT \'\',
                 questionnaire_completed_at  TEXT,
                 questionnaire_last_edited_at TEXT,
+                zodiac                      TEXT,
                 is_mental_health_opted_in   INTEGER NOT NULL DEFAULT 0
             )
         """)

@@ -1338,6 +1338,7 @@ async def luminary(
         occ_rows    = await db.fetch(
             """SELECT occurrence_key, sub_stage FROM player_occurrences
                WHERE player_id = $1 AND is_resolved = 0""", player_id)
+        profile_row_lum = await db.fetchrow("SELECT zodiac FROM player_profiles WHERE player_id = $1", player_id)
         weekly_rows = await db.fetch(
             """SELECT need_key, AVG(value_after) as avg_val, date(timestamp) as day
                FROM event_log WHERE player_id = $1
@@ -1362,6 +1363,8 @@ async def luminary(
                AND timestamp >= datetime('now', '-7 days')
                GROUP BY need_key, date(timestamp) ORDER BY day ASC""", (player_id,)) as cur:
             weekly_rows = await cur.fetchall()
+        async with db.execute("SELECT zodiac FROM player_profiles WHERE player_id = ?", (player_id,)) as cur:
+            profile_row_lum = await cur.fetchone()
 
     purpose_value = float(need_row["value"]) if need_row else 100.0
     wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
@@ -1783,6 +1786,7 @@ async def public_player_profile(
 
     if is_postgres():
         stats_row = await db.fetchrow("SELECT * FROM flare_stats WHERE player_id = $1", target_id)
+        target_profile_row = await db.fetchrow("SELECT pronouns, age_group, zodiac FROM player_profiles WHERE player_id = $1", target_id)
         posts_rows = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
@@ -1803,6 +1807,8 @@ async def public_player_profile(
     else:
         async with db.execute("SELECT * FROM flare_stats WHERE player_id = ?", (target_id,)) as cur:
             stats_row = await cur.fetchone()
+        async with db.execute("SELECT pronouns, age_group, zodiac FROM player_profiles WHERE player_id = ?", (target_id,)) as cur:
+            target_profile_row = await cur.fetchone()
         async with db.execute(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
@@ -1839,10 +1845,13 @@ async def public_player_profile(
 
     is_own_profile = (target_id == viewer_id)
 
+    target_profile = dict(target_profile_row) if target_profile_row else {}
+
     return templates.TemplateResponse(request, "apps/public_profile.html", {
         "token":            token,
         "viewer":           viewer,
         "target":           target,
+        "target_profile":   target_profile,
         "is_own_profile":   is_own_profile,
         "viewer_following": bool(viewer_following),
         "posts":            [fmt_post(r) for r in posts_rows],

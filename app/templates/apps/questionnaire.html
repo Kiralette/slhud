@@ -3,85 +3,44 @@
 
 {% block extra_style %}
 <style>
-  body { background: var(--bg); }
-  .q-topbar {
-    padding: 14px 18px 12px;
-    border-bottom: 0.5px solid var(--border);
-    display: flex; align-items: center; gap: 12px;
-  }
-  .q-back { background: none; border: none; font-family: var(--font); font-size: 12px; color: var(--ink3); cursor: pointer; padding: 0; }
-  .q-title { font-family: var(--font-head); font-size: 18px; font-weight: 400; color: var(--ink); }
-  .q-step-indicator { margin-left: auto; font-size: 10px; color: var(--ink4); font-weight: 500; }
-
-  .screen { display: none; padding: 20px 18px 120px; }
-  .screen.active { display: block; }
-
-  .welcome-text { font-size: 13px; color: var(--ink2); line-height: 1.7; margin-bottom: 20px; }
-
-  .path-card {
-    background: var(--bg2); border: 0.5px solid var(--border);
-    border-radius: var(--radius); padding: 20px 18px; margin-bottom: 12px;
-    cursor: pointer; transition: border-color .15s, background .15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .path-card:hover, .path-card:active { border-color: var(--gold); background: var(--gold-light); }
-  .path-card-icon { font-size: 32px; margin-bottom: 10px; }
-  .path-card-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
-  .path-card-desc { font-size: 12px; color: var(--ink2); line-height: 1.6; }
-
-  .progress-bar { height: 3px; background: var(--bg3); border-radius: 2px; margin-bottom: 24px; }
-  .progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width .3s ease; }
-
-  .q-question { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 20px; }
-  .q-options { display: flex; flex-direction: column; gap: 10px; }
-  .q-option {
-    padding: 14px 16px; background: var(--bg2); border: 0.5px solid var(--border);
-    border-radius: var(--radius); font-family: var(--font); font-size: 13px; color: var(--ink2);
-    cursor: pointer; text-align: left; transition: all .15s; width: 100%;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .q-option:hover, .q-option:active, .q-option.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-
-  .q-input {
-    width: 100%; padding: 14px 16px; border: 0.5px solid var(--border2);
-    border-radius: var(--radius); background: var(--bg); color: var(--ink);
-    font-family: var(--font); font-size: 14px; outline: none; box-sizing: border-box;
-  }
-  .q-input:focus { border-color: var(--gold); }
-  .q-next-btn {
-    width: 100%; margin-top: 12px; padding: 14px;
-    background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius);
-    font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer;
-  }
-
-  .build-intro { font-size: 13px; color: var(--ink2); line-height: 1.6; margin-bottom: 6px; }
-  .pick-count { font-size: 11px; color: var(--gold); font-weight: 600; margin-bottom: 14px; }
-  .trait-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-  .trait-chip {
-    padding: 11px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2);
-    background: var(--bg2); color: var(--ink2); font-family: var(--font); font-size: 12px;
-    font-weight: 500; cursor: pointer; text-align: center; transition: all .15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .trait-chip.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  .trait-chip.negative { color: var(--rose); border-color: rgba(156,80,80,.3); }
-  .trait-chip.negative.selected { background: var(--rose); border-color: var(--rose); color: white; }
-
-  .build-submit-btn {
-    width: 100%; padding: 14px; background: var(--ink); color: var(--bg);
-    border: none; border-radius: var(--radius); font-family: var(--font);
-    font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 4px;
-  }
-  .build-submit-btn:disabled { opacity: .4; cursor: not-allowed; }
-
-  .result-center { text-align: center; }
-  .result-icon { font-size: 56px; margin-bottom: 16px; }
-  .result-title { font-family: var(--font-head); font-size: 26px; font-weight: 400; color: var(--ink); margin-bottom: 8px; }
-  .result-sub { font-size: 13px; color: var(--ink2); line-height: 1.6; margin-bottom: 20px; }
-  .result-traits { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; justify-content: center; }
-  .result-trait { padding: 7px 14px; border-radius: 20px; background: var(--bg2); color: var(--ink2); border: 0.5px solid var(--border); font-size: 12px; font-weight: 500; }
-  .result-bonus { display: inline-block; background: var(--gold-light); color: var(--gold); font-size: 13px; font-weight: 600; padding: 8px 20px; border-radius: 20px; margin-bottom: 20px; }
-  .result-done-btn { width: 100%; padding: 14px; background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; }
+  .q-topbar { padding:14px 18px 12px; border-bottom:0.5px solid var(--border); display:flex; align-items:center; gap:12px; }
+  .q-back { background:none; border:none; font-family:var(--font); font-size:12px; color:var(--ink3); cursor:pointer; padding:0; }
+  .q-title { font-family:var(--font-head); font-size:18px; font-weight:400; color:var(--ink); }
+  .q-step-indicator { margin-left:auto; font-size:10px; color:var(--ink4); font-weight:500; }
+  .screen { display:none; padding:20px 18px 120px; }
+  .screen.active { display:block; }
+  .welcome-text { font-size:13px; color:var(--ink2); line-height:1.7; margin-bottom:20px; }
+  .path-card { background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius); padding:20px 18px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, background .15s; -webkit-tap-highlight-color:transparent; }
+  .path-card:hover,.path-card:active { border-color:var(--gold); background:var(--gold-light); }
+  .path-card-icon { font-size:32px; margin-bottom:10px; }
+  .path-card-title { font-size:15px; font-weight:600; color:var(--ink); margin-bottom:5px; }
+  .path-card-desc { font-size:12px; color:var(--ink2); line-height:1.6; }
+  .progress-bar { height:3px; background:var(--bg3); border-radius:2px; margin-bottom:24px; }
+  .progress-fill { height:100%; background:var(--gold); border-radius:2px; transition:width .3s ease; }
+  .q-question { font-family:var(--font-head); font-size:20px; font-weight:400; color:var(--ink); line-height:1.4; margin-bottom:20px; }
+  .q-options { display:flex; flex-direction:column; gap:10px; }
+  .q-option { padding:14px 16px; background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius); font-family:var(--font); font-size:13px; color:var(--ink2); cursor:pointer; text-align:left; transition:all .15s; width:100%; -webkit-tap-highlight-color:transparent; }
+  .q-option:hover,.q-option:active,.q-option.selected { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .q-input { width:100%; padding:14px 16px; border:0.5px solid var(--border2); border-radius:var(--radius); background:var(--bg); color:var(--ink); font-family:var(--font); font-size:14px; outline:none; box-sizing:border-box; }
+  .q-input:focus { border-color:var(--gold); }
+  .q-next-btn { width:100%; margin-top:12px; padding:14px; background:var(--ink); color:var(--bg); border:none; border-radius:var(--radius); font-family:var(--font); font-size:14px; font-weight:500; cursor:pointer; }
+  .build-intro { font-size:13px; color:var(--ink2); line-height:1.6; margin-bottom:6px; }
+  .pick-count { font-size:11px; color:var(--gold); font-weight:600; margin-bottom:14px; }
+  .trait-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  .trait-chip { padding:11px 12px; border-radius:var(--radius-sm); border:0.5px solid var(--border2); background:var(--bg2); color:var(--ink2); font-family:var(--font); font-size:12px; font-weight:500; cursor:pointer; text-align:center; transition:all .15s; -webkit-tap-highlight-color:transparent; }
+  .trait-chip.selected { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .trait-chip.negative { color:var(--rose); border-color:rgba(156,80,80,.3); }
+  .trait-chip.negative.selected { background:var(--rose); border-color:var(--rose); color:white; }
+  .build-submit-btn { width:100%; padding:14px; background:var(--ink); color:var(--bg); border:none; border-radius:var(--radius); font-family:var(--font); font-size:14px; font-weight:500; cursor:pointer; margin-top:4px; }
+  .build-submit-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .result-center { text-align:center; }
+  .result-icon { font-size:56px; margin-bottom:16px; }
+  .result-title { font-family:var(--font-head); font-size:26px; font-weight:400; color:var(--ink); margin-bottom:8px; }
+  .result-sub { font-size:13px; color:var(--ink2); line-height:1.6; margin-bottom:20px; }
+  .result-traits { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; justify-content:center; }
+  .result-trait { padding:7px 14px; border-radius:20px; background:var(--bg2); color:var(--ink2); border:0.5px solid var(--border); font-size:12px; font-weight:500; }
+  .result-bonus { display:inline-block; background:var(--gold-light); color:var(--gold); font-size:13px; font-weight:600; padding:8px 20px; border-radius:20px; margin-bottom:20px; }
+  .result-done-btn { width:100%; padding:14px; background:var(--ink); color:var(--bg); border:none; border-radius:var(--radius); font-family:var(--font); font-size:14px; font-weight:500; cursor:pointer; }
 </style>
 {% endblock %}
 
@@ -98,7 +57,7 @@
     <div class="path-card" onclick="startDiscover()">
       <div class="path-card-icon">🔮</div>
       <div class="path-card-title">Discover my traits</div>
-      <div class="path-card-desc">Answer 9 quick questions and the HUD will figure out your traits. Recommended for new players.</div>
+      <div class="path-card-desc">Answer a few questions and the HUD will figure out your traits. Recommended for new players.</div>
     </div>
     <div class="path-card" onclick="startBuild()">
       <div class="path-card-icon">🧩</div>
@@ -134,7 +93,7 @@
       <div class="result-sub" id="result-sub">Your traits have been applied and will shape your experience.</div>
       <div class="result-traits" id="result-traits"></div>
       <div class="result-bonus" id="result-bonus" style="display:none;"></div>
-      <button class="result-done-btn" onclick="window.location.href='/app/pulse?token={{ token }}'">Open Pulse →</button>
+      <button class="result-done-btn" onclick="window.location.href='/app/canvas?token={{ token }}'">Open Canvas →</button>
     </div>
   </div>
 </div>
@@ -151,34 +110,92 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
 }
-
 function goBack() {
   showScreen('screen-home');
   document.getElementById('q-back').style.display = 'none';
   document.getElementById('q-title').textContent = 'Profile Setup';
   document.getElementById('q-step-indicator').textContent = '';
-  currentStep = 0; answers = {}; profileData = {};
+  currentStep = 0; answerKeys = []; profileData = {};
 }
 
+// Each question has label options + matching answer_key values for scoring
 const QUESTIONS = [
-  { key:'display_name', q:"First — what should we call you?", type:'text', placeholder:'Your display name…' },
-  { key:'pronouns', q:"What are your pronouns?", type:'pills', options:['she/her','he/him','they/them','she/they','he/they','any/all'] },
-  { key:'q_free_day', q:"A full day off — what's most likely happening?", type:'pills', options:["Out socialising","Solo creative project","Gym or outdoors","Reading or studying","Gaming or streaming","Sleeping, honestly"] },
-  { key:'q_stress', q:"Something goes wrong. Your gut reaction?", type:'pills', options:["Text someone immediately","Try to fix it myself","Get frustrated then move on","Overthink it for hours","Shrug it off pretty fast"] },
-  { key:'q_routine', q:"Your relationship with routines?", type:'pills', options:["Love them, very structured","Good intentions, messy reality","Prefer to go with the flow","What is a routine"] },
-  { key:'q_food', q:"Your relationship with food?", type:'pills', options:["Eat anything, no issues","Picky, I have my things","I forget to eat honestly","Food is culture, I love it"] },
-  { key:'q_energy', q:"Your energy levels tend to be…", type:'pills', options:["High in the morning","High late at night","Inconsistent, day by day","Honestly always low"] },
-  { key:'q_social', q:"In a group of new people, you're usually…", type:'pills', options:["Making friends with everyone","Talking to one or two people","Mostly observing","Ready to leave honestly"] },
-  { key:'q_life', q:"Where are you at right now?", type:'pills', options:["Building toward something big","Taking it one day at a time","Processing some stuff","Thriving, honestly","Lost but figuring it out"] }
+  {
+    key: 'display_name', type: 'text',
+    q: "First — what should we call you?",
+    placeholder: 'Your display name…'
+  },
+  {
+    key: 'pronouns', type: 'pills',
+    q: "What are your pronouns?",
+    options: ['she/her','he/him','they/them','she/they','he/they','any/all'],
+    answer_keys: [null,null,null,null,null,null]  // profile field, no scoring
+  },
+  {
+    key: 'age_group', type: 'pills',
+    q: "Age group?",
+    options: ['18–21','22–25','26–30','31–35','36–40','40+'],
+    answer_keys: ['18-21','22-25','26-30','31-35','36-40','40+'],
+    profile: true
+  },
+  {
+    key: 'zodiac', type: 'pills',
+    q: "What's your zodiac sign?",
+    options: ['♈ Aries','♉ Taurus','♊ Gemini','♋ Cancer','♌ Leo','♍ Virgo','♎ Libra','♏ Scorpio','♐ Sagittarius','♑ Capricorn','♒ Aquarius','♓ Pisces'],
+    answer_keys: ['aries','taurus','gemini','cancer','leo','virgo','libra','scorpio','sagittarius','capricorn','aquarius','pisces'],
+    profile: true
+  },
+  {
+    key: 'q1', type: 'pills',
+    q: "A full day off — what's most likely happening?",
+    options: ['Out socialising','Something creative','Gym or outdoors','Reading or studying','Gaming or streaming','Sleeping honestly'],
+    answer_keys: ['q1_social','q1_creative','q1_active','q1_reading','q1_homebody','q1_homebody']
+  },
+  {
+    key: 'q2', type: 'pills',
+    q: "Something goes wrong. Your gut reaction?",
+    options: ['Text someone immediately','Try to fix it myself','Get frustrated, move on','Overthink it for hours','Shrug it off pretty fast'],
+    answer_keys: ['q2_talk','q2_exercise','q2_ignore','q2_overthink','q2_ignore']
+  },
+  {
+    key: 'q3', type: 'pills',
+    q: "In a group of new people, you're usually…",
+    options: ['Making friends with everyone','Talking to one or two','Mostly observing','Ready to leave, honestly'],
+    answer_keys: ['q3_everywhere','q3_hosting','q3_observing','q3_left_early']
+  },
+  {
+    key: 'q4', type: 'pills',
+    q: "How do you describe yourself?",
+    options: ['Goal-driven','Go with the flow','The planner','The creative one','The caring one'],
+    answer_keys: ['q4_goal_driven','q4_go_with_flow','q4_planner','q4_creative','q4_helper']
+  },
+  {
+    key: 'q5', type: 'pills',
+    q: "Food?",
+    options: ['Eat anything, no issues','Picky, I have my things','I forget to eat honestly','Food is culture, love it'],
+    answer_keys: ['q5_adventurous','q5_picky','q5_forget','q5_fuel']
+  },
+  {
+    key: 'q6', type: 'pills',
+    q: "Your self-awareness level?",
+    options: ['Very self-aware, I reflect a lot','Aware but can be harsh on myself','Curious — I like figuring myself out','Night owl energy, do it later','Morning person, sorted before noon'],
+    answer_keys: ['q6_aware','q6_harsh','q6_curious','q6_night_owl','q6_morning']
+  },
+  {
+    key: 'q7', type: 'pills',
+    q: "How do people usually describe you?",
+    options: ['Caring and warm','Funny and social','Intense and driven','Quiet and thoughtful','Unpredictable and exciting'],
+    answer_keys: ['q7_caring','q7_funny','q7_intense','q7_quiet','q7_unpredictable']
+  }
 ];
 
-let currentStep = 0, answers = {}, profileData = {};
+let currentStep = 0, answerKeys = [], profileData = {};
 
 function startDiscover() {
   showScreen('screen-q');
   document.getElementById('q-back').style.display = 'block';
   document.getElementById('q-title').textContent = 'Getting to know you';
-  currentStep = 0; answers = {}; profileData = {};
+  currentStep = 0; answerKeys = []; profileData = {};
   renderStep();
 }
 
@@ -195,8 +212,11 @@ function renderStep() {
     inp.focus();
     inp.addEventListener('keydown', e => { if(e.key==='Enter') submitText(); });
   } else {
-    body.innerHTML = '<div class="q-options">' + q.options.map(opt =>
-      `<button class="q-option" onclick="selectPill(this,'${q.key}','${opt.replace(/'/g,"&#39;")}')">${opt}</button>`
+    // For zodiac, show as 2-column grid
+    const isZodiac = q.key === 'zodiac';
+    const style = isZodiac ? 'display:grid;grid-template-columns:1fr 1fr;gap:8px;' : '';
+    body.innerHTML = `<div class="q-options" style="${style}">` + q.options.map((opt, i) =>
+      `<button class="q-option" onclick="selectPill(this, ${i})">${opt}</button>`
     ).join('') + '</div>';
   }
 }
@@ -205,17 +225,23 @@ function submitText() {
   const inp = document.getElementById('q-text-input');
   const val = (inp?.value||'').trim();
   if (!val) { inp?.focus(); return; }
-  const q = QUESTIONS[currentStep];
-  if (q.key === 'display_name') profileData.display_name = val;
-  else answers[q.key] = val;
+  profileData.display_name = val;
   nextStep();
 }
 
-function selectPill(btn, key, val) {
+function selectPill(btn, idx) {
   document.querySelectorAll('#q-body .q-option').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  if (key === 'pronouns') profileData.pronouns = val;
-  else answers[key] = val;
+  const q = QUESTIONS[currentStep];
+
+  if (q.key === 'pronouns') {
+    profileData.pronouns = q.options[idx];
+  } else if (q.profile) {
+    profileData[q.key] = q.answer_keys[idx];
+  } else {
+    const ak = q.answer_keys[idx];
+    if (ak) answerKeys.push(ak);
+  }
   setTimeout(nextStep, 280);
 }
 
@@ -232,18 +258,29 @@ async function submitQuestionnaire() {
   try {
     const res = await fetch('/questionnaire/submit', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ token:TOKEN, display_name:profileData.display_name||null, pronouns:profileData.pronouns||null, answers:Object.values(answers) })
+      body: JSON.stringify({
+        token: TOKEN,
+        display_name: profileData.display_name || null,
+        pronouns: profileData.pronouns || null,
+        age_group: profileData.age_group || null,
+        zodiac: profileData.zodiac || null,
+        answers: answerKeys
+      })
     });
     const data = await res.json();
-    showResult(data.trait_displays||[], data.lumen_bonus||0);
+    if (data.status === 'complete' || data.trait_displays) {
+      showResult(data.trait_displays||[], data.lumen_bonus||0, data.zodiac_trait||null);
+    } else {
+      throw new Error(data.detail || 'Error');
+    }
   } catch(e) {
     document.getElementById('q-question').textContent = 'Something went wrong.';
     document.getElementById('q-body').innerHTML = '<button class="q-next-btn" onclick="submitQuestionnaire()">Try again</button>';
   }
 }
 
+// ── Build path ─────────────────────────────────────────────────────────────
 const selectedTraits = new Set();
-
 function startBuild() {
   showScreen('screen-build');
   document.getElementById('q-back').style.display = 'block';
@@ -253,18 +290,13 @@ function startBuild() {
   document.getElementById('pick-count').textContent = '0 / 5 selected';
   document.getElementById('build-submit').disabled = true;
 }
-
 function toggleTrait(chip) {
   const key = chip.dataset.key;
   if (selectedTraits.has(key)) { selectedTraits.delete(key); chip.classList.remove('selected'); }
-  else {
-    if (selectedTraits.size >= 5) return;
-    selectedTraits.add(key); chip.classList.add('selected');
-  }
+  else { if (selectedTraits.size >= 5) return; selectedTraits.add(key); chip.classList.add('selected'); }
   document.getElementById('pick-count').textContent = selectedTraits.size + ' / 5 selected';
   document.getElementById('build-submit').disabled = selectedTraits.size === 0;
 }
-
 async function submitBuild() {
   if (!selectedTraits.size) return;
   const btn = document.getElementById('build-submit');
@@ -276,16 +308,19 @@ async function submitBuild() {
     });
     const data = await res.json();
     const displays = [...selectedTraits].map(k => { const t=TRAIT_DEFS.find(x=>x.key===k); return t?t.display:k; });
-    showResult(displays, data.lumen_bonus||0);
+    showResult(displays, data.lumen_bonus||0, null);
   } catch(e) { btn.disabled=false; btn.textContent='Apply traits'; toast('Something went wrong.'); }
 }
 
-function showResult(traitDisplays, bonus) {
+// ── Result ─────────────────────────────────────────────────────────────────
+function showResult(traitDisplays, bonus, zodiacTrait) {
   showScreen('screen-result');
   document.getElementById('q-back').style.display = 'none';
   document.getElementById('q-title').textContent = 'Done ✓';
   document.getElementById('q-step-indicator').textContent = '';
-  document.getElementById('result-traits').innerHTML = traitDisplays.map(t=>`<span class="result-trait">${t}</span>`).join('');
+  let allTraits = [...traitDisplays];
+  if (zodiacTrait) allTraits.push(zodiacTrait + ' ✦');
+  document.getElementById('result-traits').innerHTML = allTraits.map(t=>`<span class="result-trait">${t}</span>`).join('');
   if (bonus > 0) { const b=document.getElementById('result-bonus'); b.textContent='+✦'+bonus+' starting bonus'; b.style.display='inline-block'; }
 }
 </script>
