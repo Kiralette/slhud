@@ -8,7 +8,8 @@ PUT  /notifications/read           — mark all read
 PUT  /notifications/read/{app}     — mark one app's notifications read
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from app.services.auth import get_current_player
 from app.database import get_db
 from app.services.notifications import (
