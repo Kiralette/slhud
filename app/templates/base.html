@@ -36,8 +36,10 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
+    html {
+      background: #f0ede8; /* slightly darker so phone frame is visible */
+    }
     html, body {
-      background: var(--bg);
       color: var(--ink);
       font-family: var(--font);
       font-size: 14px;
@@ -46,13 +48,39 @@
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
-
-    /* Phone-width shell — makes apps look right when opened directly in a browser */
-    body > * {
+    body {
+      background: var(--bg);
       max-width: 430px;
-      margin-left: auto;
-      margin-right: auto;
+      margin: 0 auto;
     }
+
+    /* -- Status bar (shown on all sub-apps) -- */
+    .base-status-bar {
+      padding: 14px 22px 6px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--bg);
+    }
+    .base-status-time {
+      font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      font-size: 17px; font-weight: 600; letter-spacing: -0.3px;
+      color: var(--ink);
+    }
+    .base-status-icons { display: flex; gap: 5px; align-items: center; }
+    .base-signal-bars { display: flex; align-items: flex-end; gap: 1.5px; height: 12px; }
+    .base-signal-bar { width: 3px; border-radius: 1px; background: var(--ink); }
+    .base-signal-bar:nth-child(1) { height: 4px; }
+    .base-signal-bar:nth-child(2) { height: 6px; }
+    .base-signal-bar:nth-child(3) { height: 9px; }
+    .base-signal-bar:nth-child(4) { height: 12px; }
+    .base-wifi { font-size: 12px; color: var(--ink); font-weight: 500; }
+    .base-battery-wrap { display: flex; align-items: center; gap: 1px; }
+    .base-battery-body {
+      width: 22px; height: 11px;
+      border: 1.5px solid var(--ink); border-radius: 3px;
+      position: relative; padding: 1.5px;
+    }
+    .base-battery-fill { height: 100%; width: 75%; background: var(--ink); border-radius: 1px; }
+    .base-battery-tip { width: 2px; height: 5px; background: var(--ink); border-radius: 0 1px 1px 0; }
 
     .topbar {
       position: sticky; top: 0; z-index: 100;
@@ -328,9 +356,39 @@
   {% block extra_style %}{% endblock %}
 </head>
 <body>
+  {% block status_bar %}
+  <div class="base-status-bar">
+    <div class="base-status-time" id="base-status-time">9:41</div>
+    <div class="base-status-icons">
+      <div class="base-signal-bars">
+        <div class="base-signal-bar"></div><div class="base-signal-bar"></div>
+        <div class="base-signal-bar"></div><div class="base-signal-bar"></div>
+      </div>
+      <span class="base-wifi">WiFi</span>
+      <div class="base-battery-wrap">
+        <div class="base-battery-body"><div class="base-battery-fill"></div></div>
+        <div class="base-battery-tip"></div>
+      </div>
+    </div>
+  </div>
+  {% endblock %}
   {% block content %}{% endblock %}
   <div id="toast"></div>
   <script>
+    // Update base status bar clock
+    (function() {
+      function updateBaseClock() {
+        var el = document.getElementById('base-status-time');
+        if (!el) return;
+        var now = new Date();
+        var h = now.getHours() % 12 || 12;
+        var m = now.getMinutes().toString().padStart(2,'0');
+        el.textContent = h + ':' + m;
+      }
+      updateBaseClock();
+      setInterval(updateBaseClock, 30000);
+    })();
+
     function showTab(id) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
