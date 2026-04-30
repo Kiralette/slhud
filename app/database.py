@@ -375,6 +375,16 @@ async def _init_sqlite():
         """)
         # --- ACHIEVEMENTS & STATS ---
         await db.execute("""
+            CREATE TABLE IF NOT EXISTS horoscope_cache (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                sign        TEXT    NOT NULL,
+                date        TEXT    NOT NULL,
+                horoscope   TEXT    NOT NULL,
+                fetched_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(sign, date)
+            )
+        """)
+        await db.execute("""
             CREATE TABLE IF NOT EXISTS player_achievements (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                 player_id       INTEGER NOT NULL REFERENCES players(id),
@@ -772,6 +782,16 @@ async def _init_postgres():
                 trigger_source TEXT    DEFAULT NULL,
                 fired_at       TEXT    NOT NULL DEFAULT (now()::text),
                 expired_at     TEXT    DEFAULT NULL
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS horoscope_cache (
+                id          SERIAL PRIMARY KEY,
+                sign        TEXT    NOT NULL,
+                date        TEXT    NOT NULL,
+                horoscope   TEXT    NOT NULL,
+                fetched_at  TEXT    NOT NULL DEFAULT now()::text,
+                UNIQUE(sign, date)
             )
         """)
         await conn.execute("""

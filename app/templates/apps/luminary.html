@@ -107,6 +107,20 @@
 </div>
 {% endif %}
 
+{% if not zodiac_sign %}
+<div style="margin:12px 18px;padding:14px;background:var(--gold-light);border:0.5px solid rgba(154,124,78,.25);border-radius:var(--radius);">
+  <div style="font-size:12px;font-weight:600;color:var(--gold);margin-bottom:8px;">✦ Set your zodiac to see your daily horoscope</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;" id="zodiac-picker">
+    {% for sign, sym_col in [('aries','♈'),('taurus','♉'),('gemini','♊'),('cancer','♋'),('leo','♌'),('virgo','♍'),('libra','♎'),('scorpio','♏'),('sagittarius','♐'),('capricorn','♑'),('aquarius','♒'),('pisces','♓')] %}
+    <button onclick="setZodiac('{{ sign }}')"
+      style="padding:8px 4px;border:0.5px solid var(--border2);background:var(--bg);border-radius:var(--radius-sm);font-family:var(--font);font-size:10px;cursor:pointer;text-align:center;">
+      {{ sym_col }}<br><span style="font-size:9px;color:var(--ink3);">{{ sign|title }}</span>
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <div class="tabs">
   <button class="tab active" data-tab="tab-purpose" onclick="showTab('tab-purpose')">Purpose</button>
   <button class="tab" data-tab="tab-reflection" onclick="showTab('tab-reflection')">Reflection</button>
@@ -256,4 +270,20 @@
   <div class="scroll-pad"></div>
 </div>
 
-{% endblock %}
+{% block extra_script %}
+<script>
+async function setZodiac(sign) {
+  try {
+    const res = await fetch('/settings/update', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: '{{ token }}', zodiac: sign })
+    });
+    if (res.ok) {
+      toast('Zodiac set to ' + sign.charAt(0).toUpperCase() + sign.slice(1) + ' ✓');
+      setTimeout(() => location.reload(), 1200);
+    }
+  } catch(e) { toast('Could not save zodiac'); }
+}
+</script>
+{% endblock %}{% endblock %}

@@ -41,6 +41,7 @@ class SettingsUpdate(BaseModel):
     privacy_prefs: dict | None = None
     bedtime_slt: str | None = None
     timezone_offset_hours: int | None = None
+    zodiac: str | None = None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

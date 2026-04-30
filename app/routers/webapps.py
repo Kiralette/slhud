@@ -13,6 +13,7 @@ import json
 
 from app.database import get_db, is_postgres
 from app.config import get_config
+from app.services.horoscope import get_horoscope
 
 router = APIRouter(prefix="/app", tags=["webapps"])
 
@@ -1389,8 +1390,14 @@ async def luminary(
         k = r["occurrence_key"]
         purpose_occurrences.append({"key": k, "sub_stage": r["sub_stage"]})
 
+    zodiac_sign = dict(profile_row_lum).get("zodiac") if profile_row_lum else None
+    try:
+        horoscope = await get_horoscope(zodiac_sign) if zodiac_sign else None
+    except Exception:
+        horoscope = None
+
     return templates.TemplateResponse(request, "apps/luminary.html", {
-"token":               token,
+        "token":               token,
         "player":              player,
         "purpose_value":       purpose_value,
         "purpose_zone":        purpose_zone(purpose_value),
@@ -1399,6 +1406,8 @@ async def luminary(
         "wellbeing":           round(wellbeing, 1),
         "needs_map":           needs_map,
         "purpose_occurrences": purpose_occurrences,
+        "zodiac_sign":         zodiac_sign,
+        "horoscope":           horoscope,
     })
 
 
