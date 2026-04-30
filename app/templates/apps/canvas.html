@@ -572,7 +572,7 @@
       <div class="notif-row {{ 'unread' if not n.is_read else 'read-notif' }}"
            data-app="{{ n.app_source }}"
            data-read="{{ '0' if not n.is_read else '1' }}"
-           data-url="{{ n.action_url or ('/app/' + {
+           data-url="{% set _app_map = {
     'lumen_eats': 'lumen-eats', 'lumen-eats': 'lumen-eats',
     'sip': 'sip', 'recharge': 'recharge', 'thrill': 'thrill',
     'aura': 'aura', 'glow': 'glow', 'luminary': 'luminary',
@@ -580,7 +580,7 @@
     'grind': 'grind', 'ritual': 'ritual', 'canvas': 'canvas',
     'haul': 'haul', 'wavelength': 'wavelength',
     'following': 'flare', 'social': 'aura', 'system': 'canvas'
-}.get(n.app_source, n.app_source) + '?token=' + token) }}"
+} %}{% if n.action_url %}{{ n.action_url + ('?token=' + token if '?' not in n.action_url else '&token=' + token) }}{% else %}/app/{{ _app_map.get(n.app_source, n.app_source) }}?token={{ token }}{% endif %}"
            onclick="openNotif(this, {{ n.id }})"
            style="cursor:pointer;">
         <div class="notif-app-icon">{{ app_icons.get(n.app_source, '📱') }}</div>

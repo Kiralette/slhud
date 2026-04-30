@@ -954,7 +954,7 @@ async def questionnaire_app(
         })
 
     return templates.TemplateResponse(request, "apps/questionnaire.html", {
-"token":   token,
+        "token":   token,
         "player":  player,
         "traits":  traits,
     })

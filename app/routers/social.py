@@ -109,7 +109,7 @@ async def follow_player(body: FollowRequest, db=Depends(get_db)):
         title=f"{follower['display_name']} followed you on Flare 👀",
         body="",
         priority="low",
-        action_url=f"/app/flare?token={{token}}&tab=discover",
+        action_url="/app/flare",
         db=db,
     )
 
