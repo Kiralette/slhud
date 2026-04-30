@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}SL HUD{% endblock %}</title>
-
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-
   <style>
     :root {
       --bg:          #faf9f7;
@@ -33,17 +31,9 @@
       --radius-sm:   7px;
       --font:        'Jost', sans-serif;
       --font-head:   'Cormorant Garamond', serif;
-
-      /* ✅ GLOBAL UI SCALE CONTROL */
-      --ui-scale: 1.15;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     html {
       font-size: 16px;
@@ -58,18 +48,11 @@
     }
 
     body {
-      width: min(520px, 100%);
+      max-width: 500px; zoom: 1.2;
       margin: 0 auto;
       min-height: 100vh;
       overflow-x: hidden;
       position: relative;
-    }
-
-    /* ✅ GLOBAL SCALE WRAPPER */
-    .app-scale {
-      transform: scale(var(--ui-scale));
-      transform-origin: top center;
-      width: calc(100% / var(--ui-scale));
     }
 
     /* ── Status bar ── */
@@ -77,14 +60,10 @@
       padding: 14px 22px 6px;
       display: flex; justify-content: space-between; align-items: center;
     }
-
     .base-status-time {
       font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-      font-size: 17px; font-weight: 600;
-      letter-spacing: -0.3px;
-      color: var(--ink);
+      font-size: 17px; font-weight: 600; letter-spacing: -0.3px; color: var(--ink);
     }
-
     .base-status-icons { display: flex; gap: 5px; align-items: center; }
     .base-signal-bars { display: flex; align-items: flex-end; gap: 1.5px; height: 12px; }
     .base-signal-bar { width: 3px; border-radius: 1px; background: var(--ink); }
@@ -92,16 +71,9 @@
     .base-signal-bar:nth-child(2) { height: 6px; }
     .base-signal-bar:nth-child(3) { height: 9px; }
     .base-signal-bar:nth-child(4) { height: 12px; }
-
     .base-wifi { font-size: 12px; color: var(--ink); font-weight: 500; }
-
     .base-battery-wrap { display: flex; align-items: center; gap: 1px; }
-    .base-battery-body {
-      width: 22px; height: 11px;
-      border: 1.5px solid var(--ink);
-      border-radius: 3px;
-      padding: 1.5px;
-    }
+    .base-battery-body { width: 22px; height: 11px; border: 1.5px solid var(--ink); border-radius: 3px; padding: 1.5px; }
     .base-battery-fill { height: 100%; width: 75%; background: var(--ink); border-radius: 1px; }
     .base-battery-tip { width: 2px; height: 5px; background: var(--ink); border-radius: 0 1px 1px 0; }
 
@@ -112,100 +84,296 @@
       backdrop-filter: blur(12px);
       border-bottom: 0.5px solid var(--border);
       padding: 11px 18px;
-      display: flex; justify-content: space-between; align-items: flex-end;
+      display: flex; align-items: flex-end; justify-content: space-between;
     }
+    .topbar-left {}
+    .topbar-eyebrow { font-size: 9px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink4); margin-bottom: 1px; }
+    .topbar-title { font-family: var(--font-head); font-size: 21px; font-weight: 400; color: var(--ink); line-height: 1; }
+    .topbar-lumen { font-size: 12px; font-weight: 500; color: var(--gold); letter-spacing: 0.02em; text-align: right; padding-bottom: 2px; }
+    .topbar-lumen span { font-size: 9px; color: var(--ink4); display: block; text-align: right; letter-spacing: 0.06em; text-transform: uppercase; }
 
-    .topbar-title {
-      font-family: var(--font-head);
-      font-size: 21px;
-      color: var(--ink);
+    /* ── Need bar ── */
+    .need-bar-wrap { padding: 13px 18px; background: var(--bg); border-bottom: 0.5px solid var(--border); }
+    .need-bar-label { display: flex; justify-content: space-between; margin-bottom: 7px; align-items: center; }
+    .need-bar-label .need-name { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink3); }
+    .need-bar-label .need-val { font-size: 12px; font-weight: 500; color: var(--ink2); }
+    .need-bar-track { height: 2px; background: var(--bg4); border-radius: 99px; overflow: hidden; }
+    .need-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+    .need-bar-fill.ok   { background: var(--green); }
+    .need-bar-fill.warn { background: var(--amber); }
+    .need-bar-fill.crit { background: var(--rose); animation: crit-pulse 2s ease infinite; }
+    @keyframes crit-pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+    /* ── Status pill ── */
+    .status-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; padding: 4px 10px; border-radius: 99px; margin-top: 9px; }
+    .status-pill.ok   { background: var(--green-light); color: var(--green); }
+    .status-pill.warn { background: var(--amber-light); color: var(--amber); }
+    .status-pill.crit { background: var(--rose-light);  color: var(--rose); }
+    .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; padding: 0 10px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 57px; z-index: 90; overflow-x: hidden; }
+    .tab { padding: 10px 4px 9px; flex: 1; font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink4); cursor: pointer; border: none; background: none; border-bottom: 1.5px solid transparent; margin-bottom: -0.5px; transition: all .2s; text-align: center; font-family: var(--font); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tab.active { color: var(--ink); border-bottom-color: var(--gold); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Section head ── */
+    .section-head { padding: 18px 18px 8px; }
+    .section-head-title { font-family: var(--font-head); font-size: 19px; font-weight: 400; font-style: italic; color: var(--ink); line-height: 1; }
+    .section-head-sub { font-size: 10px; color: var(--ink4); letter-spacing: 0.04em; margin-top: 3px; }
+
+    /* ── Item card ── */
+    .item-card { margin: 0 18px 8px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); display: flex; align-items: center; gap: 13px; padding: 13px 14px; box-shadow: var(--shadow); transition: all .15s ease; }
+    .item-card:active { background: var(--bg2); transform: scale(.99); }
+    .item-emoji { font-size: 28px; width: 40px; text-align: center; flex-shrink: 0; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+    .item-desc { font-size: 11px; color: var(--ink3); line-height: 1.4; }
+    .item-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+    .item-tag { font-size: 9px; padding: 2px 7px; border-radius: 99px; font-weight: 500; letter-spacing: 0.03em; background: var(--bg3); color: var(--ink3); }
+    .item-tag.ok     { background: var(--green-light); color: var(--green); }
+    .item-tag.hunger { background: var(--amber-light); color: var(--amber); }
+    .item-tag.vibe   { background: var(--gold-light);  color: var(--gold); }
+    .item-tag.thirst { background: #e8f0f5; color: #3a6a8c; }
+    .item-right { text-align: right; flex-shrink: 0; }
+    .item-price { font-size: 14px; font-weight: 600; color: var(--ink2); }
+    .item-price .sym { color: var(--gold); }
+    .item-price.free { color: var(--green); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+    .item-btn { display: inline-block; margin-top: 7px; background: var(--ink); color: var(--bg); border: none; border-radius: 99px; padding: 5px 14px; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; font-family: var(--font); transition: background .15s; }
+    .item-btn:active { background: var(--ink2); }
+    .item-btn:disabled { background: var(--ink4); cursor: not-allowed; }
+    .item-btn.free-btn { background: var(--green-light); color: var(--green); }
+
+    /* ── Specials strip ── */
+    .specials-strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 18px 14px; scrollbar-width: none; }
+    .specials-strip::-webkit-scrollbar { display: none; }
+    .special-card { flex-shrink: 0; width: 136px; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 14px 12px; text-align: center; box-shadow: var(--shadow); transition: all .15s; }
+    .special-card:active { transform: scale(.97); }
+    .special-badge { display: inline-block; font-size: 8px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 0.5px solid var(--gold2); border-radius: 99px; padding: 2px 8px; margin-bottom: 8px; }
+    .special-card-emoji { font-size: 28px; margin-bottom: 7px; }
+    .special-card-name { font-size: 11px; font-weight: 500; color: var(--ink); margin-bottom: 4px; line-height: 1.3; }
+    .special-card-price { font-size: 12px; font-weight: 600; color: var(--ink2); }
+    .special-card-was { font-size: 10px; color: var(--ink4); text-decoration: line-through; margin-right: 2px; }
+    .special-card-btn { margin-top: 10px; width: 100%; background: var(--ink); color: var(--bg); border: none; border-radius: 99px; padding: 6px 0; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; font-family: var(--font); }
+    .special-card-btn:active { background: var(--ink2); }
+
+    /* ── Category chips ── */
+    .chips-row { display: flex; padding: 8px 18px; overflow-x: auto; scrollbar-width: none; gap: 6px; }
+    .chips-row::-webkit-scrollbar { display: none; }
+    .category-chip { display: inline-block; font-size: 10px; font-weight: 500; letter-spacing: 0.05em; padding: 5px 14px; border-radius: 99px; border: 0.5px solid var(--border2); color: var(--ink3); cursor: pointer; transition: all .15s; white-space: nowrap; background: var(--bg); }
+    .category-chip.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+
+    /* ── Log entries ── */
+    .log-entry { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 0.5px solid var(--border); }
+    .log-entry:last-child { border-bottom: none; }
+    .log-delta { font-size: 12px; font-weight: 600; min-width: 42px; }
+    .log-delta.pos { color: var(--green); }
+    .log-delta.neg { color: var(--rose); }
+    .log-text { flex: 1; font-size: 11px; color: var(--ink2); }
+    .log-meta { font-size: 11px; color: var(--ink3); }
+    .log-time { font-size: 10px; color: var(--ink4); }
+
+    /* ── Info / vendor cards ── */
+    .info-card { margin: 0 18px 10px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 13px 15px; }
+    .info-card p { font-size: 11px; color: var(--ink2); line-height: 1.8; }
+    .vendor-card { margin: 0 18px 10px; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 13px 15px; display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow); }
+    .vendor-icon { font-size: 24px; }
+    .vendor-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 2px; }
+    .vendor-meta { font-size: 11px; color: var(--ink3); }
+    .vendor-note { font-size: 10px; color: var(--ink4); margin-top: 3px; }
+
+    /* ── Empty states ── */
+    .empty-state, .empty { padding: 52px 18px; text-align: center; }
+    .empty-icon { font-size: 30px; margin-bottom: 12px; opacity: 0.35; }
+    .empty-title { font-family: var(--font-head); font-size: 18px; font-style: italic; color: var(--ink2); margin-bottom: 5px; }
+    .empty-sub, .empty-text { font-size: 12px; color: var(--ink4); line-height: 1.7; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; top: 20px; left: 50%;
+      transform: translateX(-50%) translateY(-90px);
+      background: var(--ink); color: var(--bg);
+      padding: 10px 22px; border-radius: 99px;
+      font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
+      z-index: 999; transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none; white-space: nowrap;
+      box-shadow: 0 6px 28px rgba(28,24,20,0.18);
     }
+    #toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* ── Nav dock ── */
+    .scroll-pad { height: 110px; }
+    .divider { height: 0.5px; background: var(--border); margin: 4px 18px; }
+
+    /* ── Dock (sticky so SL browser click targets align correctly) ── */
     .nav-bar {
-      position: fixed;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(250,249,247,0.98);
-      border: 0.5px solid rgba(28,24,20,0.12);
-      border-radius: 24px;
-      padding: 8px 14px;
-      display: flex;
-      gap: 14px;
-      box-shadow: 0 4px 24px rgba(28,24,20,0.12);
-      z-index: 300;
-    }
+  position: fixed;
+  bottom: 16px;
 
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: fit-content;
+  margin: 0;
+
+  background: rgba(250,249,247,0.98);
+  border: 0.5px solid rgba(28,24,20,0.12);
+  border-radius: 24px;
+  padding: 8px 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  box-shadow: 0 4px 24px rgba(28,24,20,0.12);
+  z-index: 300;
+    }
     .nav-dock-icon {
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 11px;
-      font-size: 20px;
-      text-decoration: none;
-      position: relative;
+      width: 44px; height: 44px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; text-decoration: none;
+      box-shadow: 0 2px 8px rgba(28,24,20,0.10);
+      transition: transform .1s; position: relative;
     }
-
+    .nav-dock-icon:active { transform: scale(0.93); }
     .nav-dock-dot {
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--rose);
-      border: 1.5px solid var(--bg);
+      position: absolute; top: -2px; right: -2px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--rose); border: 1.5px solid var(--bg);
       display: none;
     }
-
     .nav-dock-dot.show { display: block; }
+
+    /* ── Stagger animation ── */
+    .stagger > * { animation: fadeUp .3s ease both; }
+    .stagger > *:nth-child(1){animation-delay:.03s}
+    .stagger > *:nth-child(2){animation-delay:.07s}
+    .stagger > *:nth-child(3){animation-delay:.11s}
+    .stagger > *:nth-child(4){animation-delay:.15s}
+    .stagger > *:nth-child(5){animation-delay:.19s}
+    .stagger > *:nth-child(6){animation-delay:.23s}
+    .stagger > *:nth-child(7){animation-delay:.27s}
+    .stagger > *:nth-child(8){animation-delay:.31s}
+    @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
     {% block extra_style %}{% endblock %}
   </style>
 </head>
-
 <body>
 
-  <!-- ✅ EVERYTHING SCALE WRAPPED -->
-  <div class="app-scale">
-
-    {% block status_bar %}
-    <div class="base-status-bar">
-      <div class="base-status-time" id="base-status-time">9:41</div>
-
-      <div class="base-status-icons">
-        <div class="base-signal-bars">
-          <div class="base-signal-bar"></div>
-          <div class="base-signal-bar"></div>
-          <div class="base-signal-bar"></div>
-          <div class="base-signal-bar"></div>
-        </div>
-        <span class="base-wifi">WiFi</span>
-        <div class="base-battery-wrap">
-          <div class="base-battery-body"><div class="base-battery-fill"></div></div>
-          <div class="base-battery-tip"></div>
-        </div>
+  {% block status_bar %}
+  <div class="base-status-bar">
+    <div class="base-status-time" id="base-status-time">9:41</div>
+    <div class="base-status-icons">
+      <div class="base-signal-bars">
+        <div class="base-signal-bar"></div><div class="base-signal-bar"></div>
+        <div class="base-signal-bar"></div><div class="base-signal-bar"></div>
+      </div>
+      <span class="base-wifi">WiFi</span>
+      <div class="base-battery-wrap">
+        <div class="base-battery-body"><div class="base-battery-fill"></div></div>
+        <div class="base-battery-tip"></div>
       </div>
     </div>
-    {% endblock %}
-
-    {% block content %}{% endblock %}
-
-    <div id="toast"></div>
-
-    {% block nav_bar %}
-    <div class="nav-bar">
-      <a class="nav-dock-icon" href="#">🏠</a>
-      <a class="nav-dock-icon" href="#">💬</a>
-      <a class="nav-dock-icon" href="#">✦</a>
-      <a class="nav-dock-icon" href="#">🪞</a>
-    </div>
-    {% endblock %}
-
   </div>
+  {% endblock %}
 
+  {% block content %}{% endblock %}
+
+  <div id="toast"></div>
+
+  {% block nav_bar %}
+  <div class="nav-bar" id="nav-bar">
+    <a class="nav-dock-icon" id="nav-home"   style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)" href="#">🏠</a>
+    <a class="nav-dock-icon" id="nav-ping"   style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)" href="#">
+      <div class="nav-dock-dot" id="navdot-ping"></div>💬
+    </a>
+    <a class="nav-dock-icon" id="nav-flare"  style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)" href="#">
+      <div class="nav-dock-dot" id="navdot-flare"></div>✦
+    </a>
+    <a class="nav-dock-icon" id="nav-canvas" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)" href="#">
+      <div class="nav-dock-dot" id="navdot-canvas"></div>🪞
+    </a>
+  </div>
+  {% endblock %}
+
+  <script>
+    // Clock
+    (function() {
+      var el = document.getElementById('base-status-time');
+      if (!el) return;
+      function tick() {
+        var now = new Date(), h = now.getHours() % 12 || 12;
+        el.textContent = h + ':' + now.getMinutes().toString().padStart(2,'0');
+      }
+      tick(); setInterval(tick, 30000);
+    })();
+
+    // Wire dock token from URL
+    (function() {
+      var token = (new URLSearchParams(window.location.search)).get("token") || "";
+      var ids   = ["nav-home","nav-ping","nav-flare","nav-canvas"];
+      var paths = ["/app/home","/app/ping","/app/flare","/app/canvas"];
+      ids.forEach(function(id, i) {
+        var el = document.getElementById(id);
+        if (el) el.href = paths[i] + (token ? "?token=" + token : "");
+      });
+      if (token) {
+        function pollDots() {
+          fetch("/notifications/unread-count", { headers: { "Authorization": "Bearer " + token } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              var byApp = d.by_app || {};
+              ["ping","flare","canvas"].forEach(function(app) {
+                var dot = document.getElementById("navdot-" + app);
+                if (dot) dot.classList.toggle("show", (byApp[app] || 0) > 0);
+              });
+            }).catch(function(){});
+        }
+        pollDots(); setInterval(pollDots, 60000);
+      }
+    })();
+
+    // Tab switching
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+      var btn = document.querySelector('[data-tab="'+id+'"]');
+      var panel = document.getElementById(id);
+      if (btn) btn.classList.add('active');
+      if (panel) panel.classList.add('active');
+    }
+
+    // Toast
+    function toast(msg, d) {
+      var el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('show');
+      setTimeout(function() { el.classList.remove('show'); }, d || 3500);
+    }
+
+    // Buy item
+    async function buyItem(itemKey, token, itemName, price) {
+      var btn = event.target, orig = btn.textContent;
+      btn.disabled = true; btn.textContent = '···';
+      try {
+        var res = await fetch('/shop/buy', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body: JSON.stringify({item_key: itemKey})
+        });
+        var data = await res.json();
+        if (res.ok) {
+          toast(price === 0 ? itemName+' — collected' : itemName+' — ✦'+price+' spent');
+          setTimeout(function() { location.reload(); }, 1400);
+        } else {
+          toast(data.detail || 'Could not complete purchase');
+          btn.disabled = false; btn.textContent = orig;
+        }
+      } catch(e) {
+        toast('Connection error');
+        btn.disabled = false; btn.textContent = orig;
+      }
+    }
+  </script>
+
+  {% block extra_script %}{% endblock %}
 </body>
 </html>
