@@ -86,7 +86,8 @@
     padding: 0; transition: color .15s;
   }
   .post-action-btn:active { color: var(--ink); }
-  .post-action-btn.liked  { color: var(--rose); }
+  .post-action-btn.liked    { color: var(--rose); }
+  .post-action-btn.following { color: var(--green); }
   .post-npc-count { font-size: 10px; color: var(--ink4); margin-left: auto; }
 
   /* ── Compose box ── */
@@ -189,18 +190,32 @@
   <div class="post-cat">{{ post.category|title }}</div>
   <div class="post-content">{{ post.content_text }}</div>
   <div class="post-actions">
-    <button class="post-action-btn" onclick="likePost({{ post.id }}, '{{ token }}', this)">
-      ♡ Like
+    <button class="post-action-btn {% if post.viewer_has_liked %}liked{% endif %}"
+            id="like-btn-{{ post.id }}"
+            onclick="likePost({{ post.id }}, '{{ token }}', this)">
+      {% if post.viewer_has_liked %}♥ Liked{% else %}♡ Like{% endif %}
     </button>
     <button class="post-action-btn" onclick="commentPost({{ post.id }}, '{{ token }}')">
       💬 Comment
     </button>
     {% if post.player_id != player.id %}
-    <button class="post-action-btn" onclick="followPlayer('{{ post.player_uuid or post.player_id }}', '{{ token }}', this)">
+    {% if post.viewer_is_following %}
+    <button class="post-action-btn following"
+            data-uuid="{{ post.player_uuid }}"
+            data-name="{{ post.display_name }}"
+            onclick="toggleFollow('{{ post.player_uuid }}', '{{ post.display_name }}', '{{ token }}', this)">
+      ✓ Following
+    </button>
+    {% else %}
+    <button class="post-action-btn"
+            data-uuid="{{ post.player_uuid }}"
+            data-name="{{ post.display_name }}"
+            onclick="toggleFollow('{{ post.player_uuid }}', '{{ post.display_name }}', '{{ token }}', this)">
       + Follow
     </button>
     {% endif %}
-    <span class="post-npc-count" id="counts-{{ post.id }}">{{ post.npc_likes }} likes · {{ post.npc_comments }} comments</span>
+    {% endif %}
+    <span class="post-npc-count" id="counts-{{ post.id }}">{{ post.total_likes }} likes · {{ post.total_comments }} comments</span>
   </div>
 </div>
 {% endmacro %}
@@ -457,26 +472,49 @@
     } catch(e) { toast('Connection error'); }
   }
 
-  async function followPlayer(playerUuid, token, btn) {
-    if (btn.classList.contains('following')) return;
-    try {
-      const res = await fetch('/social/follow', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ follower_token: token, following_avatar_uuid: playerUuid })
-      });
-      if (res.ok) {
-        btn.textContent = '✓ Following';
-        btn.classList.add('following');
-        btn.style.color = 'var(--green)';
-        toast('Following ✓ — feed updating…');
-        // Reload after short delay so feed + follower counts refresh
-        setTimeout(() => location.reload(), 1800);
-      } else {
-        const data = await res.json();
-        toast(data.detail || 'Could not follow');
-      }
-    } catch(e) { toast('Could not follow'); }
+  async function toggleFollow(playerUuid, playerName, token, btn) {
+    const isFollowing = btn.classList.contains('following');
+
+    if (isFollowing) {
+      // Prompt to unfollow
+      if (!confirm(`Unfollow ${playerName}?`)) return;
+      try {
+        const res = await fetch('/social/follow', {
+          method: 'DELETE',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ follower_token: token, following_avatar_uuid: playerUuid })
+        });
+        if (res.ok) {
+          btn.textContent = '+ Follow';
+          btn.classList.remove('following');
+          btn.style.color = '';
+          toast(`Unfollowed ${playerName}`);
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          const data = await res.json();
+          toast(data.detail || 'Could not unfollow');
+        }
+      } catch(e) { toast('Could not unfollow'); }
+    } else {
+      // Follow
+      try {
+        const res = await fetch('/social/follow', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ follower_token: token, following_avatar_uuid: playerUuid })
+        });
+        if (res.ok) {
+          btn.textContent = '✓ Following';
+          btn.classList.add('following');
+          btn.style.color = 'var(--green)';
+          toast(`Following ${playerName} ✓`);
+          setTimeout(() => location.reload(), 1800);
+        } else {
+          const data = await res.json();
+          toast(data.detail || 'Could not follow');
+        }
+      } catch(e) { toast('Could not follow'); }
+    }
   }
 
   // Brand deal follower milestone labels

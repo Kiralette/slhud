@@ -624,6 +624,14 @@ async def flare(
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id = $1
                ORDER BY p.created_at DESC LIMIT 20""", player_id)
+        following_ids_rows = await db.fetch(
+            """SELECT following_id FROM follows WHERE follower_id = $1""", player_id)
+        real_likes_rows = await db.fetch(
+            """SELECT post_id, COUNT(*) as cnt FROM post_engagements
+               WHERE type = 'like' GROUP BY post_id""")
+        liked_post_ids_rows = await db.fetch(
+            """SELECT post_id FROM post_engagements
+               WHERE player_id = $1 AND type = 'like'""", player_id)
     else:
         async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
             wallet_row = await cur.fetchone()
@@ -653,11 +661,30 @@ async def flare(
                WHERE p.player_id = ?
                ORDER BY p.created_at DESC LIMIT 20""", (player_id,)) as cur:
             profile_posts_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT following_id FROM follows WHERE follower_id = ?", (player_id,)) as cur:
+            following_ids_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT post_id, COUNT(*) as cnt FROM post_engagements WHERE type = 'like' GROUP BY post_id") as cur:
+            real_likes_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT post_id FROM post_engagements WHERE player_id = ? AND type = 'like'", (player_id,)) as cur:
+            liked_post_ids_rows = await cur.fetchall()
+
+    following_ids = {r["following_id"] for r in following_ids_rows}
+    real_likes_map = {r["post_id"]: r["cnt"] for r in real_likes_rows}
+    liked_post_ids = {r["post_id"] for r in liked_post_ids_rows}
 
     def fmt_post(row):
         d = dict(row)
         d["content_text"] = d.get("content_text", "")
         d["player_uuid"] = d.get("avatar_uuid", "")
+        post_id = d.get("id")
+        # Total likes = NPC likes + real player likes
+        d["total_likes"] = d.get("npc_likes", 0) + real_likes_map.get(post_id, 0)
+        d["total_comments"] = d.get("npc_comments", 0)
+        d["viewer_has_liked"] = post_id in liked_post_ids
+        d["viewer_is_following"] = d.get("player_id") in following_ids
         return d
 
     wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
@@ -673,14 +700,15 @@ async def flare(
     categories = cfg.get("flare", {}).get("categories", ["life"])
 
     return templates.TemplateResponse(request, "apps/flare.html", {
-"token":         token,
-        "player":        player,
+        "token":          token,
+        "player":         player,
         "wallet_balance": wallet_balance,
-        "feed":          [fmt_post(r) for r in feed_rows],
-        "discover":      [fmt_post(r) for r in discover_rows],
-        "profile_posts": [fmt_post(r) for r in profile_posts_rows],
-        "flare_stats":   flare_stats,
-        "categories":    categories,
+        "feed":           [fmt_post(r) for r in feed_rows],
+        "discover":       [fmt_post(r) for r in discover_rows],
+        "profile_posts":  [fmt_post(r) for r in profile_posts_rows],
+        "flare_stats":    flare_stats,
+        "categories":     categories,
+        "following_ids":  list(following_ids),
     })
 
 
