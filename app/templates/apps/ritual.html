@@ -211,6 +211,7 @@
 <!-- TABS -->
 <div class="tabs">
   <button class="tab active" data-tab="tab-calendar"  onclick="showTab('tab-calendar')">Calendar</button>
+  <button class="tab"        data-tab="tab-friends"   onclick="showTab('tab-friends')">Friends</button>
   <button class="tab"        data-tab="tab-community" onclick="showTab('tab-community')">Community</button>
   {% if show_cycle_tab %}
   <button class="tab"        data-tab="tab-cycle"     onclick="showTab('tab-cycle')">Cycle</button>
@@ -285,7 +286,11 @@
         <option value="pink">Pink</option>
       </select>
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);flex:1;">
-        <input type="checkbox" id="ev-public" /> Public
+        <select class="form-select" id="ev-visibility" style="flex:1;margin:0;">
+          <option value="private">🔒 Private</option>
+          <option value="friends">👥 Friends only</option>
+          <option value="public">🌐 Public</option>
+        </select>
       </label>
     </div>
     <button class="form-submit" onclick="addEvent()">Add to Calendar</button>
@@ -294,6 +299,42 @@
 </div>
 
 <!-- ── COMMUNITY TAB ── -->
+<div id="tab-friends" class="tab-panel">
+  <div class="section-head">
+    <div class="section-head-title">Friends' events</div>
+    <div class="section-head-sub">Events from people you follow (friends-only and public).</div>
+  </div>
+  {% if friends_events %}
+  <div class="stagger">
+    {% for ev in friends_events %}
+    <div class="item-card">
+      <div class="item-emoji">
+        {% if ev.visibility == 'friends' %}👥{% else %}🌐{% endif %}
+      </div>
+      <div class="item-info">
+        <div class="item-name">{{ ev.title }}</div>
+        <div class="item-desc" style="font-size:11px;color:var(--ink3);">
+          {{ ev.event_date_slt }} · {{ ev.author_name or 'Someone you follow' }}
+        </div>
+        {% if ev.notes %}<div class="item-desc">{{ ev.notes }}</div>{% endif %}
+        <div class="item-tags">
+          <span class="item-tag">{{ ev.event_type | title }}</span>
+          {% if ev.visibility == 'friends' %}<span class="item-tag">Friends only</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">👥</div>
+    <div class="empty-title">No friends' events this month</div>
+    <div class="empty-sub">When people you follow share events, they appear here.</div>
+  </div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
 <div id="tab-community" class="tab-panel">
   <div class="section-head">
     <div class="section-head-title">Community Events</div>
@@ -502,7 +543,8 @@
       event_date_slt: dateV,
       event_type: document.getElementById('ev-type').value,
       color_key:  document.getElementById('ev-color').value,
-      is_public:  document.getElementById('ev-public').checked,
+      visibility: document.getElementById('ev-visibility').value,
+      is_public:  document.getElementById('ev-visibility').value === 'public',
     };
 
     try {

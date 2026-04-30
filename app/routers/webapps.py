@@ -833,6 +833,16 @@ async def ritual(
                AND ce.event_date_slt <= $2
                ORDER BY ce.event_date_slt ASC""",
             today.isoformat(), (today + timedelta(days=30)).isoformat())
+        friends_event_rows = await db.fetch(
+            """SELECT ce.*, pl.display_name AS author_name FROM calendar_events ce
+               JOIN players pl ON pl.id = ce.player_id
+               WHERE ce.player_id IN (
+                   SELECT following_id FROM follows WHERE follower_id = $1
+               )
+               AND ce.visibility IN ('public', 'friends')
+               AND ce.event_date_slt >= $2 AND ce.event_date_slt < $3
+               ORDER BY ce.event_date_slt ASC""",
+            player_id, month_start, month_end)
     else:
         async with db.execute(
             """SELECT * FROM calendar_events WHERE player_id = ?
@@ -854,6 +864,17 @@ async def ritual(
                ORDER BY ce.event_date_slt ASC""",
             (today.isoformat(), (today + timedelta(days=30)).isoformat())) as cur:
             community_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT ce.*, pl.display_name AS author_name FROM calendar_events ce
+               JOIN players pl ON pl.id = ce.player_id
+               WHERE ce.player_id IN (
+                   SELECT following_id FROM follows WHERE follower_id = ?
+               )
+               AND ce.visibility IN ('public', 'friends')
+               AND ce.event_date_slt >= ? AND ce.event_date_slt < ?
+               ORDER BY ce.event_date_slt ASC""",
+            (player_id, month_start, month_end)) as cur:
+            friends_event_rows = await cur.fetchall()
 
     # Cycle data
     cycle_history = []
@@ -921,6 +942,7 @@ async def ritual(
         "current_month_label":  current_month_label,
         "all_events":           [dict(r) for r in all_events_rows],
         "upcoming":             [dict(r) for r in upcoming_rows],
+        "friends_events":       [dict(r) for r in friends_event_rows],
         "community":            [dict(r) for r in community_rows],
         "show_cycle_tab":       show_cycle_tab,
         "cycle_history":        cycle_history,

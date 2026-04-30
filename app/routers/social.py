@@ -102,14 +102,14 @@ async def follow_player(body: FollowRequest, db=Depends(get_db)):
             (follower["id"], target["id"]))
         await db.commit()
 
-    # Notify the followed player
+    # Notify the followed player - link to the follower's public profile
     await push_notification(
         player_id=target["id"],
         app_source="flare",
         title=f"{follower['display_name']} followed you on Flare 👀",
-        body="",
+        body="Tap to view their profile.",
         priority="low",
-        action_url="/app/flare",
+        action_url=f"/app/player/{follower['avatar_uuid']}",
         db=db,
     )
 

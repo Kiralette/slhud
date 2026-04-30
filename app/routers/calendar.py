@@ -34,6 +34,7 @@ class NewEvent(BaseModel):
     is_recurring: bool = False
     recurrence_rule: str | None = None
     is_public: bool = False
+    visibility: str = "private"  # private, friends, public
     color_key: str = "purple"
     generates_vibe_key: str | None = None
     notes: str | None = None
@@ -46,6 +47,7 @@ class UpdateEvent(BaseModel):
     event_date_slt: str | None = None
     end_date_slt: str | None = None
     is_public: bool | None = None
+    visibility: str | None = None
     color_key: str | None = None
     notes: str | None = None
 
@@ -91,22 +93,22 @@ async def create_event(body: NewEvent, db=Depends(get_db)):
         event_id = await db.fetchval(
             """INSERT INTO calendar_events
                (player_id, title, event_type, event_date_slt, end_date_slt,
-                is_recurring, recurrence_rule, is_public, color_key,
+                is_recurring, recurrence_rule, is_public, visibility, color_key,
                 generates_vibe_key, notes)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
                RETURNING id""",
             player_id, title, event_type, body.event_date_slt, body.end_date_slt,
-            int(body.is_recurring), body.recurrence_rule, int(body.is_public),
+            int(body.is_recurring), body.recurrence_rule, int(body.is_public), body.visibility,
             color_key, body.generates_vibe_key, body.notes)
     else:
         async with db.execute(
             """INSERT INTO calendar_events
                (player_id, title, event_type, event_date_slt, end_date_slt,
-                is_recurring, recurrence_rule, is_public, color_key,
+                is_recurring, recurrence_rule, is_public, visibility, color_key,
                 generates_vibe_key, notes)
                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (player_id, title, event_type, body.event_date_slt, body.end_date_slt,
-             int(body.is_recurring), body.recurrence_rule, int(body.is_public),
+             int(body.is_recurring), body.recurrence_rule, int(body.is_public), body.visibility,
              color_key, body.generates_vibe_key, body.notes)
         ) as cur:
             event_id = cur.lastrowid
@@ -252,6 +254,7 @@ async def update_event(event_id: int, body: UpdateEvent, db=Depends(get_db)):
     if body.event_date_slt is not None: fields["event_date_slt"] = body.event_date_slt
     if body.end_date_slt is not None:   fields["end_date_slt"]   = body.end_date_slt
     if body.is_public is not None:   fields["is_public"]      = int(body.is_public)
+    if body.visibility is not None:  fields["visibility"]     = body.visibility
     if body.color_key is not None:   fields["color_key"]      = body.color_key
     if body.notes is not None:       fields["notes"]          = body.notes
 
