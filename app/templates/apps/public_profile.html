@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}{{ target.display_name }} · Flare{% endblock %}
+
+{% block extra_style %}
+<style>
+  .profile-cover {
+    height: 80px;
+    background: linear-gradient(135deg, var(--gold-light), var(--bg3));
+    position: relative;
+  }
+  .profile-avatar-wrap {
+    position: absolute;
+    bottom: -28px; left: 18px;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: var(--bg2);
+    border: 3px solid var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .profile-header-row {
+    padding: 36px 18px 12px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .profile-name {
+    font-family: var(--font-head); font-size: 22px; font-weight: 400;
+    color: var(--ink);
+  }
+  .profile-sub {
+    font-size: 11px; color: var(--ink3); margin-top: 2px;
+  }
+  .follow-btn {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 0.5px solid var(--border2);
+    background: var(--ink); color: var(--bg);
+    font-family: var(--font); font-size: 12px; font-weight: 500;
+    cursor: pointer; white-space: nowrap;
+    transition: all .15s;
+  }
+  .follow-btn.following {
+    background: var(--bg2); color: var(--green);
+    border-color: rgba(74,124,95,.3);
+  }
+  .stat-row {
+    display: flex; gap: 1px;
+    padding: 0 18px 14px;
+  }
+  .stat-cell {
+    flex: 1; text-align: center;
+    padding: 10px 8px;
+    background: var(--bg2);
+  }
+  .stat-cell:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .stat-cell:last-child  { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .stat-num   { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); }
+  .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink3); margin-top: 1px; }
+
+  .post-card {
+    margin: 6px 18px;
+    background: var(--bg2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .post-date   { font-size: 10px; color: var(--ink3); margin-bottom: 6px; }
+  .post-cat    { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); margin-bottom: 6px; }
+  .post-text   { font-size: 13px; color: var(--ink); line-height: 1.6; }
+  .post-footer {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 10px; padding-top: 8px;
+    border-top: 0.5px solid var(--border);
+  }
+  .post-like-btn {
+    padding: 5px 12px; border-radius: 20px;
+    border: 0.5px solid var(--border2);
+    background: transparent;
+    font-family: var(--font); font-size: 11px; color: var(--ink2);
+    cursor: pointer; transition: all .15s;
+  }
+  .post-like-btn.liked { color: var(--rose); border-color: rgba(156,80,80,.3); }
+  .post-count { font-size: 11px; color: var(--ink3); }
+  .post-quality {
+    font-size: 9px; padding: 2px 8px; border-radius: 20px;
+    font-weight: 600; margin-left: auto;
+  }
+  .q1 { background: var(--green-light); color: var(--green); }
+  .q2 { background: var(--gold-light); color: var(--gold); }
+  .q3 { background: rgba(154,124,78,.15); color: var(--gold); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Back nav -->
+<div style="padding:10px 18px 0;display:flex;align-items:center;gap:8px;">
+  <button onclick="history.back()"
+    style="background:none;border:none;font-family:var(--font);font-size:12px;color:var(--ink3);cursor:pointer;padding:0;">
+    ← Back
+  </button>
+  <span style="font-size:11px;color:var(--ink4);">Flare profile</span>
+</div>
+
+<!-- Cover + avatar -->
+<div class="profile-cover">
+  <div class="profile-avatar-wrap">
+    {{ target.display_name[0] | upper }}
+  </div>
+</div>
+
+<!-- Name + follow button -->
+<div class="profile-header-row">
+  <div>
+    <div class="profile-name">{{ target.display_name }}</div>
+    {% if post_streak > 0 %}
+    <div class="profile-sub">🔥 {{ post_streak }}-day post streak</div>
+    {% endif %}
+  </div>
+  {% if not is_own_profile %}
+  <button class="follow-btn {% if viewer_following %}following{% endif %}"
+          id="follow-btn"
+          onclick="toggleFollow('{{ target.avatar_uuid }}', '{{ target.display_name }}', '{{ token }}', this)">
+    {% if viewer_following %}✓ Following{% else %}+ Follow{% endif %}
+  </button>
+  {% else %}
+  <a href="/app/flare?token={{ token }}"
+     style="padding:8px 18px;border-radius:20px;border:0.5px solid var(--border2);background:var(--bg2);color:var(--ink2);font-family:var(--font);font-size:12px;text-decoration:none;">
+    My Flare
+  </a>
+  {% endif %}
+</div>
+
+<!-- Stats -->
+<div class="stat-row">
+  <div class="stat-cell">
+    <div class="stat-num">{{ "{:,}".format(follower_count) }}</div>
+    <div class="stat-label">Followers</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-num">{{ following_count }}</div>
+    <div class="stat-label">Following</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-num">{{ weekly_posts }}</div>
+    <div class="stat-label">Posts this week</div>
+  </div>
+</div>
+
+<!-- Posts -->
+<div style="padding:0 18px 6px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">
+  Recent posts
+</div>
+
+{% if posts %}
+<div class="stagger">
+  {% for post in posts %}
+  <div class="post-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div class="post-date">{{ post.created_at[:10] if post.created_at else '' }}</div>
+      {% if post.quality_tier > 0 %}
+      <span class="post-quality q{{ post.quality_tier }}">
+        {% if post.quality_tier == 1 %}Good{% elif post.quality_tier == 2 %}Great{% else %}✦ Exceptional{% endif %}
+      </span>
+      {% endif %}
+    </div>
+    <div class="post-cat">{{ post.category | title }}</div>
+    <div class="post-text">{{ post.content_text }}</div>
+    <div class="post-footer">
+      <button class="post-like-btn {% if post.viewer_has_liked %}liked{% endif %}"
+              id="like-{{ post.id }}"
+              onclick="likePost({{ post.id }}, '{{ token }}', this)">
+        {% if post.viewer_has_liked %}♥ Liked{% else %}♡ Like{% endif %}
+      </button>
+      <span class="post-count" id="counts-{{ post.id }}">
+        {{ post.total_likes }} likes · {{ post.total_comments }} comments
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">✦</div>
+  <div class="empty-title">No posts yet</div>
+  <div class="empty-text">{{ target.display_name }} hasn't posted on Flare yet.</div>
+</div>
+{% endif %}
+
+<div class="scroll-pad"></div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+const TOKEN = "{{ token }}";
+
+async function likePost(postId, token, btn) {
+  if (btn.classList.contains('liked')) return;
+  btn.classList.add('liked');
+  btn.textContent = '♥ Liked';
+  const countEl = document.getElementById('counts-' + postId);
+  if (countEl) {
+    const parts = countEl.textContent.split('·');
+    const likes = (parseInt(parts[0]) || 0) + 1;
+    const comments = parseInt(parts[1]) || 0;
+    countEl.textContent = likes + ' likes · ' + comments + ' comments';
+  }
+  try {
+    await fetch('/flare/like', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: token, post_id: postId })
+    });
+  } catch(_) {}
+}
+
+async function toggleFollow(uuid, name, token, btn) {
+  const isFollowing = btn.classList.contains('following');
+  if (isFollowing) {
+    if (!confirm('Unfollow ' + name + '?')) return;
+    try {
+      const res = await fetch('/social/follow', {
+        method: 'DELETE',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ follower_token: token, following_avatar_uuid: uuid })
+      });
+      if (res.ok) {
+        btn.textContent = '+ Follow';
+        btn.classList.remove('following');
+        toast('Unfollowed ' + name);
+        setTimeout(() => location.reload(), 1200);
+      }
+    } catch(_) { toast('Could not unfollow'); }
+  } else {
+    try {
+      const res = await fetch('/social/follow', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ follower_token: token, following_avatar_uuid: uuid })
+      });
+      if (res.ok) {
+        btn.textContent = '✓ Following';
+        btn.classList.add('following');
+        toast('Following ' + name + ' ✓');
+        setTimeout(() => location.reload(), 1200);
+      }
+    } catch(_) { toast('Could not follow'); }
+  }
+}
+</script>
+{% endblock %}

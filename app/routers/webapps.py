@@ -1749,3 +1749,105 @@ async def guide(
 async def simulator(request: Request):
     """Phone simulator — no auth required. Served at /app/simulator"""
     return templates.TemplateResponse(request, "simulator.html", {})
+
+
+# ── PUBLIC PLAYER PROFILE ────────────────────────────────────────────────────
+@router.get("/player/{avatar_uuid}", response_class=HTMLResponse)
+async def public_player_profile(
+    avatar_uuid: str,
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    """Public Flare profile for any player. Viewer needs valid token."""
+    viewer = await get_player_by_token(token, db)
+    if not viewer:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    viewer_id = viewer["id"]
+
+    # Load target player
+    if is_postgres():
+        target_row = await db.fetchrow(
+            "SELECT * FROM players WHERE avatar_uuid = $1 AND is_banned = 0", avatar_uuid)
+    else:
+        async with db.execute(
+            "SELECT * FROM players WHERE avatar_uuid = ? AND is_banned = 0", (avatar_uuid,)) as cur:
+            target_row = await cur.fetchone()
+
+    if not target_row:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Player not found.</h2>", status_code=404)
+
+    target = dict(target_row)
+    target_id = target["id"]
+
+    if is_postgres():
+        stats_row = await db.fetchrow("SELECT * FROM flare_stats WHERE player_id = $1", target_id)
+        posts_rows = await db.fetch(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               WHERE p.player_id = $1
+               ORDER BY p.created_at DESC LIMIT 20""", target_id)
+        follower_count_real = await db.fetchval(
+            "SELECT COUNT(*) FROM follows WHERE following_id = $1", target_id)
+        following_count = await db.fetchval(
+            "SELECT COUNT(*) FROM follows WHERE follower_id = $1", target_id)
+        viewer_following = await db.fetchrow(
+            "SELECT id FROM follows WHERE follower_id = $1 AND following_id = $2",
+            viewer_id, target_id)
+        real_likes_rows = await db.fetch(
+            """SELECT post_id, COUNT(*) as cnt FROM post_engagements
+               WHERE type = 'like' GROUP BY post_id""")
+        liked_post_ids_rows = await db.fetch(
+            "SELECT post_id FROM post_engagements WHERE player_id = $1 AND type = 'like'", viewer_id)
+    else:
+        async with db.execute("SELECT * FROM flare_stats WHERE player_id = ?", (target_id,)) as cur:
+            stats_row = await cur.fetchone()
+        async with db.execute(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               WHERE p.player_id = ?
+               ORDER BY p.created_at DESC LIMIT 20""", (target_id,)) as cur:
+            posts_rows = await cur.fetchall()
+        async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE following_id = ?", (target_id,)) as cur:
+            r = await cur.fetchone(); follower_count_real = r["cnt"] if r else 0
+        async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE follower_id = ?", (target_id,)) as cur:
+            r = await cur.fetchone(); following_count = r["cnt"] if r else 0
+        async with db.execute(
+            "SELECT id FROM follows WHERE follower_id = ? AND following_id = ?", (viewer_id, target_id)) as cur:
+            viewer_following = await cur.fetchone()
+        async with db.execute(
+            "SELECT post_id, COUNT(*) as cnt FROM post_engagements WHERE type = 'like' GROUP BY post_id") as cur:
+            real_likes_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT post_id FROM post_engagements WHERE player_id = ? AND type = 'like'", (viewer_id,)) as cur:
+            liked_post_ids_rows = await cur.fetchall()
+
+    fs = dict(stats_row) if stats_row else {}
+    real_likes_map = {r["post_id"]: r["cnt"] for r in real_likes_rows}
+    liked_post_ids = {r["post_id"] for r in liked_post_ids_rows}
+
+    def fmt_post(row):
+        d = dict(row)
+        d["content_text"] = d.get("content_text", "")
+        d["player_uuid"] = d.get("avatar_uuid", "")
+        post_id = d.get("id")
+        d["total_likes"] = d.get("npc_likes", 0) + real_likes_map.get(post_id, 0)
+        d["total_comments"] = d.get("npc_comments", 0)
+        d["viewer_has_liked"] = post_id in liked_post_ids
+        return d
+
+    is_own_profile = (target_id == viewer_id)
+
+    return templates.TemplateResponse(request, "apps/public_profile.html", {
+        "token":            token,
+        "viewer":           viewer,
+        "target":           target,
+        "is_own_profile":   is_own_profile,
+        "viewer_following": bool(viewer_following),
+        "posts":            [fmt_post(r) for r in posts_rows],
+        "follower_count":   fs.get("follower_count", 0) + follower_count_real,
+        "following_count":  following_count,
+        "weekly_posts":     fs.get("weekly_post_count", 0),
+        "post_streak":      fs.get("post_streak_days", 0),
+    })

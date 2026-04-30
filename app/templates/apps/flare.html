@@ -178,7 +178,7 @@
 <div class="post-card">
   <div class="post-header">
     <div>
-      <div class="post-author">{{ post.display_name or 'Unknown' }}</div>
+      <a class="post-author" href="/app/player/{{ post.player_uuid }}?token={{ token }}" style="text-decoration:none;color:inherit;cursor:pointer;">{{ post.display_name or 'Unknown' }}</a>
       <div class="post-meta">{{ post.created_at[:10] if post.created_at else '' }}</div>
     </div>
     {% if post.quality_tier > 0 %}
