@@ -3,67 +3,89 @@
 
 {% block extra_style %}
 <style>
-  html {
-    background: var(--bg);
-  }
+  html { background: var(--bg); }
   body {
     background: var(--bg);
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-    min-height: 100vh;
+    width: 100%; margin: 0; padding: 0;
+    overflow-x: hidden; min-height: 100vh;
   }
 
-  /* ── iOS status bar ── */
-  .ios-status {
-    padding: 14px 24px 6px;
+  /* ── Dynamic Island ── */
+  .dynamic-island {
+    position: relative; top: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 34px;
+    background: #000; border-radius: 20px;
+    margin: 12px auto 0;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
+    z-index: 10;
+  }
+  .di-camera {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #1a1a1a; border: 1.5px solid #111; position: relative;
+  }
+  .di-camera::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 3px; height: 3px; border-radius: 50%; background: #333;
+  }
+  .di-sensor { width: 28px; height: 7px; border-radius: 4px; background: #111; }
+
+  /* ── Status bar ── */
+  .status-bar {
+    padding: 10px 22px 6px;
     display: flex; justify-content: space-between; align-items: center;
     background: var(--bg);
   }
-  .ios-time {
+  .status-time {
     font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-    font-size: 18px; font-weight: 600; letter-spacing: -0.3px;
+    font-size: 17px; font-weight: 600; letter-spacing: -0.3px;
     color: var(--ink);
   }
-  .ios-icons { display: flex; align-items: center; gap: 6px; }
-  .signal-bars { display: flex; align-items: flex-end; gap: 2px; height: 13px; }
-  .signal-bar { width: 3.5px; border-radius: 1px; background: var(--ink); }
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+  .signal-bars { display: flex; align-items: flex-end; gap: 1.5px; height: 12px; }
+  .signal-bar { width: 3px; border-radius: 1px; background: var(--ink); }
   .signal-bar:nth-child(1) { height: 4px; }
-  .signal-bar:nth-child(2) { height: 7px; }
-  .signal-bar:nth-child(3) { height: 10px; }
-  .signal-bar:nth-child(4) { height: 13px; }
-  .wifi-label { font-size: 12px; color: var(--ink); font-weight: 500; }
+  .signal-bar:nth-child(2) { height: 6px; }
+  .signal-bar:nth-child(3) { height: 9px; }
+  .signal-bar:nth-child(4) { height: 12px; }
+  .wifi-icon { font-size: 12px; color: var(--ink); line-height: 1; }
   .battery-wrap { display: flex; align-items: center; gap: 1px; }
-  .battery-body { width: 24px; height: 12px; border: 1.5px solid var(--ink); border-radius: 3px; position: relative; padding: 1.5px; }
+  .battery-body {
+    width: 22px; height: 11px;
+    border: 1.5px solid var(--ink); border-radius: 3px;
+    position: relative; padding: 1.5px;
+  }
   .battery-fill { height: 100%; width: 75%; background: var(--ink); border-radius: 1px; }
-  .battery-tip { width: 3px; height: 6px; background: var(--ink); border-radius: 0 1px 1px 0; }
+  .battery-tip { width: 2px; height: 5px; background: var(--ink); border-radius: 0 1px 1px 0; }
 
-  /* ── Greeting + lumens ── */
-  .greeting-bar {
-    padding: 12px 24px 10px;
-    display: flex; justify-content: space-between; align-items: baseline;
-  }
-  .greeting {
+  /* ── Greeting ── */
+  .home-greeting {
+    padding: 16px 20px 10px;
     font-family: var(--font-head);
-    font-size: 30px; font-weight: 400; font-style: italic;
-    color: var(--ink); line-height: 1;
+    font-size: 28px; font-weight: 400; font-style: italic;
+    color: var(--ink);
   }
-  .greeting span { color: var(--gold); }
-  .lumens-badge { font-size: 16px; font-weight: 600; color: var(--ink2); }
+  .home-greeting span { color: var(--gold); }
+
+  /* ── Lumens badge ── */
+  .lumens-badge {
+    padding: 0 20px 10px;
+    font-size: 13px; font-weight: 500; color: var(--ink2); letter-spacing: 0.02em;
+  }
   .lumens-badge .sym { color: var(--gold); margin-right: 1px; }
 
   /* ── Needs strip ── */
   .needs-strip {
-    padding: 0 22px 10px;
+    padding: 0 20px 10px;
     display: flex; gap: 8px; align-items: flex-end;
+    border-bottom: 0.5px solid var(--border);
   }
   .need-pip {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
     text-decoration: none; -webkit-tap-highlight-color: transparent;
   }
-  .need-pip-icon { font-size: 15px; line-height: 1; }
-  .need-pip-track { width: 100%; height: 5px; background: var(--bg4); border-radius: 99px; overflow: hidden; }
+  .need-pip-icon { font-size: 13px; line-height: 1; }
+  .need-pip-track { width: 100%; height: 4px; background: var(--bg4); border-radius: 99px; overflow: hidden; }
   .need-pip-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
   .need-pip-fill.ok   { background: var(--green); }
   .need-pip-fill.warn { background: var(--amber); }
@@ -72,54 +94,53 @@
 
   /* ── Vibes strip ── */
   .vibes-strip {
-    padding: 4px 22px 12px;
+    padding: 6px 20px 10px;
     display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
-    min-height: 32px; align-items: center;
+    min-height: 30px; align-items: center;
     border-bottom: 0.5px solid var(--border);
   }
   .vibes-strip::-webkit-scrollbar { display: none; }
-  .vibe-chip { flex-shrink: 0; font-size: 11px; font-weight: 500; padding: 4px 11px; border-radius: 99px; white-space: nowrap; }
+  .vibe-chip { flex-shrink: 0; font-size: 10px; font-weight: 500; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
   .vibe-chip.positive { background: var(--green-light); color: var(--green); }
-  .vibe-chip.negative { background: var(--rose-light);  color: var(--rose);  }
-  .no-vibes { font-size: 11px; color: var(--ink4); font-style: italic; }
+  .vibe-chip.negative { background: var(--rose-light); color: var(--rose); }
+  .no-vibes { font-size: 10px; color: var(--ink4); font-style: italic; }
 
-  /* ── Section label ── */
+  /* ── Section title ── */
   .section-title {
-    padding: 14px 22px 6px;
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--ink3);
+    padding: 12px 20px 6px;
+    font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--ink3); font-weight: 500;
   }
 
   /* ── App grid ── */
   .app-grid {
     display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 16px; padding: 8px 22px 14px;
+    gap: 12px; padding: 0 20px 16px;
   }
   .app-icon {
-    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
     cursor: pointer; -webkit-tap-highlight-color: transparent;
     text-decoration: none; position: relative;
   }
   .app-icon-bubble {
-    width: 64px; height: 64px; border-radius: 16px;
+    width: 54px; height: 54px; border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 30px;
+    font-size: 24px;
     transition: transform .1s;
-    box-shadow: 0 2px 10px rgba(28,24,20,0.10);
+    box-shadow: 0 2px 8px rgba(28,24,20,0.12);
   }
-  .app-icon:active .app-icon-bubble { transform: scale(0.92); }
+  .app-icon:active .app-icon-bubble { transform: scale(0.93); }
   .app-icon-label {
-    font-size: 10px; color: var(--ink2); text-align: center;
+    font-size: 9px; color: var(--ink2); text-align: center;
     font-weight: 500; letter-spacing: .02em;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    width: 68px;
+    width: 56px;
   }
 
   /* ── Red dot ── */
   .notif-dot {
-    position: absolute; top: 0; right: calc(50% - 40px);
-    width: 10px; height: 10px; border-radius: 50%;
+    position: absolute; top: 0; right: 4px;
+    width: 9px; height: 9px; border-radius: 50%;
     background: var(--rose); border: 1.5px solid var(--bg);
     display: none;
   }
@@ -128,24 +149,24 @@
   /* ── Dock ── */
   .dock {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-    background: rgba(250,249,247,0.92);
+    background: rgba(250,249,247,0.95);
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid rgba(28,24,20,0.12);
-    border-radius: 28px; padding: 10px 18px;
-    display: flex; gap: 16px;
-    box-shadow: 0 4px 24px rgba(28,24,20,0.14);
+    border-radius: 24px; padding: 8px 14px;
+    display: flex; gap: 14px;
+    box-shadow: 0 4px 24px rgba(28,24,20,0.12);
     z-index: 200;
   }
-  .dock .app-icon-bubble { width: 54px; height: 54px; border-radius: 14px; font-size: 26px; }
+  .dock .app-icon-bubble { width: 44px; height: 44px; border-radius: 11px; font-size: 20px; }
 
   /* ── iOS notification banner ── */
   .ios-banner {
     position: fixed; top: 12px; left: 12px; right: 12px;
-    max-width: 456px; margin: 0 auto;
+    max-width: 406px; margin: 0 auto;
     background: rgba(248,248,246,0.94);
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-radius: 18px; padding: 14px 16px;
-    display: flex; align-items: flex-start; gap: 12px;
+    border-radius: 16px; padding: 12px 14px;
+    display: flex; align-items: flex-start; gap: 10px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.06);
     z-index: 500;
     transform: translateY(-140px);
@@ -153,15 +174,19 @@
     cursor: pointer;
   }
   .ios-banner.show { transform: translateY(0); }
-  .ios-banner-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .ios-banner-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--gold-light); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
   .ios-banner-content { flex: 1; min-width: 0; }
-  .ios-banner-app   { font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
-  .ios-banner-title { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ios-banner-body  { font-size: 13px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ios-banner-time  { font-size: 12px; color: var(--ink4); flex-shrink: 0; margin-top: 2px; }
+  .ios-banner-app   { font-size: 11px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px; }
+  .ios-banner-title { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ios-banner-body  { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ios-banner-time  { font-size: 11px; color: var(--ink4); flex-shrink: 0; margin-top: 2px; }
 
-  .scroll-pad { height: 120px; }
+  .scroll-pad { height: 110px; }
 </style>
+{% endblock %}
+
+{% block nav_bar %}
+{# Home has its own dock — suppress base nav bar #}
 {% endblock %}
 
 {% block content %}
@@ -177,15 +202,21 @@
   <div class="ios-banner-time" id="banner-time">now</div>
 </div>
 
-<!-- iOS status bar -->
-<div class="ios-status">
-  <div class="ios-time" id="ios-time">9:41</div>
-  <div class="ios-icons">
+<!-- Dynamic Island -->
+<div class="dynamic-island">
+  <div class="di-sensor"></div>
+  <div class="di-camera"></div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="status-time" id="status-time">9:41</div>
+  <div class="status-icons">
     <div class="signal-bars">
       <div class="signal-bar"></div><div class="signal-bar"></div>
       <div class="signal-bar"></div><div class="signal-bar"></div>
     </div>
-    <span class="wifi-label">WiFi</span>
+    <span class="wifi-icon">WiFi</span>
     <div class="battery-wrap">
       <div class="battery-body"><div class="battery-fill"></div></div>
       <div class="battery-tip"></div>
@@ -193,11 +224,11 @@
   </div>
 </div>
 
-<!-- Greeting + lumens -->
-<div class="greeting-bar">
-  <div class="greeting">Hello, <span>{{ player.display_name }}</span>.</div>
-  <div class="lumens-badge"><span class="sym">✦</span>{{ "%.0f"|format(wallet_balance) }}</div>
-</div>
+<!-- Greeting -->
+<div class="home-greeting">Hello, <span>{{ player.display_name }}</span>.</div>
+
+<!-- Lumens -->
+<div class="lumens-badge"><span class="sym">✦</span>{{ "%.0f"|format(wallet_balance) }}</div>
 
 <!-- Needs strip -->
 <div class="needs-strip">
@@ -355,7 +386,7 @@
 
 <div class="scroll-pad"></div>
 
-<!-- Home-specific dock (replaces base nav bar via block below) -->
+<!-- Dock -->
 <div class="dock">
   <a class="app-icon" href="/app/pulse?token={{ token }}">
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
@@ -376,10 +407,6 @@
 
 {% endblock %}
 
-{% block nav_bar %}
-{# Home has its own dock — suppress the base nav bar #}
-{% endblock %}
-
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
@@ -389,7 +416,7 @@
     const now = new Date();
     let h = now.getHours() % 12 || 12;
     const m = now.getMinutes().toString().padStart(2,'0');
-    document.getElementById('ios-time').textContent = h + ':' + m;
+    document.getElementById('status-time').textContent = h + ':' + m;
   }
   updateClock();
   setInterval(updateClock, 30000);
@@ -405,11 +432,10 @@
       const res = await fetch('/notifications', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
       if (res.ok) {
         const data = await res.json();
-        const untoasted = (data.notifications || []).filter(n => !n.is_read && !shownNotifIds.has(n.id));
-        if (untoasted.length > 0) {
-          const notif = untoasted[0];
-          shownNotifIds.add(notif.id);
-          showBanner(notif);
+        const unseen = (data.notifications || []).filter(n => !n.is_read && !shownNotifIds.has(n.id));
+        if (unseen.length > 0) {
+          shownNotifIds.add(unseen[0].id);
+          showBanner(unseen[0]);
         }
       }
     } catch(_) {}
