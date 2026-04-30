@@ -149,7 +149,9 @@ async def _init_sqlite():
                 theme_case_color      TEXT    NOT NULL DEFAULT '#7f77dd',
                 theme_wallpaper_uuid  TEXT    DEFAULT NULL,
                 is_muted              INTEGER NOT NULL DEFAULT 0,
-                timezone_offset_hours REAL    NOT NULL DEFAULT 0.0
+                timezone_offset_hours REAL    NOT NULL DEFAULT 0.0,
+                bedtime_slt           TEXT    DEFAULT NULL,
+                sleep_streak_days     INTEGER NOT NULL DEFAULT 0
             )
         """)
         # --- ECONOMY ---

@@ -221,6 +221,11 @@ async def update_settings(body: SettingsUpdate, db=Depends(get_db)):
     if body.privacy_prefs is not None:
         fields["privacy_prefs"] = json.dumps(body.privacy_prefs)
 
+    if body.bedtime_slt is not None:
+        fields["bedtime_slt"] = body.bedtime_slt.strip()[:10]
+    if body.timezone_offset_hours is not None:
+        fields["timezone_offset_hours"] = body.timezone_offset_hours
+
     if fields:
         if is_postgres():
             sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields))
@@ -232,6 +237,21 @@ async def update_settings(body: SettingsUpdate, db=Depends(get_db)):
             await db.execute(
                 f"UPDATE player_settings SET {sets} WHERE player_id = ?",
                 (*fields.values(), player_id))
+            await db.commit()
+
+    # Zodiac saves to player_profiles
+    VALID_ZODIACS = {"aries","taurus","gemini","cancer","leo","virgo",
+                     "libra","scorpio","sagittarius","capricorn","aquarius","pisces"}
+    if body.zodiac and body.zodiac.lower() in VALID_ZODIACS:
+        zodiac = body.zodiac.lower()
+        if is_postgres():
+            await db.execute(
+                "INSERT INTO player_profiles (player_id, zodiac) VALUES ($1, $2) ON CONFLICT (player_id) DO UPDATE SET zodiac = $2",
+                player_id, zodiac)
+        else:
+            await db.execute("INSERT OR IGNORE INTO player_profiles (player_id) VALUES (?)", (player_id,))
+            await db.execute("UPDATE player_profiles SET zodiac = ? WHERE player_id = ?", (zodiac, player_id))
+            await db.commit()
 
     # MH opt-in lives in player_profiles
     if body.is_mental_health_opted_in is not None:

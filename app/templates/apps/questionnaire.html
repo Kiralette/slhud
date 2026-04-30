@@ -139,6 +139,14 @@ const QUESTIONS = [
     profile: true
   },
   {
+    key: 'biology_agab', type: 'pills',
+    q: "What were you assigned at birth?",
+    subtitle: "This determines whether certain biology-based features like the cycle tracker are enabled for you.",
+    options: ['Female','Male','Intersex','Prefer not to say'],
+    answer_keys: ['female','male','intersex','prefer_not_to_say'],
+    profile: true
+  },
+  {
     key: 'zodiac', type: 'pills',
     q: "What's your zodiac sign?",
     options: ['♈ Aries','♉ Taurus','♊ Gemini','♋ Cancer','♌ Leo','♍ Virgo','♎ Libra','♏ Scorpio','♐ Sagittarius','♑ Capricorn','♒ Aquarius','♓ Pisces'],
@@ -206,6 +214,10 @@ function renderStep() {
   const q = QUESTIONS[currentStep];
   document.getElementById('q-question').textContent = q.q;
   const body = document.getElementById('q-body');
+  // Show optional subtitle
+  let sub = document.getElementById('q-subtitle');
+  if (!sub) { sub = document.createElement('div'); sub.id = 'q-subtitle'; sub.style.cssText = 'font-size:11px;color:var(--ink3);margin-bottom:16px;line-height:1.6;'; document.getElementById('q-question').after(sub); }
+  sub.textContent = q.subtitle || '';
   if (q.type === 'text') {
     body.innerHTML = `<input class="q-input" id="q-text-input" type="text" placeholder="${q.placeholder||''}" maxlength="40" autocomplete="off"><button class="q-next-btn" onclick="submitText()">Continue →</button>`;
     const inp = document.getElementById('q-text-input');
@@ -263,6 +275,7 @@ async function submitQuestionnaire() {
         display_name: profileData.display_name || null,
         pronouns: profileData.pronouns || null,
         age_group: profileData.age_group || null,
+        biology_agab: profileData.biology_agab || null,
         zodiac: profileData.zodiac || null,
         answers: answerKeys
       })

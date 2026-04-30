@@ -803,7 +803,7 @@ async def ritual(
             profile_row = await cur.fetchone()
 
     agab = (dict(profile_row)["biology_agab"] if profile_row else "") or ""
-    show_cycle_tab = agab.lower() in ("female", "intersex", "")
+    show_cycle_tab = agab.lower() in ("female", "intersex")
 
     # Events for current month
     month_start = f"{current_year:04d}-{current_month:02d}-01"
