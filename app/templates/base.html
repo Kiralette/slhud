@@ -113,8 +113,8 @@
     .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
     /* ── Tabs ── */
-    .tabs { display: flex; padding: 0 10px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 57px; z-index: 90; }
-    .tab { padding: 10px 8px 9px; flex: 1; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink4); cursor: pointer; border: none; background: none; border-bottom: 1.5px solid transparent; margin-bottom: -0.5px; transition: all .2s; text-align: center; font-family: var(--font); }
+    .tabs { display: flex; padding: 0 10px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 57px; z-index: 90; overflow-x: hidden; }
+    .tab { padding: 10px 4px 9px; flex: 1; font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink4); cursor: pointer; border: none; background: none; border-bottom: 1.5px solid transparent; margin-bottom: -0.5px; transition: all .2s; text-align: center; font-family: var(--font); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tab.active { color: var(--ink); border-bottom-color: var(--gold); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
