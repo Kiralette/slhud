@@ -47,6 +47,26 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* Phone-width shell — makes apps look right when opened directly in a browser */
+    body > * {
+      max-width: 430px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    /* Fixed/sticky elements should still be constrained */
+    .nav-bar, #toast {
+      max-width: 430px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    #toast {
+      left: 50%;
+      transform: translateX(-50%) translateY(-90px);
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
     .topbar {
       position: sticky; top: 0; z-index: 100;
       background: rgba(250,249,247,0.95);
@@ -373,31 +393,34 @@
     }
   </script>
   <!-- Persistent nav bar -->
+  {% block nav_bar %}
   <div class="nav-bar" id="nav-bar">
     <a class="nav-back" onclick="history.length > 1 ? history.back() : null" href="javascript:void(0)">&#8592; Back</a>
     <div class="nav-dock">
-      <a class="nav-dock-icon" id="nav-home"       style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)" href="/app/home?token=">&#127968;</a>
-      <a class="nav-dock-icon" id="nav-ping"       style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)" href="/app/ping?token=">
+      <a class="nav-dock-icon" id="nav-home"       style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)" href="#">&#127968;</a>
+      <a class="nav-dock-icon" id="nav-ping"       style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)" href="#">
         <div class="nav-dock-dot" id="navdot-ping"></div>&#128172;
       </a>
-      <a class="nav-dock-icon" id="nav-flare"      style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)" href="/app/flare?token=">
+      <a class="nav-dock-icon" id="nav-flare"      style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)" href="#">
         <div class="nav-dock-dot" id="navdot-flare"></div>&#10022;
       </a>
-      <a class="nav-dock-icon" id="nav-canvas"     style="background:linear-gradient(135deg,#f5ede0,#ead8c0)" href="/app/canvas?token=">
+      <a class="nav-dock-icon" id="nav-canvas"     style="background:linear-gradient(135deg,#f5ede0,#ead8c0)" href="#">
         <div class="nav-dock-dot" id="navdot-canvas"></div>&#129710;
       </a>
     </div>
   </div>
+  {% endblock %}
 
   <script>
-    // Wire up nav bar token from page token if available
+    // Wire up nav bar token — prefer PAGE_TOKEN (set by page), fall back to URL ?token=
     (function() {
-      var token = (typeof PAGE_TOKEN !== "undefined") ? PAGE_TOKEN : "";
+      var token = (typeof PAGE_TOKEN !== "undefined" && PAGE_TOKEN) ? PAGE_TOKEN
+                  : (new URLSearchParams(window.location.search)).get("token") || "";
       var links = ["nav-home","nav-ping","nav-flare","nav-canvas"];
       var paths = ["/app/home","/app/ping","/app/flare","/app/canvas"];
       for (var i = 0; i < links.length; i++) {
         var el = document.getElementById(links[i]);
-        if (el && token) el.href = paths[i] + "?token=" + token;
+        if (el) el.href = paths[i] + (token ? "?token=" + token : "");
       }
       // Poll dots
       if (token) {

@@ -5,8 +5,6 @@
 <style>
   html {
     background: var(--bg);
-    font-size: 20px;
-    zoom: 1.45;
   }
   body {
     background: var(--bg);
@@ -357,7 +355,7 @@
 
 <div class="scroll-pad"></div>
 
-<!-- Dock -->
+<!-- Home-specific dock (replaces base nav bar via block below) -->
 <div class="dock">
   <a class="app-icon" href="/app/pulse?token={{ token }}">
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
@@ -378,9 +376,14 @@
 
 {% endblock %}
 
+{% block nav_bar %}
+{# Home has its own dock — suppress the base nav bar #}
+{% endblock %}
+
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
+  const PAGE_TOKEN = TOKEN;
 
   function updateClock() {
     const now = new Date();
@@ -394,7 +397,7 @@
   const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',aura:'🫂',recharge:'⚡',wavelength:'🎵',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️',system:'✦' };
   const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',glow:'Glow',thrill:'Thrill',luminary:'Luminary',system:'SL HUD' };
 
-  let lastNotifId = null, bannerTimeout = null;
+  let shownNotifIds = new Set(), bannerTimeout = null;
 
   async function pollNotifications() {
     if (!TOKEN) return;
@@ -402,10 +405,11 @@
       const res = await fetch('/notifications', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
       if (res.ok) {
         const data = await res.json();
-        const untoasted = (data.notifications || []).filter(n => !n.is_read && !n.is_toasted);
-        if (untoasted.length > 0 && untoasted[0].id !== lastNotifId) {
-          lastNotifId = untoasted[0].id;
-          showBanner(untoasted[0]);
+        const untoasted = (data.notifications || []).filter(n => !n.is_read && !shownNotifIds.has(n.id));
+        if (untoasted.length > 0) {
+          const notif = untoasted[0];
+          shownNotifIds.add(notif.id);
+          showBanner(notif);
         }
       }
     } catch(_) {}
