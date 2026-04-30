@@ -82,35 +82,124 @@
 
     /* Dynamic island */
     .dynamic-island {
-      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-      width: 126px; height: 36px;
-      background: #1a1814;
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 34px;
+      background: #000;
       border-radius: 20px;
       z-index: 200;
       display: flex; align-items: center; justify-content: center;
-      gap: 10px;
+      gap: 8px;
+      box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
     }
     .di-camera {
       width: 10px; height: 10px; border-radius: 50%;
-      background: #2a2520;
-      border: 2px solid #0a0806;
+      background: #1a1a1a;
+      border: 1.5px solid #111;
+      position: relative;
+    }
+    .di-camera::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: #333;
     }
     .di-sensor {
-      width: 32px; height: 8px; border-radius: 4px;
-      background: #0a0806;
+      width: 28px; height: 7px; border-radius: 4px;
+      background: #111;
     }
 
     /* Status bar */
     .status-bar {
-      padding: 62px 24px 8px;
+      padding: 58px 22px 6px;
       display: flex; justify-content: space-between; align-items: center;
       background: var(--bg);
     }
     .status-time {
-      font-family: var(--font-head); font-size: 16px; font-weight: 400;
+      font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      font-size: 17px; font-weight: 600; letter-spacing: -0.3px;
       color: var(--ink);
     }
-    .status-icons { font-size: 11px; color: var(--ink3); display: flex; gap: 6px; align-items: center; }
+    .status-icons {
+      display: flex; gap: 5px; align-items: center;
+    }
+    /* Signal bars */
+    .signal-bars {
+      display: flex; align-items: flex-end; gap: 1.5px; height: 12px;
+    }
+    .signal-bar {
+      width: 3px; border-radius: 1px;
+      background: var(--ink);
+    }
+    .signal-bar:nth-child(1) { height: 4px; }
+    .signal-bar:nth-child(2) { height: 6px; }
+    .signal-bar:nth-child(3) { height: 9px; }
+    .signal-bar:nth-child(4) { height: 12px; }
+    /* Wifi icon */
+    .wifi-icon {
+      font-size: 12px; color: var(--ink); line-height: 1;
+    }
+    /* Battery */
+    .battery-wrap {
+      display: flex; align-items: center; gap: 1px;
+    }
+    .battery-body {
+      width: 22px; height: 11px;
+      border: 1.5px solid var(--ink); border-radius: 3px;
+      position: relative; padding: 1.5px;
+    }
+    .battery-fill {
+      height: 100%; width: 75%;
+      background: var(--ink); border-radius: 1px;
+    }
+    .battery-tip {
+      width: 2px; height: 5px;
+      background: var(--ink); border-radius: 0 1px 1px 0;
+    }
+
+    /* ── iOS Banner Notification ── */
+    .ios-banner {
+      position: absolute;
+      top: 12px; left: 12px; right: 12px;
+      background: rgba(248,248,248,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex; align-items: flex-start; gap: 10px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08);
+      z-index: 500;
+      transform: translateY(-120px);
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      cursor: pointer;
+    }
+    .ios-banner.show {
+      transform: translateY(0);
+    }
+    .ios-banner-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: var(--gold-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .ios-banner-content { flex: 1; min-width: 0; }
+    .ios-banner-app {
+      font-size: 11px; font-weight: 600; color: var(--ink3);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 1px;
+    }
+    .ios-banner-title {
+      font-size: 13px; font-weight: 600; color: #1a1a1a;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ios-banner-body {
+      font-size: 12px; color: #555;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ios-banner-time {
+      font-size: 11px; color: var(--ink3); flex-shrink: 0; margin-top: 2px;
+    }
 
     /* App iframe */
     .app-frame {
@@ -478,26 +567,89 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// Poll for notifications and show red dots
+// Poll for notifications and show red dots + banners
 const DOT_APPS = ['ping', 'flare', 'canvas'];
+const APP_ICONS = {
+  'ping': '💬', 'flare': '✦', 'canvas': '🪞', 'lumen_eats': '🍽️',
+  'sip': '💧', 'grind': '💼', 'vault': '💰', 'ritual': '🗓️',
+  'system': '✦', 'aura': '🫂', 'recharge': '⚡', 'wavelength': '🎵',
+  'lumen-eats': '🍽️', 'haul': '🛍️', 'glow': '🛁', 'thrill': '🎉',
+  'luminary': '🕯️',
+};
+const APP_NAMES = {
+  'ping': 'Ping', 'flare': 'Flare', 'canvas': 'Canvas',
+  'lumen_eats': 'Lumen Eats', 'lumen-eats': 'Lumen Eats',
+  'sip': 'Sip', 'grind': 'Grind', 'vault': 'Vault',
+  'ritual': 'Ritual', 'aura': 'Aura', 'recharge': 'Recharge',
+  'wavelength': 'Wavelength', 'haul': 'Haul', 'system': 'SL HUD',
+};
+
+let lastNotifId = null;
+let bannerTimeout = null;
+
 async function pollNotifications() {
   if (!TOKEN) return;
+  // Check for new unread notifications to show as banners
   try {
-    const res = await fetch(`${BASE_URL}/notifications/unread-count`, {
+    const res = await fetch(`${BASE_URL}/notifications`, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
+    if (res.ok) {
+      const data = await res.json();
+      const notifs = (data.notifications || []).filter(n => !n.is_read && !n.is_toasted);
+      if (notifs.length > 0 && notifs[0].id !== lastNotifId) {
+        lastNotifId = notifs[0].id;
+        showBanner(notifs[0]);
+      }
+    }
+  } catch(_) {}
+
+  // Also update red dots
+  try {
+    const res2 = await fetch(`${BASE_URL}/notifications/unread-count`, {
       headers: { 'Authorization': `Bearer ${TOKEN}` }
     });
-    if (!res.ok) return;
-    const data = await res.json();
-    const byApp = data.by_app || {};
+    if (!res2.ok) return;
+    const data2 = await res2.json();
+    const byApp = data2.by_app || {};
     DOT_APPS.forEach(app => {
       const hasNotif = (byApp[app] || 0) > 0;
       const dot = document.getElementById('dot-' + app);
       if (dot) dot.classList.toggle('show', hasNotif);
-      // Also update homescreen icon dot
       const hdot = document.getElementById('hdot-' + app);
       if (hdot) hdot.classList.toggle('show', hasNotif);
     });
   } catch(_) {}
+}
+
+function showBanner(notif) {
+  const app = notif.app_source || 'system';
+  document.getElementById('banner-icon').textContent = APP_ICONS[app] || '✦';
+  document.getElementById('banner-app').textContent = APP_NAMES[app] || app;
+  document.getElementById('banner-title').textContent = notif.title || '';
+  document.getElementById('banner-body').textContent = notif.body || '';
+  document.getElementById('banner-time').textContent = 'now';
+
+  const banner = document.getElementById('ios-banner');
+  banner.classList.add('show');
+
+  // Store action url for click
+  banner.dataset.url = notif.action_url || '';
+  banner.dataset.notifId = notif.id || '';
+
+  if (bannerTimeout) clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(dismissBanner, 4500);
+}
+
+function dismissBanner() {
+  const banner = document.getElementById('ios-banner');
+  banner.classList.remove('show');
+  // Mark as toasted
+  if (banner.dataset.notifId && TOKEN) {
+    fetch(`${BASE_URL}/notifications/mark-read`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token: TOKEN, notification_id: parseInt(banner.dataset.notifId)})
+    }).catch(() => {});
+  }
 }
 setInterval(pollNotifications, 8000);
 
