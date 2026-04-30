@@ -300,7 +300,8 @@
 
       <div class="section-title">Life</div>
       <div class="app-grid">
-        <div class="app-icon" onclick="openApp('canvas','Canvas','🪞')">
+        <div class="app-icon" id="home-canvas" onclick="openApp('canvas','Canvas','🪞')">
+          <div class="notif-dot" id="hdot-canvas"></div>
           <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
           <div class="app-icon-label">Canvas</div>
         </div>
@@ -320,11 +321,13 @@
 
       <div class="section-title">Social & Media</div>
       <div class="app-grid">
-        <div class="app-icon" onclick="openApp('flare','Flare','✦')">
+        <div class="app-icon" id="home-flare" onclick="openApp('flare','Flare','✦')">
+          <div class="notif-dot" id="hdot-flare"></div>
           <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
           <div class="app-icon-label">Flare</div>
         </div>
-        <div class="app-icon" onclick="openApp('ping','Ping','💬')">
+        <div class="app-icon" id="home-ping" onclick="openApp('ping','Ping','💬')">
+          <div class="notif-dot" id="hdot-ping"></div>
           <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
           <div class="app-icon-label">Ping</div>
         </div>
@@ -495,8 +498,12 @@ async function pollNotifications() {
     const data = await res.json();
     const byApp = data.by_app || {};
     DOT_APPS.forEach(app => {
+      const hasNotif = (byApp[app] || 0) > 0;
       const dot = document.getElementById('dot-' + app);
-      if (dot) dot.classList.toggle('show', (byApp[app] || 0) > 0);
+      if (dot) dot.classList.toggle('show', hasNotif);
+      // Also update homescreen icon dot
+      const hdot = document.getElementById('hdot-' + app);
+      if (hdot) hdot.classList.toggle('show', hasNotif);
     });
   } catch(_) {}
 }

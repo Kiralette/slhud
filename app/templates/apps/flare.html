@@ -469,7 +469,9 @@
         btn.textContent = '✓ Following';
         btn.classList.add('following');
         btn.style.color = 'var(--green)';
-        toast('Following ✓');
+        toast('Following ✓ — feed updating…');
+        // Reload after short delay so feed + follower counts refresh
+        setTimeout(() => location.reload(), 1800);
       } else {
         const data = await res.json();
         toast(data.detail || 'Could not follow');

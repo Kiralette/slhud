@@ -608,6 +608,7 @@ async def flare(
         wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
         stats_row  = await db.fetchrow("SELECT * FROM flare_stats WHERE player_id = $1", player_id)
         following_count = await db.fetchval("SELECT COUNT(*) FROM follows WHERE follower_id = $1", player_id)
+        follower_count_real = await db.fetchval("SELECT COUNT(*) FROM follows WHERE following_id = $1", player_id)
         feed_rows  = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
@@ -631,6 +632,9 @@ async def flare(
         async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE follower_id = ?", (player_id,)) as cur:
             fc = await cur.fetchone()
         following_count = fc["cnt"] if fc else 0
+        async with db.execute("SELECT COUNT(*) as cnt FROM follows WHERE following_id = ?", (player_id,)) as cur:
+            fc2 = await cur.fetchone()
+        follower_count_real = fc2["cnt"] if fc2 else 0
         async with db.execute(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
@@ -659,7 +663,7 @@ async def flare(
     wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
     fs = dict(stats_row) if stats_row else {}
     flare_stats = {
-        "follower_count":  fs.get("follower_count", 0),
+        "follower_count":  fs.get("follower_count", 0) + follower_count_real,
         "following_count": following_count,
         "weekly_posts":    fs.get("weekly_post_count", 0),
         "post_streak":     fs.get("post_streak_days", 0),
