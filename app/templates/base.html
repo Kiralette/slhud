@@ -6,6 +6,11 @@
   <title>{% block title %}SL HUD{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
+    .app-scale {
+  transform: scale(1.2);
+  transform-origin: top center;
+  width: calc(100% / 1.2);
+   }
     :root {
       --bg:          #faf9f7;
       --bg2:         #f4f2ee;
@@ -48,7 +53,7 @@
     }
 
     body {
-      max-width: 500px; zoom: 1.2;
+      max-width: 500px;
       margin: 0 auto;
       min-height: 100vh;
       overflow-x: hidden;
@@ -258,7 +263,7 @@
   </style>
 </head>
 <body>
-
+ <div class="app-scale">
   {% block status_bar %}
   <div class="base-status-bar">
     <div class="base-status-time" id="base-status-time">9:41</div>
@@ -375,5 +380,6 @@
   </script>
 
   {% block extra_script %}{% endblock %}
+ </div>
 </body>
 </html>
