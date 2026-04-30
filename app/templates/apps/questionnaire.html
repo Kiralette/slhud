@@ -3,235 +3,142 @@
 
 {% block extra_style %}
 <style>
-  .q-wrap {
-    display: flex; flex-direction: column; min-height: 100vh;
-  }
-  .q-header {
-    padding: 16px 18px 12px;
+  body { background: var(--bg); }
+  .q-topbar {
+    padding: 14px 18px 12px;
     border-bottom: 0.5px solid var(--border);
-    background: var(--bg);
+    display: flex; align-items: center; gap: 12px;
   }
-  .q-header-eyebrow {
-    font-size: 9px; text-transform: uppercase; letter-spacing: .14em;
-    color: var(--ink3); margin-bottom: 3px;
-  }
-  .q-header-title {
-    font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink);
-  }
+  .q-back { background: none; border: none; font-family: var(--font); font-size: 12px; color: var(--ink3); cursor: pointer; padding: 0; }
+  .q-title { font-family: var(--font-head); font-size: 18px; font-weight: 400; color: var(--ink); }
+  .q-step-indicator { margin-left: auto; font-size: 10px; color: var(--ink4); font-weight: 500; }
 
-  /* Path chooser */
-  .path-chooser {
-    padding: 24px 18px;
-    display: flex; flex-direction: column; gap: 12px;
-    overflow-y: auto;
-  }
+  .screen { display: none; padding: 20px 18px 120px; }
+  .screen.active { display: block; }
+
+  .welcome-text { font-size: 13px; color: var(--ink2); line-height: 1.7; margin-bottom: 20px; }
+
   .path-card {
     background: var(--bg2); border: 0.5px solid var(--border);
-    border-radius: var(--radius); padding: 18px;
+    border-radius: var(--radius); padding: 20px 18px; margin-bottom: 12px;
     cursor: pointer; transition: border-color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
   }
-  .path-card:hover { border-color: var(--gold); background: var(--gold-light); }
-  .path-card-icon { font-size: 28px; margin-bottom: 8px; }
-  .path-card-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
-  .path-card-desc { font-size: 12px; color: var(--ink2); line-height: 1.5; }
+  .path-card:hover, .path-card:active { border-color: var(--gold); background: var(--gold-light); }
+  .path-card-icon { font-size: 32px; margin-bottom: 10px; }
+  .path-card-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+  .path-card-desc { font-size: 12px; color: var(--ink2); line-height: 1.6; }
 
-  /* Chat area */
-  .q-chat {
-    flex: 1; overflow-y: auto; padding: 16px 18px 8px;
-    display: flex; flex-direction: column; gap: 14px;
-    min-height: 300px;
-  }
-  .q-bubble {
-    max-width: 85%;
-    padding: 11px 14px;
-    border-radius: 16px;
-    font-size: 13px; line-height: 1.6;
-  }
-  .q-bubble.bot {
-    background: var(--bg2); color: var(--ink);
-    border-radius: 16px 16px 16px 4px;
-    align-self: flex-start;
-  }
-  .q-bubble.user {
-    background: var(--ink); color: var(--bg);
-    border-radius: 16px 16px 4px 16px;
-    align-self: flex-end;
-  }
-  .q-bubble.typing {
-    background: var(--bg2); align-self: flex-start;
-    padding: 12px 16px;
-  }
-  .typing-dots { display: flex; gap: 4px; align-items: center; }
-  .typing-dots span {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--ink3);
-    animation: dot-bounce .9s infinite;
-  }
-  .typing-dots span:nth-child(2) { animation-delay: .15s; }
-  .typing-dots span:nth-child(3) { animation-delay: .3s; }
-  @keyframes dot-bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+  .progress-bar { height: 3px; background: var(--bg3); border-radius: 2px; margin-bottom: 24px; }
+  .progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width .3s ease; }
 
-  /* Pill answers */
-  .q-pills {
-    display: flex; flex-wrap: wrap; gap: 8px;
-    padding: 4px 0 8px;
+  .q-question { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 20px; }
+  .q-options { display: flex; flex-direction: column; gap: 10px; }
+  .q-option {
+    padding: 14px 16px; background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius); font-family: var(--font); font-size: 13px; color: var(--ink2);
+    cursor: pointer; text-align: left; transition: all .15s; width: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
-  .q-pill {
-    padding: 8px 16px; border-radius: 20px;
-    border: 0.5px solid var(--border2);
-    background: var(--bg); color: var(--ink);
-    font-family: var(--font); font-size: 12px; font-weight: 500;
-    cursor: pointer; transition: all .15s;
-  }
-  .q-pill:hover, .q-pill.selected {
-    background: var(--ink); color: var(--bg); border-color: var(--ink);
-  }
+  .q-option:hover, .q-option:active, .q-option.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
-  /* Text input */
-  .q-input-row {
-    display: flex; gap: 8px; padding: 0 0 4px;
+  .q-input {
+    width: 100%; padding: 14px 16px; border: 0.5px solid var(--border2);
+    border-radius: var(--radius); background: var(--bg); color: var(--ink);
+    font-family: var(--font); font-size: 14px; outline: none; box-sizing: border-box;
   }
-  .q-text-input {
-    flex: 1; padding: 10px 14px;
-    border: 0.5px solid var(--border2); border-radius: 20px;
-    background: var(--bg); color: var(--ink);
-    font-family: var(--font); font-size: 13px;
-    outline: none;
-  }
-  .q-text-input:focus { border-color: var(--gold); }
-  .q-send-btn {
-    padding: 10px 18px; background: var(--ink); color: var(--bg);
-    border: none; border-radius: 20px;
-    font-family: var(--font); font-size: 12px; font-weight: 500;
-    cursor: pointer;
-  }
-
-  /* Bottom input bar */
-  .q-input-bar {
-    padding: 12px 18px 20px;
-    border-top: 0.5px solid var(--border);
-    background: var(--bg);
-  }
-
-  /* Trait picker (Build path) */
-  .trait-picker-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 18px;
-  }
-  .trait-pick-chip {
-    padding: 10px 12px; border-radius: var(--radius-sm);
-    border: 0.5px solid var(--border2);
-    background: var(--bg2); color: var(--ink2);
-    font-size: 12px; font-weight: 500;
-    cursor: pointer; text-align: center;
-    transition: all .15s;
-  }
-  .trait-pick-chip.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  .trait-pick-chip.negative.selected { background: var(--rose); border-color: var(--rose); color: white; }
-  .trait-pick-chip.negative:not(.selected) { color: var(--rose); border-color: rgba(156,80,80,.3); }
-
-  /* Result screen */
-  .q-result {
-    padding: 28px 18px; text-align: center;
-  }
-  .q-result-icon { font-size: 52px; margin-bottom: 16px; }
-  .q-result-title {
-    font-family: var(--font-head); font-size: 28px; font-weight: 400;
-    color: var(--ink); margin-bottom: 8px;
-  }
-  .q-result-sub { font-size: 13px; color: var(--ink2); line-height: 1.6; margin-bottom: 24px; }
-  .trait-result-list {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 20px;
-  }
-  .trait-result-chip {
-    padding: 7px 16px; border-radius: 20px;
-    font-size: 12px; font-weight: 500;
-    background: var(--bg2); color: var(--ink2);
-    border: 0.5px solid var(--border);
-  }
-  .trait-result-chip.negative { background: var(--rose-light); color: var(--rose); border-color: rgba(156,80,80,.2); }
-  .lumen-bonus-badge {
-    display: inline-block; background: var(--gold-light);
-    color: var(--gold); font-size: 13px; font-weight: 600;
-    padding: 8px 20px; border-radius: 20px; margin-bottom: 24px;
-  }
-  .q-done-btn {
-    width: 100%; padding: 14px; background: var(--ink); color: var(--bg);
-    border: none; border-radius: var(--radius-sm);
+  .q-input:focus { border-color: var(--gold); }
+  .q-next-btn {
+    width: 100%; margin-top: 12px; padding: 14px;
+    background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius);
     font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer;
   }
 
-  .hidden { display: none !important; }
+  .build-intro { font-size: 13px; color: var(--ink2); line-height: 1.6; margin-bottom: 6px; }
+  .pick-count { font-size: 11px; color: var(--gold); font-weight: 600; margin-bottom: 14px; }
+  .trait-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .trait-chip {
+    padding: 11px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2);
+    background: var(--bg2); color: var(--ink2); font-family: var(--font); font-size: 12px;
+    font-weight: 500; cursor: pointer; text-align: center; transition: all .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .trait-chip.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .trait-chip.negative { color: var(--rose); border-color: rgba(156,80,80,.3); }
+  .trait-chip.negative.selected { background: var(--rose); border-color: var(--rose); color: white; }
+
+  .build-submit-btn {
+    width: 100%; padding: 14px; background: var(--ink); color: var(--bg);
+    border: none; border-radius: var(--radius); font-family: var(--font);
+    font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 4px;
+  }
+  .build-submit-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .result-center { text-align: center; }
+  .result-icon { font-size: 56px; margin-bottom: 16px; }
+  .result-title { font-family: var(--font-head); font-size: 26px; font-weight: 400; color: var(--ink); margin-bottom: 8px; }
+  .result-sub { font-size: 13px; color: var(--ink2); line-height: 1.6; margin-bottom: 20px; }
+  .result-traits { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; justify-content: center; }
+  .result-trait { padding: 7px 14px; border-radius: 20px; background: var(--bg2); color: var(--ink2); border: 0.5px solid var(--border); font-size: 12px; font-weight: 500; }
+  .result-bonus { display: inline-block; background: var(--gold-light); color: var(--gold); font-size: 13px; font-weight: 600; padding: 8px 20px; border-radius: 20px; margin-bottom: 20px; }
+  .result-done-btn { width: 100%; padding: 14px; background: var(--ink); color: var(--bg); border: none; border-radius: var(--radius); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; }
 </style>
 {% endblock %}
 
 {% block content %}
-
-<div class="q-wrap" id="app">
-
-  <!-- Header -->
-  <div class="q-header">
-    <div class="q-header-eyebrow">SL HUD</div>
-    <div class="q-header-title" id="header-title">Getting started</div>
+<div>
+  <div class="q-topbar">
+    <button class="q-back" id="q-back" onclick="goBack()" style="display:none;">←</button>
+    <div class="q-title" id="q-title">Profile Setup</div>
+    <div class="q-step-indicator" id="q-step-indicator"></div>
   </div>
 
-  <!-- ── SCREEN: Path chooser ── -->
-  <div id="screen-path" class="path-chooser">
-    <div style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:4px;">
-      Welcome. Let's set up your profile and find your traits — the personality traits that shape how your HUD works.
-    </div>
-    <div class="path-card" onclick="startPath('discover')">
+  <div class="screen active" id="screen-home">
+    <div class="welcome-text">Let's set up your profile and find your traits — personality modifiers that shape how your HUD works.</div>
+    <div class="path-card" onclick="startDiscover()">
       <div class="path-card-icon">🔮</div>
       <div class="path-card-title">Discover my traits</div>
-      <div class="path-card-desc">Answer a few questions and the HUD will figure out your traits. Recommended for new players.</div>
+      <div class="path-card-desc">Answer 9 quick questions and the HUD will figure out your traits. Recommended for new players.</div>
     </div>
-    <div class="path-card" onclick="startPath('build')">
+    <div class="path-card" onclick="startBuild()">
       <div class="path-card-icon">🧩</div>
       <div class="path-card-title">Build my own</div>
-      <div class="path-card-desc">Pick up to 5 traits manually. You know yourself best.</div>
+      <div class="path-card-desc">Pick up to 5 traits manually. Negative traits give you ✦50 each as a starting bonus.</div>
     </div>
   </div>
 
-  <!-- ── SCREEN: Discover (chat) ── -->
-  <div id="screen-discover" style="display:none;flex-direction:column;flex:1;">
-    <div class="q-chat" id="chat-log"></div>
-    <div class="q-input-bar" id="input-bar"></div>
+  <div class="screen" id="screen-q">
+    <div class="progress-bar"><div class="progress-fill" id="q-progress" style="width:0%"></div></div>
+    <div class="q-question" id="q-question"></div>
+    <div id="q-body"></div>
   </div>
 
-  <!-- ── SCREEN: Build (trait picker) ── -->
-  <div id="screen-build" style="display:none;">
-    <div style="padding:14px 18px 8px;">
-      <div style="font-size:13px;color:var(--ink2);line-height:1.5;margin-bottom:4px;">Pick up to 5 traits. Negative traits give you ✦50 each at start — no judgment.</div>
-      <div id="pick-count" style="font-size:11px;color:var(--gold);font-weight:600;margin-bottom:8px;">0 / 5 selected</div>
-    </div>
-    <div class="trait-picker-grid" id="trait-grid">
+  <div class="screen" id="screen-build">
+    <div class="build-intro">Pick up to 5 traits. Negative traits give you ✦50 each at start.</div>
+    <div class="pick-count" id="pick-count">0 / 5 selected</div>
+    <div class="trait-grid">
       {% for t in traits %}
-      <div class="trait-pick-chip {% if t.is_negative %}negative{% endif %}"
-           data-key="{{ t.key }}" data-negative="{{ '1' if t.is_negative else '0' }}"
-           onclick="toggleTrait(this)">
-        {{ t.display }}{% if t.is_negative %} <span style="font-size:9px;opacity:.7;">+✦50</span>{% endif %}
+      <div class="trait-chip {% if t.is_negative %}negative{% endif %}"
+           data-key="{{ t.key }}" onclick="toggleTrait(this)">
+        {{ t.display }}{% if t.is_negative %} <span style="font-size:9px;opacity:.6;">+✦50</span>{% endif %}
       </div>
       {% endfor %}
     </div>
-    <div style="padding:12px 18px 24px;">
-      <button class="q-done-btn" onclick="submitBuild()">Apply traits</button>
-    </div>
+    <button class="build-submit-btn" id="build-submit" onclick="submitBuild()" disabled>Apply traits</button>
   </div>
 
-  <!-- ── SCREEN: Result ── -->
-  <div id="screen-result" style="display:none;">
-    <div class="q-result">
-      <div class="q-result-icon">✨</div>
-      <div class="q-result-title" id="result-title">You're all set.</div>
-      <div class="q-result-sub" id="result-sub">Your traits have been applied. They'll shape your experience from here on.</div>
-      <div class="trait-result-list" id="result-traits"></div>
-      <div class="lumen-bonus-badge" id="result-bonus" style="display:none;"></div>
-      <button class="q-done-btn" onclick="window.location.href='/app/pulse?token={{ token }}'">
-        Open Pulse →
-      </button>
+  <div class="screen" id="screen-result">
+    <div class="result-center">
+      <div class="result-icon">✨</div>
+      <div class="result-title">All set!</div>
+      <div class="result-sub" id="result-sub">Your traits have been applied and will shape your experience.</div>
+      <div class="result-traits" id="result-traits"></div>
+      <div class="result-bonus" id="result-bonus" style="display:none;"></div>
+      <button class="result-done-btn" onclick="window.location.href='/app/pulse?token={{ token }}'">Open Pulse →</button>
     </div>
   </div>
-
 </div>
-
+<div class="scroll-pad"></div>
 {% endblock %}
 
 {% block extra_script %}
@@ -239,292 +146,147 @@
 const TOKEN = "{{ token }}";
 const TRAIT_DEFS = {{ traits | tojson }};
 
-// ── State ──────────────────────────────────────────────────────────────
-const state = {
-  path: null,
-  step: 0,
-  profile: {},
-  answers: [],
-};
-
-// ── Screen switching ───────────────────────────────────────────────────
 function showScreen(id) {
-  ['screen-path','screen-discover','screen-build','screen-result'].forEach(s => {
-    document.getElementById(s).style.display = 'none';
-  });
-  const el = document.getElementById(id);
-  el.style.display = id === 'screen-discover' ? 'flex' : 'block';
-  if (id === 'screen-discover') {
-    el.style.flexDirection = 'column';
-    el.style.flex = '1';
-  }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
 }
 
-function startPath(path) {
-  state.path = path;
-  if (path === 'discover') {
-    showScreen('screen-discover');
-    document.getElementById('header-title').textContent = 'Getting to know you…';
-    runStep(0);
-  } else {
-    showScreen('screen-build');
-    document.getElementById('header-title').textContent = 'Build your traits';
-  }
+function goBack() {
+  showScreen('screen-home');
+  document.getElementById('q-back').style.display = 'none';
+  document.getElementById('q-title').textContent = 'Profile Setup';
+  document.getElementById('q-step-indicator').textContent = '';
+  currentStep = 0; answers = {}; profileData = {};
 }
 
-// ── Chat helpers ───────────────────────────────────────────────────────
-function addBubble(text, type='bot') {
-  const chat = document.getElementById('chat-log');
-  const div = document.createElement('div');
-  div.className = `q-bubble ${type}`;
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  return div;
-}
-
-function addTyping() {
-  const chat = document.getElementById('chat-log');
-  const div = document.createElement('div');
-  div.className = 'q-bubble typing';
-  div.id = 'typing-indicator';
-  div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-function removeTyping() {
-  const el = document.getElementById('typing-indicator');
-  if (el) el.remove();
-}
-
-function botSay(text, delay=600) {
-  return new Promise(resolve => {
-    addTyping();
-    setTimeout(() => {
-      removeTyping();
-      addBubble(text, 'bot');
-      resolve();
-    }, delay);
-  });
-}
-
-function setInput(html) {
-  document.getElementById('input-bar').innerHTML = html;
-}
-
-// ── Questionnaire steps ────────────────────────────────────────────────
-const STEPS = [
-  {
-    q: "First — what should we call you? You can update this anytime.",
-    type: 'text',
-    placeholder: 'Display name…',
-    key: 'display_name',
-  },
-  {
-    q: "What are your pronouns?",
-    type: 'pills',
-    options: ['she/her','he/him','they/them','she/they','he/they','any/all','other'],
-    key: 'pronouns',
-  },
-  {
-    q: "How do you express yourself?",
-    type: 'pills',
-    options: ['Feminine','Masculine','Androgynous','Fluid','Nonbinary','Other'],
-    values: ['feminine','masculine','androgynous','fluid','nonbinary','other'],
-    key: 'gender_expression',
-  },
-  {
-    q: "When you have a full day off, what's most likely happening?",
-    type: 'pills',
-    options: ['I'm out socialising','Solo creative project','Gym or outdoors','Reading or studying','Gaming or streaming','I'm sleeping lol'],
-    answer_key: 'q1',
-  },
-  {
-    q: "Something goes wrong in your day. What's your gut reaction?",
-    type: 'pills',
-    options: ['Text someone immediately','Try to fix it myself','Get frustrated then move on','Overthink it for hours','Shrug it off pretty fast','Spiral a little, ngl'],
-    answer_key: 'q2',
-  },
-  {
-    q: "How do you feel about routines?",
-    type: 'pills',
-    options: ['Love them, very structured','Good intentions, messy reality','Prefer to go with the flow','What is a routine'],
-    answer_key: 'q3',
-  },
-  {
-    q: "What's your relationship with food?",
-    type: 'pills',
-    options: ['I eat anything, no issues','Picky, I have my things','I forget to eat honestly','Food is culture, I love it'],
-    answer_key: 'q4',
-  },
-  {
-    q: "Your energy levels tend to be…",
-    type: 'pills',
-    options: ['High in the morning','High late at night','Inconsistent, depends on the day','Honestly always low'],
-    answer_key: 'q5',
-  },
-  {
-    q: "Last one — how do you feel about where you are in life right now?",
-    type: 'pills',
-    options: ['Building toward something big','Taking it one day at a time','Processing some stuff','Thriving, honestly','Lost but figuring it out'],
-    answer_key: 'q6',
-  },
+const QUESTIONS = [
+  { key:'display_name', q:"First — what should we call you?", type:'text', placeholder:'Your display name…' },
+  { key:'pronouns', q:"What are your pronouns?", type:'pills', options:['she/her','he/him','they/them','she/they','he/they','any/all'] },
+  { key:'q_free_day', q:"A full day off — what's most likely happening?", type:'pills', options:["Out socialising","Solo creative project","Gym or outdoors","Reading or studying","Gaming or streaming","Sleeping, honestly"] },
+  { key:'q_stress', q:"Something goes wrong. Your gut reaction?", type:'pills', options:["Text someone immediately","Try to fix it myself","Get frustrated then move on","Overthink it for hours","Shrug it off pretty fast"] },
+  { key:'q_routine', q:"Your relationship with routines?", type:'pills', options:["Love them, very structured","Good intentions, messy reality","Prefer to go with the flow","What is a routine"] },
+  { key:'q_food', q:"Your relationship with food?", type:'pills', options:["Eat anything, no issues","Picky, I have my things","I forget to eat honestly","Food is culture, I love it"] },
+  { key:'q_energy', q:"Your energy levels tend to be…", type:'pills', options:["High in the morning","High late at night","Inconsistent, day by day","Honestly always low"] },
+  { key:'q_social', q:"In a group of new people, you're usually…", type:'pills', options:["Making friends with everyone","Talking to one or two people","Mostly observing","Ready to leave honestly"] },
+  { key:'q_life', q:"Where are you at right now?", type:'pills', options:["Building toward something big","Taking it one day at a time","Processing some stuff","Thriving, honestly","Lost but figuring it out"] }
 ];
 
-async function runStep(i) {
-  state.step = i;
-  const step = STEPS[i];
-  await botSay(step.q);
+let currentStep = 0, answers = {}, profileData = {};
 
-  if (step.type === 'text') {
-    setInput(`
-      <div class="q-input-row">
-        <input class="q-text-input" id="q-input" placeholder="${step.placeholder}" maxlength="40" />
-        <button class="q-send-btn" onclick="submitText()">→</button>
-      </div>
-    `);
-    document.getElementById('q-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') submitText();
-    });
-    setTimeout(() => document.getElementById('q-input')?.focus(), 100);
+function startDiscover() {
+  showScreen('screen-q');
+  document.getElementById('q-back').style.display = 'block';
+  document.getElementById('q-title').textContent = 'Getting to know you';
+  currentStep = 0; answers = {}; profileData = {};
+  renderStep();
+}
+
+function renderStep() {
+  const total = QUESTIONS.length;
+  document.getElementById('q-progress').style.width = Math.round((currentStep/total)*100) + '%';
+  document.getElementById('q-step-indicator').textContent = (currentStep+1) + ' / ' + total;
+  const q = QUESTIONS[currentStep];
+  document.getElementById('q-question').textContent = q.q;
+  const body = document.getElementById('q-body');
+  if (q.type === 'text') {
+    body.innerHTML = `<input class="q-input" id="q-text-input" type="text" placeholder="${q.placeholder||''}" maxlength="40" autocomplete="off"><button class="q-next-btn" onclick="submitText()">Continue →</button>`;
+    const inp = document.getElementById('q-text-input');
+    inp.focus();
+    inp.addEventListener('keydown', e => { if(e.key==='Enter') submitText(); });
   } else {
-    const opts = step.options;
-    const vals = step.values || opts.map(o => o.toLowerCase().replace(/ /g,'_'));
-    const pills = opts.map((o, idx) =>
-      `<button class="q-pill" data-val="${vals[idx]}" onclick="submitPill(this, '${step.key || step.answer_key}')">${o}</button>`
-    ).join('');
-    setInput(`<div class="q-pills">${pills}</div>`);
+    body.innerHTML = '<div class="q-options">' + q.options.map(opt =>
+      `<button class="q-option" onclick="selectPill(this,'${q.key}','${opt.replace(/'/g,"&#39;")}')">${opt}</button>`
+    ).join('') + '</div>';
   }
 }
 
 function submitText() {
-  const input = document.getElementById('q-input');
-  if (!input) return;
-  const val = input.value.trim();
-  if (!val) return;
-  const step = STEPS[state.step];
-  addBubble(val, 'user');
-  if (step.key) state.profile[step.key] = val;
-  setInput('');
+  const inp = document.getElementById('q-text-input');
+  const val = (inp?.value||'').trim();
+  if (!val) { inp?.focus(); return; }
+  const q = QUESTIONS[currentStep];
+  if (q.key === 'display_name') profileData.display_name = val;
+  else answers[q.key] = val;
   nextStep();
 }
 
-function submitPill(btn, key) {
-  const val = btn.dataset.val;
-  const label = btn.textContent.trim();
-  // Highlight selection
-  btn.parentElement.querySelectorAll('.q-pill').forEach(p => p.classList.remove('selected'));
+function selectPill(btn, key, val) {
+  document.querySelectorAll('#q-body .q-option').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  addBubble(label, 'user');
-
-  const step = STEPS[state.step];
-  if (step.key) {
-    state.profile[step.key] = val;
-  } else {
-    state.answers.push(val);
-  }
-  setInput('');
-  setTimeout(nextStep, 300);
+  if (key === 'pronouns') profileData.pronouns = val;
+  else answers[key] = val;
+  setTimeout(nextStep, 280);
 }
 
 function nextStep() {
-  const next = state.step + 1;
-  if (next < STEPS.length) {
-    runStep(next);
-  } else {
-    finishDiscover();
-  }
-}
-
-async function finishDiscover() {
-  await botSay("Getting to know you…", 800);
-  await botSay("Almost there…", 600);
-  await submitQuestionnaire();
+  currentStep++;
+  if (currentStep >= QUESTIONS.length) submitQuestionnaire();
+  else renderStep();
 }
 
 async function submitQuestionnaire() {
-  const body = {
-    token: TOKEN,
-    display_name: state.profile.display_name || null,
-    pronouns: state.profile.pronouns || null,
-    gender_expression: state.profile.gender_expression || null,
-    answers: state.answers,
-  };
-
+  document.getElementById('q-question').textContent = 'Working it out…';
+  document.getElementById('q-body').innerHTML = '<div style="color:var(--ink3);font-size:13px;padding-top:8px;">Figuring out your traits…</div>';
+  document.getElementById('q-step-indicator').textContent = '';
   try {
     const res = await fetch('/questionnaire/submit', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body),
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token:TOKEN, display_name:profileData.display_name||null, pronouns:profileData.pronouns||null, answers:Object.values(answers) })
     });
     const data = await res.json();
-    showResult(data.trait_displays || [], data.lumen_bonus || 0, false);
-  } catch (e) {
-    addBubble("Something went wrong. Try again.", 'bot');
+    showResult(data.trait_displays||[], data.lumen_bonus||0);
+  } catch(e) {
+    document.getElementById('q-question').textContent = 'Something went wrong.';
+    document.getElementById('q-body').innerHTML = '<button class="q-next-btn" onclick="submitQuestionnaire()">Try again</button>';
   }
 }
 
-// ── Build path ─────────────────────────────────────────────────────────
 const selectedTraits = new Set();
+
+function startBuild() {
+  showScreen('screen-build');
+  document.getElementById('q-back').style.display = 'block';
+  document.getElementById('q-title').textContent = 'Build your traits';
+  selectedTraits.clear();
+  document.querySelectorAll('.trait-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('pick-count').textContent = '0 / 5 selected';
+  document.getElementById('build-submit').disabled = true;
+}
 
 function toggleTrait(chip) {
   const key = chip.dataset.key;
-  if (selectedTraits.has(key)) {
-    selectedTraits.delete(key);
-    chip.classList.remove('selected');
-  } else {
-    if (selectedTraits.size >= 5) {
-      chip.style.animation = 'shake .3s';
-      setTimeout(() => chip.style.animation = '', 300);
-      return;
-    }
-    selectedTraits.add(key);
-    chip.classList.add('selected');
+  if (selectedTraits.has(key)) { selectedTraits.delete(key); chip.classList.remove('selected'); }
+  else {
+    if (selectedTraits.size >= 5) return;
+    selectedTraits.add(key); chip.classList.add('selected');
   }
-  document.getElementById('pick-count').textContent = `${selectedTraits.size} / 5 selected`;
+  document.getElementById('pick-count').textContent = selectedTraits.size + ' / 5 selected';
+  document.getElementById('build-submit').disabled = selectedTraits.size === 0;
 }
 
 async function submitBuild() {
-  if (selectedTraits.size === 0) return;
+  if (!selectedTraits.size) return;
+  const btn = document.getElementById('build-submit');
+  btn.disabled = true; btn.textContent = 'Applying…';
   try {
     const res = await fetch('/questionnaire/build', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({token: TOKEN, trait_keys: [...selectedTraits]}),
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ token:TOKEN, trait_keys:[...selectedTraits] })
     });
     const data = await res.json();
-    // Get display names from trait defs
-    const displays = [...selectedTraits].map(k => {
-      const t = TRAIT_DEFS.find(x => x.key === k);
-      return t ? t.display : k;
-    });
-    showResult(displays, data.lumen_bonus || 0, true);
-  } catch (e) {
-    alert('Something went wrong. Try again.');
-  }
+    const displays = [...selectedTraits].map(k => { const t=TRAIT_DEFS.find(x=>x.key===k); return t?t.display:k; });
+    showResult(displays, data.lumen_bonus||0);
+  } catch(e) { btn.disabled=false; btn.textContent='Apply traits'; toast('Something went wrong.'); }
 }
 
-// ── Result screen ──────────────────────────────────────────────────────
-function showResult(traitDisplays, bonus, isBuild) {
+function showResult(traitDisplays, bonus) {
   showScreen('screen-result');
-  document.getElementById('header-title').textContent = 'All set ✓';
-
-  const list = document.getElementById('result-traits');
-  list.innerHTML = traitDisplays.map(t =>
-    `<span class="trait-result-chip">${t}</span>`
-  ).join('');
-
-  if (bonus > 0) {
-    const b = document.getElementById('result-bonus');
-    b.textContent = `+✦${bonus} starting bonus`;
-    b.style.display = 'inline-block';
-  }
-
-  if (isBuild) {
-    document.getElementById('result-sub').textContent =
-      'Your chosen traits are live. Check Canvas → Traits anytime to review them.';
-  }
+  document.getElementById('q-back').style.display = 'none';
+  document.getElementById('q-title').textContent = 'Done ✓';
+  document.getElementById('q-step-indicator').textContent = '';
+  document.getElementById('result-traits').innerHTML = traitDisplays.map(t=>`<span class="result-trait">${t}</span>`).join('');
+  if (bonus > 0) { const b=document.getElementById('result-bonus'); b.textContent='+✦'+bonus+' starting bonus'; b.style.display='inline-block'; }
 }
 </script>
 {% endblock %}
