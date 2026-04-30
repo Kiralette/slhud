@@ -53,19 +53,6 @@
       margin-left: auto;
       margin-right: auto;
     }
-    /* Fixed/sticky elements should still be constrained */
-    .nav-bar, #toast {
-      max-width: 430px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    #toast {
-      left: 50%;
-      transform: translateX(-50%) translateY(-90px);
-    }
-    #toast.show {
-      transform: translateX(-50%) translateY(0);
-    }
 
     .topbar {
       position: sticky; top: 0; z-index: 100;
@@ -296,42 +283,29 @@
     .scroll-pad { height: 110px; }
     .divider { height: 0.5px; background: var(--border); margin: 4px 18px; }
 
-    /* -- Persistent nav bar -- */
+    /* -- Persistent dock (all apps) -- */
     .nav-bar {
-      position: fixed; bottom: 0; left: 0; right: 0;
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
       background: rgba(250,249,247,0.95);
       backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-top: 0.5px solid var(--border);
-      padding: 8px 16px 12px;
-      display: flex; align-items: center; justify-content: space-between;
+      border: 0.5px solid rgba(28,24,20,0.12);
+      border-radius: 24px; padding: 8px 14px;
+      display: flex; gap: 14px; align-items: center;
+      box-shadow: 0 4px 24px rgba(28,24,20,0.12);
       z-index: 300;
-      box-shadow: 0 -2px 16px rgba(28,24,20,0.06);
-    }
-    .nav-back {
-      display: flex; align-items: center; gap: 5px;
-      font-size: 11px; font-weight: 500; color: var(--ink3);
-      background: var(--bg2); border: 0.5px solid var(--border2);
-      border-radius: 99px; padding: 6px 14px;
-      cursor: pointer; text-decoration: none;
-      -webkit-tap-highlight-color: transparent;
-      transition: background .15s;
-    }
-    .nav-back:active { background: var(--bg3); }
-    .nav-dock {
-      display: flex; gap: 8px; align-items: center;
     }
     .nav-dock-icon {
-      width: 42px; height: 42px; border-radius: 11px;
+      width: 44px; height: 44px; border-radius: 11px;
       display: flex; align-items: center; justify-content: center;
       font-size: 20px; text-decoration: none;
-      box-shadow: 0 1px 6px rgba(28,24,20,0.10);
+      box-shadow: 0 2px 8px rgba(28,24,20,0.10);
       -webkit-tap-highlight-color: transparent;
       transition: transform .1s; position: relative;
     }
-    .nav-dock-icon:active { transform: scale(0.92); }
+    .nav-dock-icon:active { transform: scale(0.93); }
     .nav-dock-dot {
       position: absolute; top: -2px; right: -2px;
-      width: 8px; height: 8px; border-radius: 50%;
+      width: 9px; height: 9px; border-radius: 50%;
       background: var(--rose); border: 1.5px solid var(--bg);
       display: none;
     }
@@ -392,22 +366,19 @@
       }
     }
   </script>
-  <!-- Persistent nav bar -->
+  <!-- Persistent dock -->
   {% block nav_bar %}
   <div class="nav-bar" id="nav-bar">
-    <a class="nav-back" onclick="history.length > 1 ? history.back() : null" href="javascript:void(0)">&#8592; Back</a>
-    <div class="nav-dock">
-      <a class="nav-dock-icon" id="nav-home"       style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)" href="#">&#127968;</a>
-      <a class="nav-dock-icon" id="nav-ping"       style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)" href="#">
-        <div class="nav-dock-dot" id="navdot-ping"></div>&#128172;
-      </a>
-      <a class="nav-dock-icon" id="nav-flare"      style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)" href="#">
-        <div class="nav-dock-dot" id="navdot-flare"></div>&#10022;
-      </a>
-      <a class="nav-dock-icon" id="nav-canvas"     style="background:linear-gradient(135deg,#f5ede0,#ead8c0)" href="#">
-        <div class="nav-dock-dot" id="navdot-canvas"></div>&#129710;
-      </a>
-    </div>
+    <a class="nav-dock-icon" id="nav-home"   style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)" href="#">&#127968;</a>
+    <a class="nav-dock-icon" id="nav-ping"   style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)" href="#">
+      <div class="nav-dock-dot" id="navdot-ping"></div>&#128172;
+    </a>
+    <a class="nav-dock-icon" id="nav-flare"  style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)" href="#">
+      <div class="nav-dock-dot" id="navdot-flare"></div>&#10022;
+    </a>
+    <a class="nav-dock-icon" id="nav-canvas" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)" href="#">
+      <div class="nav-dock-dot" id="navdot-canvas"></div>&#129710;
+    </a>
   </div>
   {% endblock %}
 
