@@ -303,4 +303,12 @@ async def send_message(body: SendMessage, db=Depends(get_db)):
         await increment_stat(player_id, "total_messages_sent")
     except Exception:
         pass
+
+    # Sending a message fills Social need a little
+    try:
+        from app.services.needs import update_need
+        await update_need(player_id, "social", 2.0, db, "Sent a Ping message +2 Social")
+    except Exception:
+        pass
+
     return {"status": "sent", "thread_id": thread_id}

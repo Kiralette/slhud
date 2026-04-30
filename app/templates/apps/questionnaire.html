@@ -190,13 +190,13 @@
   </div>
 
   <!-- ── SCREEN: Discover (chat) ── -->
-  <div id="screen-discover" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div id="screen-discover" style="display:none;">
     <div class="q-chat" id="chat-log"></div>
     <div class="q-input-bar" id="input-bar"></div>
   </div>
 
   <!-- ── SCREEN: Build (trait picker) ── -->
-  <div id="screen-build" class="hidden">
+  <div id="screen-build" style="display:none;">
     <div style="padding:14px 18px 8px;">
       <div style="font-size:13px;color:var(--ink2);line-height:1.5;margin-bottom:4px;">Pick up to 5 traits. Negative traits give you ✦50 each at start — no judgment.</div>
       <div id="pick-count" style="font-size:11px;color:var(--gold);font-weight:600;margin-bottom:8px;">0 / 5 selected</div>
@@ -216,7 +216,7 @@
   </div>
 
   <!-- ── SCREEN: Result ── -->
-  <div id="screen-result" class="hidden">
+  <div id="screen-result" style="display:none;">
     <div class="q-result">
       <div class="q-result-icon">✨</div>
       <div class="q-result-title" id="result-title">You're all set.</div>
@@ -249,16 +249,17 @@ const state = {
 // ── Screen switching ───────────────────────────────────────────────────
 function showScreen(id) {
   ['screen-path','screen-discover','screen-build','screen-result'].forEach(s => {
-    document.getElementById(s).classList.add('hidden');
-    document.getElementById(s).style.display = '';
+    const el = document.getElementById(s);
+    el.style.display = 'none';
   });
   const el = document.getElementById(id);
-  el.classList.remove('hidden');
   if (id === 'screen-discover') {
     el.style.display = 'flex';
     el.style.flexDirection = 'column';
     el.style.flex = '1';
     el.style.overflow = 'hidden';
+  } else {
+    el.style.display = 'block';
   }
 }
 

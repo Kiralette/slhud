@@ -517,3 +517,101 @@ async def topup_wallet(
         "lindens_paid": body.lindens,
         "lumens_added": lumens_to_add,
     }
+
+
+# ── POST /shop/subscribe ───────────────────────────────────────────────────────
+
+class SubscribeRequest(BaseModel):
+    token: str
+    subscription_key: str
+
+@router.post("/subscribe")
+async def subscribe(body: SubscribeRequest, db=Depends(get_db)):
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    cfg = get_config()
+    sub_defs = cfg.get("subscriptions", {})
+
+    # Handle both list and dict formats in config
+    if isinstance(sub_defs, list):
+        valid_keys = set(sub_defs)
+        sub_cost = {"wavelength_premium": cfg.get("wavelength", {}).get("premium_cost_weekly", 25),
+                    "gym_membership": 30, "flare_verified": 20}.get(body.subscription_key, 25)
+    else:
+        if body.subscription_key not in sub_defs:
+            raise HTTPException(status_code=400, detail="Unknown subscription.")
+        sub_cost = sub_defs[body.subscription_key].get("weekly_cost", 25)
+        valid_keys = set(sub_defs.keys())
+
+    if body.subscription_key not in valid_keys:
+        raise HTTPException(status_code=400, detail="Unknown subscription.")
+
+    # Check balance
+    if is_postgres():
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+    else:
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+
+    balance = float(wallet_row["balance"]) if wallet_row else 0.0
+    if balance < sub_cost:
+        raise HTTPException(status_code=400, detail=f"Insufficient balance. Need ✦{sub_cost}.")
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Check already subscribed
+    if is_postgres():
+        existing = await db.fetchrow(
+            "SELECT id FROM subscriptions WHERE player_id = $1 AND subscription_key = $2 AND is_active = 1",
+            player_id, body.subscription_key)
+        if existing:
+            return {"ok": True, "status": "already_active"}
+        new_balance = balance - sub_cost
+        await db.execute("UPDATE wallets SET balance = $1 WHERE player_id = $2", new_balance, player_id)
+        await db.execute(
+            "INSERT INTO subscriptions (player_id, subscription_key, started_at, renews_at, is_active) VALUES ($1, $2, $3, $3, 1)",
+            player_id, body.subscription_key, now)
+    else:
+        async with db.execute(
+            "SELECT id FROM subscriptions WHERE player_id = ? AND subscription_key = ? AND is_active = 1",
+            (player_id, body.subscription_key)) as cur:
+            existing = await cur.fetchone()
+        if existing:
+            return {"ok": True, "status": "already_active"}
+        new_balance = balance - sub_cost
+        await db.execute("UPDATE wallets SET balance = ? WHERE player_id = ?", (new_balance, player_id))
+        await db.execute(
+            "INSERT OR IGNORE INTO subscriptions (player_id, subscription_key, started_at, renews_at, is_active) VALUES (?, ?, ?, ?, 1)",
+            (player_id, body.subscription_key, now, now))
+        await db.commit()
+
+    return {"ok": True, "status": "subscribed", "new_balance": round(new_balance, 2)}
+
+
+# ── POST /shop/unsubscribe ────────────────────────────────────────────────────
+
+class UnsubscribeRequest(BaseModel):
+    token: str
+    subscription_key: str
+
+@router.post("/unsubscribe")
+async def unsubscribe(body: UnsubscribeRequest, db=Depends(get_db)):
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    if is_postgres():
+        await db.execute(
+            "UPDATE subscriptions SET is_active = 0 WHERE player_id = $1 AND subscription_key = $2",
+            player_id, body.subscription_key)
+    else:
+        await db.execute(
+            "UPDATE subscriptions SET is_active = 0 WHERE player_id = ? AND subscription_key = ?",
+            (player_id, body.subscription_key))
+        await db.commit()
+
+    return {"ok": True, "status": "cancelled"}

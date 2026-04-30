@@ -134,7 +134,7 @@
 <script>
 function saveBedtime() {
   const t = document.getElementById('bedtime-input').value;
-  fetch('/profile/settings', {
+  fetch('/settings/update', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({token: '{{ token }}', bedtime_slt: t})

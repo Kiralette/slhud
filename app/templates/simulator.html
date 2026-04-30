@@ -63,7 +63,7 @@
 
     /* Phone shell */
     .phone-shell {
-      width: 390px;
+      width: 393px;
       background: #2a2520;
       border-radius: 48px;
       padding: 12px;
@@ -115,7 +115,7 @@
     /* App iframe */
     .app-frame {
       width: 100%;
-      height: 780px;
+      height: 844px;
       border: none;
       display: block;
       background: var(--bg);
@@ -173,6 +173,15 @@
       z-index: 100;
     }
     .dock .app-icon-bubble { width: 48px; height: 48px; border-radius: 12px; font-size: 22px; }
+  .app-icon { position: relative; }
+  .notif-dot {
+    position: absolute; top: 0; right: 4px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--rose, #c0392b);
+    border: 2px solid #2a2520;
+    display: none;
+  }
+  .notif-dot.show { display: block; }
 
     /* Back button */
     .back-btn {
@@ -386,13 +395,16 @@
       <div class="app-icon" onclick="openApp('pulse','Pulse','🏠')">
         <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
       </div>
-      <div class="app-icon" onclick="openApp('ping','Ping','💬')">
+      <div class="app-icon" id="dock-ping" onclick="openApp('ping','Ping','💬')">
+        <div class="notif-dot" id="dot-ping"></div>
         <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
       </div>
-      <div class="app-icon" onclick="openApp('flare','Flare','✦')">
+      <div class="app-icon" id="dock-flare" onclick="openApp('flare','Flare','✦')">
+        <div class="notif-dot" id="dot-flare"></div>
         <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
       </div>
-      <div class="app-icon" onclick="openApp('canvas','Canvas','🪞')">
+      <div class="app-icon" id="dock-canvas" onclick="openApp('canvas','Canvas','🪞')">
+        <div class="notif-dot" id="dot-canvas"></div>
         <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
       </div>
     </div>
@@ -467,14 +479,46 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
+
+// Poll for notifications and show red dots
+const DOT_APPS = ['ping', 'flare', 'canvas'];
+async function pollNotifications() {
+  if (!TOKEN) return;
+  try {
+    const res = await fetch(`${BASE_URL}/notifications/unread-count`, {
+      headers: { 'Authorization': `Bearer ${TOKEN}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const byApp = data.by_app || {};
+    DOT_APPS.forEach(app => {
+      const dot = document.getElementById('dot-' + app);
+      if (dot) dot.classList.toggle('show', (byApp[app] || 0) > 0);
+    });
+  } catch(_) {}
+}
+setInterval(pollNotifications, 8000);
+
+// Handle open_app messages from iframe (canvas notification clicks)
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'open_app' && e.data.url) {
+    const frame = document.getElementById('app-frame');
+    frame.src = e.data.url;
+    frame.style.display = 'block';
+    document.getElementById('home-screen').style.display = 'none';
+    document.getElementById('back-btn').style.display = 'block';
+  }
+});
 
 // Live clock
 function updateClock() {
   const now = new Date();
-  const h = now.getHours();
+  let h = now.getHours();
   const m = now.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
   document.getElementById('status-time').textContent = `${h}:${m}`;
 }
 updateClock();

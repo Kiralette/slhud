@@ -88,3 +88,25 @@ async def mark_read_app(
     """
     await mark_app_read(player["id"], app_source, db)
     return {"ok": True, "app": app_source}
+
+class MarkReadRequest(BaseModel):
+    token: str
+    notification_id: int
+
+@router.post("/mark-read")
+async def mark_single_read(body: MarkReadRequest, db=Depends(get_db)):
+    """Mark a single notification as read by ID. Used by Canvas JS."""
+    from app.routers.players import get_player_by_token as _get_player
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    if is_postgres():
+        await db.execute(
+            "UPDATE notifications SET is_read = 1, is_toasted = 1 WHERE id = $1 AND player_id = $2",
+            body.notification_id, player["id"])
+    else:
+        await db.execute(
+            "UPDATE notifications SET is_read = 1, is_toasted = 1 WHERE id = ? AND player_id = ?",
+            (body.notification_id, player["id"]))
+        await db.commit()
+    return {"ok": True}

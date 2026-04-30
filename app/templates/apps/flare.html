@@ -412,27 +412,23 @@
 
   async function likePost(postId, token, btn) {
     if (btn.classList.contains('liked')) return;
+    // Optimistic UI update immediately
+    btn.classList.add('liked');
+    btn.textContent = '♥ Liked';
+    const countEl = document.getElementById('counts-' + postId);
+    if (countEl) {
+      const parts = countEl.textContent.split('·');
+      const likes = (parseInt(parts[0]) || 0) + 1;
+      const comments = parseInt(parts[1]) || 0;
+      countEl.textContent = likes + ' likes · ' + comments + ' comments';
+    }
     try {
-      const res = await fetch('/flare/like', {
+      await fetch('/flare/like', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: token, post_id: postId })
       });
-      const data = await res.json();
-      if (res.ok && data.status !== 'already_liked') {
-        btn.classList.add('liked');
-        btn.textContent = '♥ Liked';
-        toast('Liked ♥');
-        // Refresh counts
-        const countEl = document.getElementById('counts-' + postId);
-        if (countEl) {
-          const parts = countEl.textContent.split('·');
-          const likes = (parseInt(parts[0]) || 0) + 1;
-          const comments = parseInt((parts[1] || '0'));
-          countEl.textContent = likes + ' likes · ' + comments + ' comments';
-        }
-      }
-    } catch(e) { toast('Connection error'); }
+    } catch(e) { /* silent — optimistic update already applied */ }
   }
 
   async function commentPost(postId, token) {
@@ -467,7 +463,7 @@
       const res = await fetch('/social/follow', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token: token, following_avatar_uuid: playerUuid })
+        body: JSON.stringify({ follower_token: token, following_avatar_uuid: playerUuid })
       });
       if (res.ok) {
         btn.textContent = '✓ Following';

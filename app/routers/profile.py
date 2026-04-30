@@ -39,6 +39,8 @@ class SettingsUpdate(BaseModel):
     is_mental_health_opted_in: bool | None = None
     notification_prefs: dict | None = None
     privacy_prefs: dict | None = None
+    bedtime_slt: str | None = None
+    timezone_offset_hours: int | None = None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

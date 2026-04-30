@@ -73,7 +73,7 @@ def build_shop_items(cfg: dict, categories: list[str] | None = None) -> list[dic
     """Build display-ready shop items from config."""
     items = []
     emoji_map = {
-        "water":         ("💧", "Crisp and free. Always.",          "free"),
+        "water":         ("💧", "Crisp and free. Always.",          "drinks"),
         "basic_snack":   ("🥨", "Quick bite, light hunger fill.",    "snacks"),
         "basic_meal":    ("🍱", "Simple, filling, affordable.",      "meals"),
         "good_meal":     ("🍝", "A proper meal. Hits the spot.",     "meals"),
@@ -196,8 +196,8 @@ async def lumen_eats(
     now = datetime.now(timezone.utc)
     days_left = 7 - now.weekday() if now.weekday() <= 6 else 1
 
-    # All base shop items
-    shop_items = build_shop_items(cfg)
+    # Food items only (drinks handled by Sip)
+    shop_items = build_shop_items(cfg, categories=["snacks", "meals"])
 
     # Nearby vendors (placeholder — populated by LSL zone data in future)
     nearby_vendors = []
@@ -347,7 +347,7 @@ async def sip(
         return "crit"
 
     # All drink shop items
-    drink_items = build_shop_items(cfg, categories=["drinks_free", "drinks_paid"])
+    drink_items = build_shop_items(cfg, categories=["drinks"])
 
     thirst_log = [
         {

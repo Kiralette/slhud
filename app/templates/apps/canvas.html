@@ -554,16 +554,35 @@
     <button class="notif-chip" data-app="system"    onclick="filterNotifs('system', this)">System</button>
   </div>
 
+  <!-- Unread / Read tabs -->
+  <div style="display:flex;gap:1px;margin:0 0 2px;">
+    <button id="ntab-unread" onclick="showNotifTab('unread')"
+      style="flex:1;padding:9px;border:none;background:var(--ink);color:var(--bg);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;border-radius:var(--radius-sm) 0 0 var(--radius-sm);">
+      Unread <span id="unread-count" style="opacity:.7;"></span>
+    </button>
+    <button id="ntab-read" onclick="showNotifTab('read')"
+      style="flex:1;padding:9px;border:none;background:var(--bg3);color:var(--ink2);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;border-radius:0 var(--radius-sm) var(--radius-sm) 0;">
+      Read
+    </button>
+  </div>
+
   <div id="notif-list">
     {% if notifications %}
       {% for n in notifications %}
-      <div class="notif-row {{ 'unread' if not n.is_read else '' }}" data-app="{{ n.app_source }}">
+      <div class="notif-row {{ 'unread' if not n.is_read else 'read-notif' }}"
+           data-app="{{ n.app_source }}"
+           data-read="{{ '0' if not n.is_read else '1' }}"
+           data-url="{{ n.action_url or ('/app/' + n.app_source + '?token=' + token) }}"
+           onclick="openNotif(this, {{ n.id }})"
+           style="cursor:pointer;">
         <div class="notif-app-icon">{{ app_icons.get(n.app_source, '📱') }}</div>
         <div class="notif-content">
           <div class="notif-title">{{ n.title }}</div>
           {% if n.body %}<div class="notif-body">{{ n.body }}</div>{% endif %}
         </div>
-        <div class="notif-time">{{ n.created_at[5:10] if n.created_at else '' }}</div>
+        <div class="notif-time">{{ n.created_at[5:10] if n.created_at else '' }}
+          {% if not n.is_read %}<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--rose);margin-left:5px;vertical-align:middle;"></span>{% endif %}
+        </div>
       </div>
       {% endfor %}
     {% else %}
@@ -677,9 +696,65 @@
     document.querySelectorAll('.notif-chip').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.notif-row').forEach(row => {
-      row.style.display = (app === 'all' || row.dataset.app === app) ? '' : 'none';
+      const appMatch = (app === 'all' || row.dataset.app === app);
+      const tabMatch = currentNotifTab === 'all' || 
+        (currentNotifTab === 'unread' && row.dataset.read === '0') ||
+        (currentNotifTab === 'read' && row.dataset.read === '1');
+      row.style.display = (appMatch && tabMatch) ? '' : 'none';
     });
   }
+
+  let currentNotifTab = 'unread';
+  function showNotifTab(tab) {
+    currentNotifTab = tab;
+    const unreadBtn = document.getElementById('ntab-unread');
+    const readBtn   = document.getElementById('ntab-read');
+    if (tab === 'unread') {
+      unreadBtn.style.background = 'var(--ink)'; unreadBtn.style.color = 'var(--bg)'; unreadBtn.style.fontWeight = '600';
+      readBtn.style.background   = 'var(--bg3)'; readBtn.style.color   = 'var(--ink2)'; readBtn.style.fontWeight = '500';
+    } else {
+      readBtn.style.background   = 'var(--ink)'; readBtn.style.color   = 'var(--bg)'; readBtn.style.fontWeight = '600';
+      unreadBtn.style.background = 'var(--bg3)'; unreadBtn.style.color = 'var(--ink2)'; unreadBtn.style.fontWeight = '500';
+    }
+    document.querySelectorAll('.notif-row').forEach(row => {
+      row.style.display = (
+        (tab === 'unread' && row.dataset.read === '0') ||
+        (tab === 'read'   && row.dataset.read === '1')
+      ) ? '' : 'none';
+    });
+    // Update unread count
+    const unreadCount = document.querySelectorAll('.notif-row[data-read="0"]').length;
+    const el = document.getElementById('unread-count');
+    if (el) el.textContent = unreadCount > 0 ? '(' + unreadCount + ')' : '';
+  }
+
+  async function openNotif(row, notifId) {
+    const url = row.dataset.url;
+    // Mark as read
+    if (row.dataset.read === '0') {
+      row.dataset.read = '1';
+      row.classList.remove('unread');
+      row.classList.add('read-notif');
+      row.querySelector('.notif-time span') && row.querySelector('.notif-time span').remove();
+      try {
+        await fetch('/notifications/mark-read', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: TOKEN, notification_id: notifId })
+        });
+      } catch(_) {}
+    }
+    // Navigate to app in simulator parent or same window
+    if (url && url !== '#') {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'open_app', url: url }, '*');
+      } else {
+        window.location.href = url;
+      }
+    }
+  }
+
+  // Init notification tab on load
+  document.addEventListener('DOMContentLoaded', () => showNotifTab('unread'));
 
   // ── Occurrences ────────────────────────────────────────────
 
