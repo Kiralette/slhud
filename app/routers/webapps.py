@@ -1667,6 +1667,90 @@ async def skill_app(
     })
 
 
+# -- HOME LAUNCHER ------------------------------------------------------------
+@router.get("/home", response_class=HTMLResponse)
+async def home(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    """
+    Full-screen app launcher -- the HUD entry point.
+    Shows needs strip, active vibes, and full app grid with live red dots.
+    LSL loads this on the screen prim; all navigation happens in the webapp.
+    """
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse(
+            "<h2 style=\'font-family:sans-serif;padding:40px;color:#888;\'>Invalid or missing token.</h2>",
+            status_code=401
+        )
+
+    player_id = player["id"]
+    cfg = get_config()
+
+    if is_postgres():
+        needs_rows = await db.fetch("SELECT need_key, value FROM needs WHERE player_id = $1", player_id)
+        wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        vibes_rows = await db.fetch(
+            """SELECT vibe_key, is_negative FROM vibes
+               WHERE player_id = $1 AND (expires_at IS NULL OR expires_at > now()::text)
+               ORDER BY applied_at DESC LIMIT 8""", player_id)
+    else:
+        async with db.execute("SELECT need_key, value FROM needs WHERE player_id = ?", (player_id,)) as cur:
+            needs_rows = await cur.fetchall()
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet_row = await cur.fetchone()
+        async with db.execute(
+            """SELECT vibe_key, is_negative FROM vibes
+               WHERE player_id = ? AND (expires_at IS NULL OR expires_at > datetime('now'))
+               ORDER BY applied_at DESC LIMIT 8""", (player_id,)
+        ) as cur:
+            vibes_rows = await cur.fetchall()
+
+    needs_cfg = cfg.get("needs", {})
+    app_key_map = {
+        "hunger":  "lumen-eats",
+        "thirst":  "sip",
+        "energy":  "recharge",
+        "fun":     "thrill",
+        "social":  "aura",
+        "hygiene": "glow",
+        "purpose": "luminary",
+    }
+
+    needs_data = []
+    for r in needs_rows:
+        k = r["need_key"]
+        v = float(r["value"])
+        nc = needs_cfg.get(k, {})
+        warn = nc.get("warn_threshold", 40)
+        crit = nc.get("crit_threshold", 20)
+        zone = "ok" if v >= warn else ("warn" if v >= crit else "crit")
+        needs_data.append({
+            "key":          k,
+            "display_name": nc.get("display_name", k.title()),
+            "icon":         nc.get("icon", ""),
+            "value":        v,
+            "zone":         zone,
+            "app_key":      app_key_map.get(k, k),
+        })
+
+    order = ["hunger", "thirst", "energy", "fun", "social", "hygiene", "purpose"]
+    needs_data.sort(key=lambda x: order.index(x["key"]) if x["key"] in order else 99)
+
+    wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
+    vibes = [dict(r) for r in vibes_rows]
+
+    return templates.TemplateResponse(request, "apps/home.html", {
+        "token":          token,
+        "player":         player,
+        "needs_data":     needs_data,
+        "wallet_balance": wallet_balance,
+        "vibes":          vibes,
+    })
+
+
 # ── PULSE (home widget) ───────────────────────────────────────────────────────
 @router.get("/pulse", response_class=HTMLResponse)
 async def pulse(
