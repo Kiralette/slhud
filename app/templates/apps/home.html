@@ -3,42 +3,74 @@
 
 {% block extra_style %}
 <style>
+  html, body {
+    background: var(--bg);
+    max-width: 430px;
+    margin: 0 auto;
+    overflow-x: hidden;
+  }
 
-  body { overflow-x: hidden; }
-
-  /* ── Status bar ── */
-  .status-bar {
-    padding: 10px 20px 6px;
+  /* ── iOS status bar ── */
+  .ios-status {
+    padding: 14px 22px 6px;
     display: flex; justify-content: space-between; align-items: center;
     background: var(--bg);
-    position: sticky; top: 0; z-index: 100;
-    border-bottom: 0.5px solid var(--border);
   }
-  .status-name {
+  .ios-time {
+    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    font-size: 16px; font-weight: 600; letter-spacing: -0.3px;
+    color: var(--ink);
+  }
+  .ios-icons {
+    display: flex; align-items: center; gap: 5px;
+  }
+  .signal-bars {
+    display: flex; align-items: flex-end; gap: 1.5px; height: 11px;
+  }
+  .signal-bar { width: 3px; border-radius: 1px; background: var(--ink); }
+  .signal-bar:nth-child(1) { height: 4px; }
+  .signal-bar:nth-child(2) { height: 6px; }
+  .signal-bar:nth-child(3) { height: 8px; }
+  .signal-bar:nth-child(4) { height: 11px; }
+  .wifi-icon { font-size: 11px; color: var(--ink); }
+  .battery-wrap { display: flex; align-items: center; gap: 1px; }
+  .battery-body {
+    width: 22px; height: 11px;
+    border: 1.5px solid var(--ink); border-radius: 3px;
+    position: relative; padding: 1.5px;
+  }
+  .battery-fill { height: 100%; width: 75%; background: var(--ink); border-radius: 1px; }
+  .battery-tip { width: 2px; height: 5px; background: var(--ink); border-radius: 0 1px 1px 0; }
+
+  /* ── Greeting + lumens ── */
+  .greeting-bar {
+    padding: 10px 22px 8px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .greeting {
     font-family: var(--font-head);
-    font-size: 20px; font-weight: 400; font-style: italic;
+    font-size: 26px; font-weight: 400; font-style: italic;
     color: var(--ink); line-height: 1;
   }
-  .status-name span { color: var(--gold); }
-  .status-lumens {
-    font-size: 13px; font-weight: 600; color: var(--gold);
+  .greeting span { color: var(--gold); }
+  .lumens-badge {
+    font-size: 14px; font-weight: 600; color: var(--ink2);
+    letter-spacing: -0.01em;
   }
-  .status-lumens small { font-size: 10px; font-weight: 400; color: var(--ink4); margin-right: 1px; }
+  .lumens-badge .sym { color: var(--gold); margin-right: 1px; }
 
   /* ── Needs strip ── */
   .needs-strip {
-    padding: 8px 16px 10px;
-    background: var(--bg);
-    border-bottom: 0.5px solid var(--border);
+    padding: 0 20px 8px;
+    display: flex; gap: 6px; align-items: flex-end;
   }
-  .needs-row { display: flex; gap: 6px; }
   .need-pip {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
     text-decoration: none; -webkit-tap-highlight-color: transparent;
   }
-  .need-pip-icon { font-size: 12px; line-height: 1; }
+  .need-pip-icon { font-size: 13px; line-height: 1; }
   .need-pip-track {
-    width: 100%; height: 3px; background: var(--bg4); border-radius: 99px; overflow: hidden;
+    width: 100%; height: 4px; background: var(--bg4); border-radius: 99px; overflow: hidden;
   }
   .need-pip-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
   .need-pip-fill.ok   { background: var(--green); }
@@ -48,10 +80,10 @@
 
   /* ── Vibes strip ── */
   .vibes-strip {
-    padding: 6px 16px;
+    padding: 4px 20px 10px;
     display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
+    min-height: 28px; align-items: center;
     border-bottom: 0.5px solid var(--border);
-    min-height: 32px; align-items: center;
   }
   .vibes-strip::-webkit-scrollbar { display: none; }
   .vibe-chip {
@@ -73,17 +105,17 @@
   /* ── App grid ── */
   .app-grid {
     display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 10px; padding: 6px 16px 10px;
+    gap: 14px; padding: 8px 20px 12px;
   }
   .app-icon {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
     cursor: pointer; -webkit-tap-highlight-color: transparent;
     text-decoration: none; position: relative;
   }
   .app-icon-bubble {
-    width: 52px; height: 52px; border-radius: 13px;
+    width: 56px; height: 56px; border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
+    font-size: 26px;
     transition: transform .1s;
     box-shadow: 0 2px 8px rgba(28,24,20,0.10);
   }
@@ -92,12 +124,12 @@
     font-size: 9px; color: var(--ink2); text-align: center;
     font-weight: 500; letter-spacing: .02em;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    width: 56px;
+    width: 60px;
   }
 
   /* ── Red dot ── */
   .notif-dot {
-    position: absolute; top: 0; right: calc(50% - 34px);
+    position: absolute; top: 0; right: calc(50% - 36px);
     width: 9px; height: 9px; border-radius: 50%;
     background: var(--rose);
     border: 1.5px solid var(--bg);
@@ -107,25 +139,24 @@
 
   /* ── Dock ── */
   .dock {
-    position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
     background: rgba(250,249,247,0.92);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 0.5px solid rgba(28,24,20,0.12);
-    border-radius: 24px;
-    padding: 8px 14px;
-    display: flex; gap: 12px;
+    border-radius: 26px;
+    padding: 9px 16px;
+    display: flex; gap: 14px;
     box-shadow: 0 4px 24px rgba(28,24,20,0.14);
     z-index: 200;
   }
-  .dock .app-icon-bubble {
-    width: 44px; height: 44px; border-radius: 11px; font-size: 20px;
-  }
+  .dock .app-icon-bubble { width: 48px; height: 48px; border-radius: 12px; font-size: 22px; }
 
-  /* ── iOS-style notification banner ── */
+  /* ── iOS notification banner ── */
   .ios-banner {
     position: fixed;
     top: 12px; left: 12px; right: 12px;
+    max-width: 406px; margin: 0 auto;
     background: rgba(248,248,246,0.94);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -137,8 +168,6 @@
     transform: translateY(-140px);
     transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1);
     cursor: pointer;
-    max-width: 420px;
-    margin: 0 auto;
   }
   .ios-banner.show { transform: translateY(0); }
   .ios-banner-icon {
@@ -148,72 +177,76 @@
     font-size: 18px; flex-shrink: 0;
   }
   .ios-banner-content { flex: 1; min-width: 0; }
-  .ios-banner-app {
-    font-size: 10px; font-weight: 600; color: var(--ink3);
-    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px;
-  }
-  .ios-banner-title {
-    font-size: 13px; font-weight: 600; color: var(--ink);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .ios-banner-body {
-    font-size: 12px; color: var(--ink2);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .ios-banner-time { font-size: 11px; color: var(--ink4); flex-shrink: 0; margin-top: 2px; }
+  .ios-banner-app { font-size: 10px; font-weight: 600; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1px; }
+  .ios-banner-title { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ios-banner-body  { font-size: 12px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ios-banner-time  { font-size: 11px; color: var(--ink4); flex-shrink: 0; margin-top: 2px; }
 
-  .scroll-pad { height: 100px; }
-
+  .scroll-pad { height: 110px; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- iOS-style notification banner -->
+<!-- Notification banner -->
 <div class="ios-banner" id="ios-banner" onclick="dismissBanner()">
   <div class="ios-banner-icon" id="banner-icon">✦</div>
   <div class="ios-banner-content">
-    <div class="ios-banner-app" id="banner-app">SL HUD</div>
+    <div class="ios-banner-app"   id="banner-app">SL HUD</div>
     <div class="ios-banner-title" id="banner-title"></div>
-    <div class="ios-banner-body" id="banner-body"></div>
+    <div class="ios-banner-body"  id="banner-body"></div>
   </div>
   <div class="ios-banner-time" id="banner-time">now</div>
 </div>
 
-<!-- Status bar -->
-<div class="status-bar">
-  <div class="status-name">Hello, <span>{{ player.display_name }}</span>.</div>
-  <div class="status-lumens"><small>✦</small>{{ "%.0f"|format(wallet_balance) }}</div>
+<!-- iOS status bar -->
+<div class="ios-status">
+  <div class="ios-time" id="ios-time">9:41</div>
+  <div class="ios-icons">
+    <div class="signal-bars">
+      <div class="signal-bar"></div>
+      <div class="signal-bar"></div>
+      <div class="signal-bar"></div>
+      <div class="signal-bar"></div>
+    </div>
+    <span class="wifi-icon">WiFi</span>
+    <div class="battery-wrap">
+      <div class="battery-body"><div class="battery-fill"></div></div>
+      <div class="battery-tip"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Greeting + lumens -->
+<div class="greeting-bar">
+  <div class="greeting">Hello, <span>{{ player.display_name }}</span>.</div>
+  <div class="lumens-badge"><span class="sym">✦</span>{{ "%.0f"|format(wallet_balance) }}</div>
 </div>
 
 <!-- Needs strip -->
 <div class="needs-strip">
-  <div class="needs-row">
-    {% for need in needs_data %}
-    <a class="need-pip" href="/app/{{ need.app_key }}?token={{ token }}" title="{{ need.display_name }}">
-      <div class="need-pip-icon">{{ need.icon }}</div>
-      <div class="need-pip-track">
-        <div class="need-pip-fill {{ need.zone }}" style="width:{{ need.value }}%"></div>
-      </div>
-    </a>
-    {% endfor %}
-  </div>
+  {% for need in needs_data %}
+  <a class="need-pip" href="/app/{{ need.app_key }}?token={{ token }}" title="{{ need.display_name }}">
+    <div class="need-pip-icon">{{ need.icon }}</div>
+    <div class="need-pip-track">
+      <div class="need-pip-fill {{ need.zone }}" style="width:{{ need.value }}%"></div>
+    </div>
+  </a>
+  {% endfor %}
 </div>
 
-<!-- Vibes strip -->
+<!-- Vibes -->
 <div class="vibes-strip">
   {% if vibes %}
     {% for v in vibes %}
-    <span class="vibe-chip {{ 'negative' if v.is_negative else 'positive' }}">
-      {{ v.vibe_key | replace('_', ' ') | title }}
-    </span>
+    <span class="vibe-chip {{ 'negative' if v.is_negative else 'positive' }}">{{ v.vibe_key | replace('_',' ') | title }}</span>
     {% endfor %}
   {% else %}
     <span class="no-vibes">No active vibes</span>
   {% endif %}
 </div>
 
-<!-- Needs section -->
+<!-- NEEDS -->
 <div class="section-title">Needs</div>
 <div class="app-grid">
   <a class="app-icon" href="/app/pulse?token={{ token }}">
@@ -257,7 +290,7 @@
   </a>
 </div>
 
-<!-- Life section -->
+<!-- LIFE -->
 <div class="section-title">Life</div>
 <div class="app-grid">
   <a class="app-icon" href="/app/canvas?token={{ token }}">
@@ -282,7 +315,7 @@
   </a>
 </div>
 
-<!-- Social & Media section -->
+<!-- SOCIAL & MEDIA -->
 <div class="section-title">Social & Media</div>
 <div class="app-grid">
   <a class="app-icon" href="/app/flare?token={{ token }}">
@@ -307,7 +340,7 @@
   </a>
 </div>
 
-<!-- Skills section -->
+<!-- SKILLS -->
 <div class="section-title">Skills</div>
 <div class="app-grid">
   <a class="app-icon" href="/app/skill/cooking?token={{ token }}">
@@ -323,7 +356,7 @@
     <div class="app-icon-label">Charm</div>
   </a>
   <a class="app-icon" href="/app/skill/fitness?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">🏃</div>
+    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#ede9f5,#ddd5f0)">💪</div>
     <div class="app-icon-label">Stride</div>
   </a>
   <a class="app-icon" href="/app/skill/gaming?token={{ token }}">
@@ -331,7 +364,7 @@
     <div class="app-icon-label">Play</div>
   </a>
   <a class="app-icon" href="/app/skill/music?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🎸</div>
+    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#ecd4d4)">🎵</div>
     <div class="app-icon-label">Strings</div>
   </a>
   <a class="app-icon" href="/app/skill/knowledge?token={{ token }}">
@@ -352,7 +385,7 @@
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
   </a>
   <a class="app-icon" href="/app/ping?token={{ token }}">
-    <div class="notif-dot show" id="dock-dot-ping" style="display:none"></div>
+    <div class="notif-dot" id="dock-dot-ping"></div>
     <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
   </a>
   <a class="app-icon" href="/app/flare?token={{ token }}">
@@ -370,36 +403,27 @@
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
-  const BASE  = "";  // same origin
 
-  const APP_ICONS = {
-    ping: '💬', flare: '✦', canvas: '🪞', lumen_eats: '🍽️',
-    sip: '💧', grind: '💼', vault: '💰', ritual: '🗓️',
-    aura: '🫂', recharge: '⚡', wavelength: '🎵', haul: '🛍️',
-    glow: '🛁', thrill: '🎉', luminary: '🕯️', system: '✦',
-  };
-  const APP_NAMES = {
-    ping: 'Ping', flare: 'Flare', canvas: 'Canvas',
-    lumen_eats: 'Lumen Eats', sip: 'Sip', grind: 'Grind',
-    vault: 'Vault', ritual: 'Ritual', aura: 'Aura',
-    recharge: 'Recharge', wavelength: 'Wavelength', haul: 'Haul',
-    glow: 'Glow', thrill: 'Thrill', luminary: 'Luminary', system: 'SL HUD',
-  };
+  // Live clock
+  function updateClock() {
+    const now = new Date();
+    let h = now.getHours() % 12 || 12;
+    const m = now.getMinutes().toString().padStart(2,'0');
+    document.getElementById('ios-time').textContent = h + ':' + m;
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
 
-  // Dot pairs: grid dot id -> dock dot id (null if no dock dot)
-  const DOCK_PAIRS = { ping: 'dock-dot-ping', flare: 'dock-dot-flare', canvas: 'dock-dot-canvas' };
+  const APP_ICONS = { ping:'💬', flare:'✦', canvas:'🪞', lumen_eats:'🍽️', sip:'💧', grind:'💼', vault:'💰', ritual:'🗓️', aura:'🫂', recharge:'⚡', wavelength:'🎵', haul:'🛍️', glow:'🛁', thrill:'🎉', luminary:'🕯️', system:'✦' };
+  const APP_NAMES = { ping:'Ping', flare:'Flare', canvas:'Canvas', lumen_eats:'Lumen Eats', sip:'Sip', grind:'Grind', vault:'Vault', ritual:'Ritual', aura:'Aura', recharge:'Recharge', wavelength:'Wavelength', haul:'Haul', glow:'Glow', thrill:'Thrill', luminary:'Luminary', system:'SL HUD' };
 
   let lastNotifId = null;
   let bannerTimeout = null;
 
   async function pollNotifications() {
     if (!TOKEN) return;
-
-    // Banner check
     try {
-      const res = await fetch(BASE + '/notifications', {
-        headers: { 'Authorization': 'Bearer ' + TOKEN }
-      });
+      const res = await fetch('/notifications', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
       if (res.ok) {
         const data = await res.json();
         const untoasted = (data.notifications || []).filter(n => !n.is_read && !n.is_toasted);
@@ -410,34 +434,21 @@
       }
     } catch(_) {}
 
-    // Red dots
     try {
-      const res2 = await fetch(BASE + '/notifications/unread-count', {
-        headers: { 'Authorization': 'Bearer ' + TOKEN }
-      });
+      const res2 = await fetch('/notifications/unread-count', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
       if (!res2.ok) return;
-      const data2 = await res2.json();
-      const byApp = data2.by_app || {};
-
-      document.querySelectorAll('.notif-dot[id^="dot-"]').forEach(dot => {
-        const appKey = dot.id.replace('dot-', '');
-        const count = byApp[appKey] || 0;
-        dot.classList.toggle('show', count > 0);
+      const byApp = (await res2.json()).by_app || {};
+      document.querySelectorAll('.notif-dot').forEach(dot => {
+        const appKey = dot.id.replace('dot-','').replace('dock-dot-','');
+        dot.classList.toggle('show', (byApp[appKey] || 0) > 0);
       });
-
-      // Dock dots
-      Object.keys(DOCK_PAIRS).forEach(appKey => {
-        const dockDot = document.getElementById(DOCK_PAIRS[appKey]);
-        if (dockDot) dockDot.classList.toggle('show', (byApp[appKey] || 0) > 0);
-      });
-
     } catch(_) {}
   }
 
   function showBanner(notif) {
     const app = notif.app_source || 'system';
-    document.getElementById('banner-icon').textContent = APP_ICONS[app] || '✦';
-    document.getElementById('banner-app').textContent  = APP_NAMES[app] || app;
+    document.getElementById('banner-icon').textContent  = APP_ICONS[app] || '✦';
+    document.getElementById('banner-app').textContent   = APP_NAMES[app] || app;
     document.getElementById('banner-title').textContent = notif.title || '';
     document.getElementById('banner-body').textContent  = notif.body  || '';
     document.getElementById('banner-time').textContent  = 'now';
@@ -449,18 +460,17 @@
   }
 
   function dismissBanner() {
-    const banner = document.getElementById('ios-banner');
-    banner.classList.remove('show');
-    if (banner.dataset.notifId && TOKEN) {
-      fetch(BASE + '/notifications/mark-read', {
+    document.getElementById('ios-banner').classList.remove('show');
+    const notifId = document.getElementById('ios-banner').dataset.notifId;
+    if (notifId && TOKEN) {
+      fetch('/notifications/mark-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: TOKEN, notification_id: parseInt(banner.dataset.notifId) })
+        body: JSON.stringify({ token: TOKEN, notification_id: parseInt(notifId) })
       }).catch(() => {});
     }
   }
 
-  // Poll on load and every 60s
   pollNotifications();
   setInterval(pollNotifications, 60000);
 </script>
