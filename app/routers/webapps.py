@@ -609,17 +609,17 @@ async def flare(
         stats_row  = await db.fetchrow("SELECT * FROM flare_stats WHERE player_id = $1", player_id)
         following_count = await db.fetchval("SELECT COUNT(*) FROM follows WHERE follower_id = $1", player_id)
         feed_rows  = await db.fetch(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id IN (SELECT following_id FROM follows WHERE follower_id = $1)
                   OR p.player_id = $1
                ORDER BY p.created_at DESC LIMIT 40""", player_id)
         discover_rows = await db.fetch(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""")
         profile_posts_rows = await db.fetch(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id = $1
                ORDER BY p.created_at DESC LIMIT 20""", player_id)
@@ -632,19 +632,19 @@ async def flare(
             fc = await cur.fetchone()
         following_count = fc["cnt"] if fc else 0
         async with db.execute(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id IN (SELECT following_id FROM follows WHERE follower_id = ?)
                   OR p.player_id = ?
                ORDER BY p.created_at DESC LIMIT 40""", (player_id, player_id)) as cur:
             feed_rows = await cur.fetchall()
         async with db.execute(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""") as cur:
             discover_rows = await cur.fetchall()
         async with db.execute(
-            """SELECT p.*, pl.display_name FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id = ?
                ORDER BY p.created_at DESC LIMIT 20""", (player_id,)) as cur:
@@ -653,6 +653,7 @@ async def flare(
     def fmt_post(row):
         d = dict(row)
         d["content_text"] = d.get("content_text", "")
+        d["player_uuid"] = d.get("avatar_uuid", "")
         return d
 
     wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
