@@ -232,7 +232,7 @@ async def get_feed(token: str, db=Depends(get_db)):
 
     if is_postgres():
         rows = await db.fetch(
-            """SELECT p.*, pl.display_name
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id IN (
@@ -244,7 +244,7 @@ async def get_feed(token: str, db=Depends(get_db)):
             player_id)
     else:
         async with db.execute(
-            """SELECT p.*, pl.display_name
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id IN (
@@ -271,14 +271,14 @@ async def discover(token: str, db=Depends(get_db)):
 
     if is_postgres():
         rows = await db.fetch(
-            """SELECT p.*, pl.display_name
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                ORDER BY p.quality_tier DESC, p.created_at DESC
                LIMIT 30""")
     else:
         async with db.execute(
-            """SELECT p.*, pl.display_name
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                ORDER BY p.quality_tier DESC, p.created_at DESC

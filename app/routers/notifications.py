@@ -11,7 +11,7 @@ PUT  /notifications/read/{app}     — mark one app's notifications read
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from app.services.auth import get_current_player
-from app.database import get_db
+from app.database import get_db, is_postgres
 from app.services.notifications import (
     get_unread_counts,
     get_urgent_toasts,
@@ -97,7 +97,7 @@ class MarkReadRequest(BaseModel):
 @router.post("/mark-read")
 async def mark_single_read(body: MarkReadRequest, db=Depends(get_db)):
     """Mark a single notification as read by ID. Used by Canvas JS."""
-    from app.routers.players import get_player_by_token as _get_player
+    from app.routers.webapps import get_player_by_token as _get_player
     player = await _get_player(body.token, db)
     if not player:
         raise HTTPException(status_code=401, detail="Invalid token.")

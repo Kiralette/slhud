@@ -91,7 +91,10 @@ def build_shop_items(cfg: dict, categories: list[str] | None = None) -> list[dic
         emoji, desc, cat = emoji_map.get(key, ("🍴", item_cfg.get("display_name", key), "meals"))
         if categories and cat not in categories:
             continue
-        hunger = item_cfg.get("need_effects", {}).get("hunger", 0)
+        effects = item_cfg.get("need_effects", {})
+        hunger = effects.get("hunger", 0)
+        thirst = effects.get("thirst", 0)
+        energy = effects.get("energy", 0)
         vibe_key = item_cfg.get("vibe_granted")
         items.append({
             "item_key":    key,
@@ -100,6 +103,8 @@ def build_shop_items(cfg: dict, categories: list[str] | None = None) -> list[dic
             "emoji":       emoji,
             "description": desc,
             "hunger_gain": hunger,
+            "thirst_gain": thirst,
+            "energy_gain": energy,
             "category":    cat,
             "vibe_granted": vibe_key,
             "vibe_name":   vibe_names.get(vibe_key, "") if vibe_key else None,
@@ -947,6 +952,9 @@ async def canvas(
         notif_rows    = await db.fetch(
             "SELECT * FROM notifications WHERE player_id = $1 ORDER BY created_at DESC LIMIT 60", player_id)
         wallet_row    = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+        if not wallet_row:
+            await db.execute("INSERT INTO wallets (player_id, balance, total_earned, total_spent) VALUES ($1, 500.0, 500.0, 0.0) ON CONFLICT DO NOTHING", player_id)
+            wallet_row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
         settings_row  = await db.fetchrow("SELECT * FROM player_settings WHERE player_id = $1", player_id)
         achieve_rows  = await db.fetch(
             "SELECT * FROM player_achievements WHERE player_id = $1 ORDER BY unlocked_at DESC", player_id)
@@ -967,6 +975,11 @@ async def canvas(
             notif_rows = await cur.fetchall()
         async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
             wallet_row = await cur.fetchone()
+        if not wallet_row:
+            await db.execute("INSERT OR IGNORE INTO wallets (player_id, balance, total_earned, total_spent) VALUES (?, 500.0, 500.0, 0.0)", (player_id,))
+            await db.commit()
+            async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+                wallet_row = await cur.fetchone()
         async with db.execute("SELECT * FROM player_settings WHERE player_id = ?", (player_id,)) as cur:
             settings_row = await cur.fetchone()
         async with db.execute(

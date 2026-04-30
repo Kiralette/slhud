@@ -26,12 +26,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 32px 16px 60px;
+      padding: 24px 16px 40px;
     }
 
     /* Config bar at top */
     .config-bar {
-      width: 100%; max-width: 900px;
+      width: 100%; max-width: 500px;
       background: rgba(255,255,255,0.07);
       border: 0.5px solid rgba(255,255,255,0.12);
       border-radius: 12px;
@@ -63,7 +63,7 @@
 
     /* Phone shell */
     .phone-shell {
-      width: 393px;
+      width: 430px;
       background: #2a2520;
       border-radius: 48px;
       padding: 12px;
@@ -434,6 +434,7 @@ function applyConfig() {
   BASE_URL = inputURL || window.location.origin;
   TOKEN = document.getElementById('player-token').value.trim();
   showToast('Connected ✓');
+  setTimeout(pollNotifications, 500);
 
   // Try to fetch player name
   fetch(`${BASE_URL}/app/pulse?token=${TOKEN}`)

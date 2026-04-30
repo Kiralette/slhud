@@ -84,11 +84,11 @@
         <div class="item-name">{{ item.display_name }}</div>
         <div class="item-desc">{{ item.description }}</div>
         <div class="item-tags">
-          {% set thirst_gain = item.need_effects.get('thirst', 0) %}
+          {% set thirst_gain = item.thirst_gain or 0 %}
           {% if thirst_gain > 0 %}
           <span class="item-tag thirst">+{{ thirst_gain }} Thirst</span>
           {% endif %}
-          {% set energy_gain = item.need_effects.get('energy', 0) %}
+          {% set energy_gain = item.energy_gain or 0 %}
           {% if energy_gain > 0 %}
           <span class="item-tag" style="background:var(--bg3);color:var(--ink2);">+{{ energy_gain }} Energy</span>
           {% endif %}
