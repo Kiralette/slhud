@@ -11,6 +11,7 @@
   transform-origin: top center;
   width: calc(500px/1.5);
   margin: auto;
+  position: relative;
    }
     :root {
       --bg:          #faf9f7;
@@ -63,7 +64,8 @@
 
     /* ── Dynamic Island ── */
     .dynamic-island {
-      position: relative;
+      position: absolute;
+      top: 8px;
       left: 50%; transform: translateX(-50%);
       width: 120px; height: 34px;
       background: #000;
@@ -72,6 +74,7 @@
       gap: 8px;
       box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
       scale: .8;
+      z-index: 200;
     }
     .di-camera {
       width: 10px; height: 10px; border-radius: 50%;
