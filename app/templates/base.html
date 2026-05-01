@@ -297,30 +297,7 @@
       tick(); setInterval(tick, 30000);
     })();
 
-    // Wire dock token from URL
-    (function() {
-      var token = (new URLSearchParams(window.location.search)).get("token") || "";
-      var ids   = ["nav-home","nav-ping","nav-flare","nav-canvas"];
-      var paths = ["/app/home","/app/ping","/app/flare","/app/canvas"];
-      ids.forEach(function(id, i) {
-        var el = document.getElementById(id);
-        if (el) el.href = paths[i] + (token ? "?token=" + token : "");
-      });
-      if (token) {
-        function pollDots() {
-          fetch("/notifications/unread-count", { headers: { "Authorization": "Bearer " + token } })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-              var byApp = d.by_app || {};
-              ["ping","flare","canvas"].forEach(function(app) {
-                var dot = document.getElementById("navdot-" + app);
-                if (dot) dot.classList.toggle("show", (byApp[app] || 0) > 0);
-              });
-            }).catch(function(){});
-        }
-        pollDots(); setInterval(pollDots, 60000);
-      }
-    })();
+
 
     // Tab switching
     function showTab(id) {
@@ -383,5 +360,32 @@
     </a>
   </div>
   {% endblock %}
+
+  <script>
+    // Wire dock token from URL
+    (function() {
+      var token = (new URLSearchParams(window.location.search)).get("token") || "";
+      var ids   = ["nav-home","nav-ping","nav-flare","nav-canvas"];
+      var paths = ["/app/home","/app/ping","/app/flare","/app/canvas"];
+      ids.forEach(function(id, i) {
+        var el = document.getElementById(id);
+        if (el) el.href = paths[i] + (token ? "?token=" + token : "");
+      });
+      if (token) {
+        function pollDots() {
+          fetch("/notifications/unread-count", { headers: { "Authorization": "Bearer " + token } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              var byApp = d.by_app || {};
+              ["ping","flare","canvas"].forEach(function(app) {
+                var dot = document.getElementById("navdot-" + app);
+                if (dot) dot.classList.toggle("show", (byApp[app] || 0) > 0);
+              });
+            }).catch(function(){});
+        }
+        pollDots(); setInterval(pollDots, 60000);
+      }
+    })();
+  </script>
 </body>
 </html>
