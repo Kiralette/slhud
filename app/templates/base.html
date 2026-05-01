@@ -64,7 +64,7 @@
 
     /* ── Dynamic Island ── */
     .dynamic-island {
-      position: absolute;
+      position: fixed;
       top: 8px;
       left: 50%; transform: translateX(-50%);
       width: 120px; height: 34px;
@@ -290,12 +290,12 @@
   </style>
 </head>
 <body>
+ <div class="dynamic-island">
+   <div class="di-sensor"></div>
+   <div class="di-camera"></div>
+ </div>
  <div class="app-scale">
   {% block status_bar %}
-  <div class="dynamic-island">
-    <div class="di-sensor"></div>
-    <div class="di-camera"></div>
-  </div>
   <div class="base-status-bar">
     <div class="base-status-time" id="base-status-time">9:41</div>
     <div class="base-status-icons">
