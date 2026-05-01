@@ -98,7 +98,6 @@
     }
 
     html, body {
-      background: var(--bg);
       color: var(--ink);
       font-family: var(--font);
       line-height: 1.5;
@@ -106,11 +105,13 @@
     }
 
     body {
-      max-width: 320px;
       margin: 0;
+      padding: 0;
+      width: 320px;
       height: 589px;
       overflow: hidden;
       position: relative;
+      background: transparent !important;
     }
 
     /* ── Dynamic Island ── */
@@ -291,8 +292,8 @@
     .nav-bar {
   position: sticky;
   bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   width: fit-content;
   margin: 0 auto;
   background: rgba(250,249,247,0.98);
@@ -304,7 +305,6 @@
   align-items: center;
   box-shadow: 0 4px 24px rgba(28,24,20,0.12);
   z-index: 300;
-  scale: 1.2;
     }
     .nav-dock-icon {
       width: 44px; height: 44px; border-radius: 11px;
