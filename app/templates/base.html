@@ -289,13 +289,13 @@
 
     /* ── Phone frame shell ── */
     html, body {
-      background: #e8e4de !important;
+      background: transparent !important;
       max-width: 100% !important;
       min-height: 100vh;
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding: 28px 0 40px;
+      padding: 0;
     }
     .phone-shell {
       width: 393px;
@@ -305,10 +305,7 @@
       position: relative;
       box-shadow:
         inset 0 0 0 1px #5a5a5e,
-        inset 0 0 0 2.5px #111,
-        0 0 0 1px #6a6a6e,
-        0 28px 72px rgba(0,0,0,0.40),
-        0 8px 24px rgba(0,0,0,0.20);
+        inset 0 0 0 2.5px #111;
     }
     /* Side hardware buttons */
     .phone-shell::before {
