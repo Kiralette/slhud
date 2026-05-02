@@ -223,7 +223,7 @@
 
     /* ── Toast ── */
     #toast {
-      position: fixed; top: 20px; left: 50%;
+      position: absolute; top: 20px; left: 50%;
       transform: translateX(-50%) translateY(-90px);
       background: var(--ink); color: var(--bg);
       padding: 10px 22px; border-radius: 99px;
@@ -237,9 +237,9 @@
     .scroll-pad { height: 110px; }
     .divider { height: 0.5px; background: var(--border); margin: 4px 18px; }
 
-    /* ── Dock (sticky so SL browser click targets align correctly) ── */
+    /* ── Dock (sticky inside phone shell — fixed would escape the frame) ── */
     .nav-bar {
-  position: fixed;
+  position: sticky;
   bottom: 16px;
 
   left: 53%;
@@ -287,10 +287,83 @@
     .stagger > *:nth-child(8){animation-delay:.31s}
     @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
+    /* ── Phone frame shell ── */
+    html, body {
+      background: #e8e4de !important;
+      max-width: 100% !important;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 28px 0 40px;
+    }
+    .phone-shell {
+      width: 393px;
+      flex-shrink: 0;
+      background: #1c1c1e;
+      border-radius: 54px;
+      position: relative;
+      box-shadow:
+        inset 0 0 0 1px #5a5a5e,
+        inset 0 0 0 2.5px #111,
+        0 0 0 1px #6a6a6e,
+        0 28px 72px rgba(0,0,0,0.40),
+        0 8px 24px rgba(0,0,0,0.20);
+    }
+    /* Side hardware buttons */
+    .phone-shell::before {
+      content: '';
+      position: absolute;
+      /* Volume up */
+      left: -4px; top: 148px;
+      width: 4px; height: 48px;
+      background: #2e2e30;
+      border-radius: 2px 0 0 2px;
+      box-shadow:
+        0 64px 0 #2e2e30,   /* Volume down */
+        0 -36px 0 #2e2e30;  /* Silent switch */
+    }
+    .phone-shell::after {
+      content: '';
+      position: absolute;
+      /* Power button */
+      right: -4px; top: 168px;
+      width: 4px; height: 78px;
+      background: #2e2e30;
+      border-radius: 0 2px 2px 0;
+    }
+    .phone-bezel {
+      margin: 10px;
+      border-radius: 45px;
+      overflow: hidden;
+      background: var(--bg, #faf9f7);
+      /* Restore the inner app layout to its original single-column constraints */
+      display: flex;
+      flex-direction: column;
+    }
+    /* The app-scale wrapper and body constraints already handle interior layout.
+       We just make sure the bezel clips everything cleanly. */
+    .phone-bezel > * {
+      max-width: 100%;
+    }
+    /* Subtle inner screen glare */
+    .phone-screen-glare {
+      position: absolute;
+      top: 10px; left: 10px; right: 10px;
+      height: 200px;
+      border-radius: 45px 45px 0 0;
+      background: linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 9999;
+    }
+
     {% block extra_style %}{% endblock %}
   </style>
 </head>
 <body>
+<div class="phone-shell">
+  <div class="phone-screen-glare"></div>
+  <div class="phone-bezel">
  <div class="dynamic-island">
    <div class="di-sensor"></div>
    <div class="di-camera"></div>
@@ -417,5 +490,8 @@
       }
     })();
   </script>
+
+  </div><!-- /phone-bezel -->
+</div><!-- /phone-shell -->
 </body>
 </html>
