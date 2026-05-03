@@ -18,10 +18,10 @@
   .pulse-need-header {
     display: flex; justify-content: space-between;
     font-size: 13px; color: var(--ink2); font-weight: 500;
-    margin-bottom: 4px;
+    margin-bottom: 4px; margin-left: 5px;
   }
   .pulse-need-val {
-    font-size: 11px; color: var(--ink3); padding: 0px 10px 0px;
+    font-size: 13px; color: var(--ink3); padding: 0px 10px 0px;
   }
   .pulse-bar-track {
     height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; scale: .95;
@@ -103,7 +103,7 @@
   <div>
     <div class="wallet-banner-label">Lumens</div>
     <div class="wallet-banner-amount" style="display:flex; align-items:center; gap:2px;">
-      <span>✦</span><span>{{ "%.0f"|format(wallet_balance) }}</span>
+      <span>✦</span><span style="padding-top:3px;">{{ "%.0f"|format(wallet_balance) }}</span>
     </div>
     <div class="wallet-banner-sub">Tap to open Vault</div>
   </div>
@@ -143,7 +143,7 @@
 {% endif %}
 
 <!-- Quick app links -->
-<div style="padding:0 18px 8px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Apps</div>
+<div style="padding:5px 18px 8px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Apps</div>
 <div class="quick-apps">
   <a href="/app/lumen-eats?token={{ token }}" class="quick-app">
     <div class="quick-app-icon">🍽️</div>
