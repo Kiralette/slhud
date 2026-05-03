@@ -11,8 +11,8 @@
     padding: 11px 14px;
     display: flex; align-items: center; gap: 10px;
   }
-  .drink-free-banner .icon { font-size: 20px; }
-  .drink-free-banner .text { font-size: 11px; color: var(--green); line-height: 1.5; }
+  .drink-free-banner .icon { font-size: 20px; padding-left: 20px; }
+  .drink-free-banner .text { font-size: 11px; color: var(--green); line-height: 1.5; padding-left: 20px; }
   .drink-free-banner .text strong { font-weight: 600; }
 </style>
 {% endblock %}
@@ -58,11 +58,6 @@
 <!-- ── ORDER TAB ──────────────────────────────────────────── -->
 <div id="tab-order" class="tab-panel active">
 
-  <!-- Free water banner -->
-  <div class="drink-free-banner">
-    <div class="icon">💧</div>
-    <div class="text"><strong>Water is always free.</strong> Stay hydrated at no cost.</div>
-  </div>
 
   <!-- Category filter chips -->
   <div class="chips-row">
