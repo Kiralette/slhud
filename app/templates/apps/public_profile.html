@@ -3,33 +3,6 @@
 
 {% block extra_style %}
 <style>
-
-/* Dynamic island */
-  .dynamic-island {
-    position: fixed;
-    left: 45%; transform: translateX(-50%);
-    width: 120px; height: 34px;
-    background: #000;
-    border-radius: 20px;
-    margin-top: 12px;
-    display: flex; align-items: center; justify-content: center;
-    gap: 8px;
-    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
-    z-index: 200;
-    scale: .8;
-    margin: auto;
-    top: 0px;
-  }
-  .di-camera {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: #1a1a1a; border: 1.5px solid #111; position: relative;
-  }
-  .di-camera::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 3px; height: 3px; border-radius: 50%; background: #333;
-  }
-  .di-sensor { width: 28px; height: 7px; border-radius: 4px; background: #111; }
-
   .profile-cover {
     height: 80px;
     background: linear-gradient(135deg, var(--gold-light), var(--bg3));
@@ -118,12 +91,6 @@
 {% endblock %}
 
 {% block content %}
-
-<!-- Dynamic Island -->
-<div class="dynamic-island">
-  <div class="di-sensor"></div>
-  <div class="di-camera"></div>
-</div>
 
 <!-- Back nav -->
 <div style="padding:10px 18px 0;display:flex;align-items:center;gap:8px;">
