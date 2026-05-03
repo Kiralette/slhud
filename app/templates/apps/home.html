@@ -2,8 +2,6 @@
 {% block title %}Home · SL HUD{% endblock %}
 
 {% block status_bar %}{% endblock %}
-{% block nav_bar %}{% endblock %}
-
 {% block extra_style %}
 <style>
   /* ── Exact simulator CSS, adapted for standalone page ── */
@@ -146,18 +144,7 @@
     color: var(--ink3); font-weight: 500;
   }
 
-  /* Dock */
-  .dock {
-    position: sticky; bottom: 16px;
-    width: fit-content; margin: 16px auto;
-    background: rgba(250,249,247,0.98);
-    border: 0.5px solid rgba(28,24,20,0.12);
-    border-radius: 24px; padding: 8px 14px;
-    display: flex; gap: 14px;
-    box-shadow: 0 4px 24px rgba(28,24,20,0.12);
-    z-index: 200;
-  }
-  .dock .app-icon-bubble { width: 44px; height: 44px; border-radius: 11px; font-size: 20px; }
+
 </style>
 {% endblock %}
 
@@ -328,25 +315,6 @@
   </div>
 </div><!-- /home-screen -->
 
-<!-- Dock -->
-<div class="dock">
-  <a class="app-icon" href="/app/pulse?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
-  </a>
-  <a class="app-icon" href="/app/ping?token={{ token }}">
-    <div class="notif-dot" id="dot-ping"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
-  </a>
-  <a class="app-icon" href="/app/flare?token={{ token }}">
-    <div class="notif-dot" id="dot-flare"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
-  </a>
-  <a class="app-icon" href="/app/canvas?token={{ token }}">
-    <div class="notif-dot" id="dot-canvas"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
-  </a>
-</div>
-
 {% endblock %}
 
 {% block extra_script %}
@@ -385,10 +353,8 @@
       const byApp = (await res2.json()).by_app || {};
       DOT_APPS.forEach(app => {
         const has = (byApp[app] || 0) > 0;
-        ['dot-','hdot-'].forEach(pre => {
-          const el = document.getElementById(pre + app);
-          if (el) el.classList.toggle('show', has);
-        });
+        const el = document.getElementById('hdot-' + app);
+        if (el) el.classList.toggle('show', has);
       });
     } catch(_) {}
   }
