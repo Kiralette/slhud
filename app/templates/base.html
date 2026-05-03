@@ -11,7 +11,6 @@
   transform-origin: top center;
   width: calc(500px/1.5);
   margin: auto;
-  position: relative;
    }
     :root {
       --bg:          #faf9f7;
@@ -62,31 +61,6 @@
       position: relative;
     }
 
-    /* ── Dynamic Island ── */
-    .dynamic-island {
-      position: relative;
-      left: 45%; transform: translateX(-50%);
-      width: 120px; height: 34px;
-      background: #000;
-      border-radius: 20px;
-      margin-top: 12px;
-      display: flex; align-items: center; justify-content: center;
-      gap: 8px;
-      box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
-      z-index: 200;
-      scale: .8;
-      top: 50px;
-    }
-    .di-camera {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: #1a1a1a; border: 1.5px solid #111; position: relative;
-    }
-    .di-camera::after {
-      content: ''; position: absolute; top: 2px; left: 2px;
-      width: 3px; height: 3px; border-radius: 50%; background: #333;
-    }
-    .di-sensor { width: 28px; height: 7px; border-radius: 4px; background: #111; }
-
     /* ── Status bar ── */
     .base-status-bar {
       padding: 14px 22px 6px;
@@ -111,7 +85,7 @@
 
     /* ── Topbar ── */
     .topbar {
-      position: relative; top: 0; z-index: 100;
+      position: sticky; top: 0; z-index: 100;
       background: rgba(250,249,247,0.95);
       backdrop-filter: blur(12px);
       border-bottom: 0.5px solid var(--border);
@@ -223,7 +197,7 @@
 
     /* ── Toast ── */
     #toast {
-      position: absolute; top: 20px; left: 50%;
+      position: fixed; top: 20px; left: 50%;
       transform: translateX(-50%) translateY(-90px);
       background: var(--ink); color: var(--bg);
       padding: 10px 22px; border-radius: 99px;
@@ -237,12 +211,12 @@
     .scroll-pad { height: 110px; }
     .divider { height: 0.5px; background: var(--border); margin: 4px 18px; }
 
-    /* ── Dock (sticky inside phone shell — fixed would escape the frame) ── */
+    /* ── Dock (sticky so SL browser click targets align correctly) ── */
     .nav-bar {
-  position: sticky;
+  position: fixed;
   bottom: 16px;
 
-  left: 53%;
+  left: 50%;
   transform: translateX(-50%);
 
   width: fit-content;
@@ -257,7 +231,6 @@
   align-items: center;
   box-shadow: 0 4px 24px rgba(28,24,20,0.12);
   z-index: 300;
-  scale: 1.2;
     }
     .nav-dock-icon {
       width: 44px; height: 44px; border-radius: 11px;
@@ -287,84 +260,10 @@
     .stagger > *:nth-child(8){animation-delay:.31s}
     @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
-    /* ── Phone frame shell ── */
-    html, body {
-      background: transparent !important;
-      max-width: 100% !important;
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 0;
-    }
-    .phone-shell {
-      width: 393px;
-      flex-shrink: 0;
-      background: #1c1c1e;
-      border-radius: 54px;
-      position: relative;
-      box-shadow:
-        inset 0 0 0 1px #5a5a5e,
-        inset 0 0 0 2.5px #111;
-    }
-    /* Side hardware buttons */
-    .phone-shell::before {
-      content: '';
-      position: absolute;
-      /* Volume up */
-      left: -4px; top: 148px;
-      width: 4px; height: 48px;
-      background: #2e2e30;
-      border-radius: 2px 0 0 2px;
-      box-shadow:
-        0 64px 0 #2e2e30,   /* Volume down */
-        0 -36px 0 #2e2e30;  /* Silent switch */
-    }
-    .phone-shell::after {
-      content: '';
-      position: absolute;
-      /* Power button */
-      right: -4px; top: 168px;
-      width: 4px; height: 78px;
-      background: #2e2e30;
-      border-radius: 0 2px 2px 0;
-    }
-    .phone-bezel {
-      margin: 10px;
-      border-radius: 45px;
-      overflow: hidden;
-      background: var(--bg, #faf9f7);
-      /* Restore the inner app layout to its original single-column constraints */
-      display: flex;
-      flex-direction: column;
-    }
-    /* The app-scale wrapper and body constraints already handle interior layout.
-       We just make sure the bezel clips everything cleanly. */
-    .phone-bezel > * {
-      max-width: 100%;
-    }
-    /* Subtle inner screen glare */
-    .phone-screen-glare {
-      position: absolute;
-      top: 10px; left: 10px; right: 10px;
-      height: 200px;
-      border-radius: 45px 45px 0 0;
-      background: linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 9999;
-    }
-
     {% block extra_style %}{% endblock %}
   </style>
 </head>
 <body>
-<div class="phone-shell">
-  <div class="phone-screen-glare"></div>
-  <div class="phone-bezel">
- <div class="dynamic-island">
-   <div class="di-sensor"></div>
-   <div class="di-camera"></div>
- </div>
  <div class="app-scale">
   {% block status_bar %}
   <div class="base-status-bar">
@@ -385,6 +284,23 @@
 
   {% block content %}{% endblock %}
 
+  <div id="toast"></div>
+
+  {% block nav_bar %}
+  <div class="nav-bar" id="nav-bar">
+    <a class="nav-dock-icon" id="nav-home"   style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)" href="#">🏠</a>
+    <a class="nav-dock-icon" id="nav-ping"   style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)" href="#">
+      <div class="nav-dock-dot" id="navdot-ping"></div>💬
+    </a>
+    <a class="nav-dock-icon" id="nav-flare"  style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)" href="#">
+      <div class="nav-dock-dot" id="navdot-flare"></div>✦
+    </a>
+    <a class="nav-dock-icon" id="nav-canvas" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)" href="#">
+      <div class="nav-dock-dot" id="navdot-canvas"></div>🪞
+    </a>
+  </div>
+  {% endblock %}
+
   <script>
     // Clock
     (function() {
@@ -397,7 +313,30 @@
       tick(); setInterval(tick, 30000);
     })();
 
-
+    // Wire dock token from URL
+    (function() {
+      var token = (new URLSearchParams(window.location.search)).get("token") || "";
+      var ids   = ["nav-home","nav-ping","nav-flare","nav-canvas"];
+      var paths = ["/app/home","/app/ping","/app/flare","/app/canvas"];
+      ids.forEach(function(id, i) {
+        var el = document.getElementById(id);
+        if (el) el.href = paths[i] + (token ? "?token=" + token : "");
+      });
+      if (token) {
+        function pollDots() {
+          fetch("/notifications/unread-count", { headers: { "Authorization": "Bearer " + token } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              var byApp = d.by_app || {};
+              ["ping","flare","canvas"].forEach(function(app) {
+                var dot = document.getElementById("navdot-" + app);
+                if (dot) dot.classList.toggle("show", (byApp[app] || 0) > 0);
+              });
+            }).catch(function(){});
+        }
+        pollDots(); setInterval(pollDots, 60000);
+      }
+    })();
 
     // Tab switching
     function showTab(id) {
@@ -443,52 +382,5 @@
 
   {% block extra_script %}{% endblock %}
  </div>
-
-  <div id="toast"></div>
-
-  {% block nav_bar %}
-  <div class="nav-bar" id="nav-bar">
-    <a class="nav-dock-icon" id="nav-home"   style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)" href="#">🏠</a>
-    <a class="nav-dock-icon" id="nav-ping"   style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)" href="#">
-      <div class="nav-dock-dot" id="navdot-ping"></div>💬
-    </a>
-    <a class="nav-dock-icon" id="nav-flare"  style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)" href="#">
-      <div class="nav-dock-dot" id="navdot-flare"></div>✦
-    </a>
-    <a class="nav-dock-icon" id="nav-canvas" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)" href="#">
-      <div class="nav-dock-dot" id="navdot-canvas"></div>🪞
-    </a>
-  </div>
-  {% endblock %}
-
-  <script>
-    // Wire dock token from URL
-    (function() {
-      var token = (new URLSearchParams(window.location.search)).get("token") || "";
-      var ids   = ["nav-home","nav-ping","nav-flare","nav-canvas"];
-      var paths = ["/app/home","/app/ping","/app/flare","/app/canvas"];
-      ids.forEach(function(id, i) {
-        var el = document.getElementById(id);
-        if (el) el.href = paths[i] + (token ? "?token=" + token : "");
-      });
-      if (token) {
-        function pollDots() {
-          fetch("/notifications/unread-count", { headers: { "Authorization": "Bearer " + token } })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-              var byApp = d.by_app || {};
-              ["ping","flare","canvas"].forEach(function(app) {
-                var dot = document.getElementById("navdot-" + app);
-                if (dot) dot.classList.toggle("show", (byApp[app] || 0) > 0);
-              });
-            }).catch(function(){});
-        }
-        pollDots(); setInterval(pollDots, 60000);
-      }
-    })();
-  </script>
-
-  </div><!-- /phone-bezel -->
-</div><!-- /phone-shell -->
 </body>
 </html>
