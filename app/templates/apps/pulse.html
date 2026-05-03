@@ -12,19 +12,19 @@
     -webkit-tap-highlight-color: transparent;
   }
   .pulse-need-icon {
-    font-size: 18px; width: 28px; text-align: center; flex-shrink: 0;
+    font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; padding: 0px 18px 0px;
   }
   .pulse-need-info { flex: 1; min-width: 0; }
   .pulse-need-header {
     display: flex; justify-content: space-between;
-    font-size: 11px; color: var(--ink2); font-weight: 500;
+    font-size: 13px; color: var(--ink2); font-weight: 500;
     margin-bottom: 4px;
   }
   .pulse-need-val {
-    font-size: 11px; color: var(--ink3);
+    font-size: 11px; color: var(--ink3); padding: 0px 10px 0px;
   }
   .pulse-bar-track {
-    height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden;
+    height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; scale: .95;
   }
   .pulse-bar-fill {
     height: 100%; border-radius: 3px; transition: width .4s ease;
@@ -35,7 +35,7 @@
   @keyframes crit-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
   .wallet-banner {
-    margin: 0 18px 14px;
+    margin: 14px 18px 14px;
     background: var(--gold-light);
     border: 0.5px solid rgba(154,124,78,.25);
     border-radius: var(--radius);
@@ -71,7 +71,7 @@
   }
   .quick-app:hover { background: var(--bg3); }
   .quick-app-icon { font-size: 20px; margin-bottom: 4px; }
-  .quick-app-label { font-size: 9px; color: var(--ink3); text-transform: uppercase; letter-spacing: .08em; }
+  .quick-app-label { font-size: 9px; color: var(--ink3); text-transform: uppercase; letter-spacing: .08em; font-weight: bolder; }
 
   .notif-badge {
     display: inline-block; background: var(--rose); color: white;
@@ -86,7 +86,7 @@
 <!-- Minimal topbar for home -->
 <div class="topbar">
   <div class="topbar-left">
-    <div class="topbar-eyebrow">SL Phone HUD</div>
+    <div class="topbar-eyebrow">Yours Truly Phone HUD</div>
     <div class="topbar-title">{{ player.display_name }}</div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
@@ -110,7 +110,7 @@
 
 <!-- Needs -->
 <div class="pulse-grid">
-  <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-bottom:10px;">Needs</div>
+  <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-bottom:10px;padding:0px 18px 0px;">Needs</div>
   {% for need in needs_data %}
   <a href="/app/{{ app_links | selectattr('need', 'equalto', need.key) | map(attribute='key') | first | default(need.key) }}?token={{ token }}"
      class="pulse-need-row" style="text-decoration:none;">
@@ -141,7 +141,7 @@
 {% endif %}
 
 <!-- Quick app links -->
-<div style="padding:0 18px 8px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Apps</div>
+<div style="padding:0 18px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);">Apps</div>
 <div class="quick-apps">
   <a href="/app/lumen-eats?token={{ token }}" class="quick-app">
     <div class="quick-app-icon">🍽️</div>
@@ -160,7 +160,7 @@
     <div class="quick-app-label">Canvas</div>
   </a>
   <a href="/app/wavelength?token={{ token }}" class="quick-app">
-    <div class="quick-app-icon">🎵</div>
+    <div class="quick-app-icon">🎧</div>
     <div class="quick-app-label">Wavelength</div>
   </a>
   <a href="/app/ritual?token={{ token }}" class="quick-app">
