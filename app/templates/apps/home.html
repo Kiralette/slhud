@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Home · SL HUD{% endblock %}
 
-{% block status_bar %}{% endblock %}
 {% block extra_style %}
 <style>
   /* ── Exact simulator CSS, adapted for standalone page ── */
@@ -12,57 +11,6 @@
     overflow-x: hidden;
     font-size: 16px;
   }
-
-  /* Dynamic island */
-  .dynamic-island {
-    position: relative;
-    left: 50%; transform: translateX(-50%);
-    width: 120px; height: 34px;
-    background: #000;
-    border-radius: 20px;
-    margin-top: 12px;
-    display: flex; align-items: center; justify-content: center;
-    gap: 8px;
-    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
-    z-index: 200;
-  }
-  .di-camera {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: #1a1a1a; border: 1.5px solid #111; position: relative;
-  }
-  .di-camera::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 3px; height: 3px; border-radius: 50%; background: #333;
-  }
-  .di-sensor { width: 28px; height: 7px; border-radius: 4px; background: #111; }
-
-  /* Status bar */
-  .status-bar {
-    padding: 10px 22px 6px;
-    display: flex; justify-content: space-between; align-items: center;
-    background: var(--bg);
-  }
-  .status-time {
-    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-    font-size: 17px; font-weight: 600; letter-spacing: -0.3px;
-    color: var(--ink);
-  }
-  .status-icons { display: flex; gap: 5px; align-items: center; }
-  .signal-bars { display: flex; align-items: flex-end; gap: 1.5px; height: 12px; }
-  .signal-bar { width: 3px; border-radius: 1px; background: var(--ink); }
-  .signal-bar:nth-child(1) { height: 4px; }
-  .signal-bar:nth-child(2) { height: 6px; }
-  .signal-bar:nth-child(3) { height: 9px; }
-  .signal-bar:nth-child(4) { height: 12px; }
-  .wifi-icon { font-size: 12px; color: var(--ink); line-height: 1; }
-  .battery-wrap { display: flex; align-items: center; gap: 1px; }
-  .battery-body {
-    width: 22px; height: 11px;
-    border: 1.5px solid var(--ink); border-radius: 3px;
-    position: relative; padding: 1.5px;
-  }
-  .battery-fill { height: 100%; width: 75%; background: var(--ink); border-radius: 1px; }
-  .battery-tip { width: 2px; height: 5px; background: var(--ink); border-radius: 0 1px 1px 0; }
 
   /* iOS Banner */
   .ios-banner {
@@ -159,28 +107,6 @@
     <div class="ios-banner-body"  id="banner-body"></div>
   </div>
   <div class="ios-banner-time" id="banner-time">now</div>
-</div>
-
-<!-- Dynamic Island -->
-<div class="dynamic-island">
-  <div class="di-sensor"></div>
-  <div class="di-camera"></div>
-</div>
-
-<!-- Status bar -->
-<div class="status-bar">
-  <div class="status-time" id="status-time">9:41</div>
-  <div class="status-icons">
-    <div class="signal-bars">
-      <div class="signal-bar"></div><div class="signal-bar"></div>
-      <div class="signal-bar"></div><div class="signal-bar"></div>
-    </div>
-    <span class="wifi-icon">WiFi</span>
-    <div class="battery-wrap">
-      <div class="battery-body"><div class="battery-fill"></div></div>
-      <div class="battery-tip"></div>
-    </div>
-  </div>
 </div>
 
 <!-- Home screen -->
@@ -323,16 +249,6 @@
   const DOT_APPS = ['ping','flare','canvas'];
   const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',system:'✦',aura:'🫂',recharge:'⚡',wavelength:'🎵',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️' };
   const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',system:'SL HUD',glow:'Glow',thrill:'Thrill',luminary:'Luminary' };
-
-  // Live clock
-  function updateClock() {
-    const now = new Date();
-    let h = now.getHours() % 12 || 12;
-    const m = now.getMinutes().toString().padStart(2,'0');
-    document.getElementById('status-time').textContent = h + ':' + m;
-  }
-  updateClock();
-  setInterval(updateClock, 30000);
 
   // Notifications
   let shownNotifIds = new Set(), bannerTimeout = null;
