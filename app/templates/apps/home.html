@@ -2,7 +2,6 @@
 {% block title %}Home · SL HUD{% endblock %}
 
 {% block status_bar %}{% endblock %}
-{% block nav_bar %}{% endblock %}
 
 {% block extra_style %}
 <style>
@@ -17,8 +16,8 @@
 
   /* Dynamic island */
   .dynamic-island {
-    position: relative;
-    left: 50%; transform: translateX(-50%);
+    position: fixed;
+    left: 45%; transform: translateX(-50%);
     width: 120px; height: 34px;
     background: #000;
     border-radius: 20px;
@@ -27,6 +26,8 @@
     gap: 8px;
     box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
     z-index: 200;
+    scale: .8;
+    margin: auto;
   }
   .di-camera {
     width: 10px; height: 10px; border-radius: 50%;
@@ -145,19 +146,6 @@
     font-size: 9px; text-transform: uppercase; letter-spacing: .12em;
     color: var(--ink3); font-weight: 500;
   }
-
-  /* Dock */
-  .dock {
-    position: sticky; bottom: 16px;
-    width: fit-content; margin: 16px auto;
-    background: rgba(250,249,247,0.98);
-    border: 0.5px solid rgba(28,24,20,0.12);
-    border-radius: 24px; padding: 8px 14px;
-    display: flex; gap: 14px;
-    box-shadow: 0 4px 24px rgba(28,24,20,0.12);
-    z-index: 200;
-  }
-  .dock .app-icon-bubble { width: 44px; height: 44px; border-radius: 11px; font-size: 20px; }
 </style>
 {% endblock %}
 
@@ -327,25 +315,6 @@
     </a>
   </div>
 </div><!-- /home-screen -->
-
-<!-- Dock -->
-<div class="dock">
-  <a class="app-icon" href="/app/pulse?token={{ token }}">
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#e8dcc8)">🏠</div>
-  </a>
-  <a class="app-icon" href="/app/ping?token={{ token }}">
-    <div class="notif-dot" id="dot-ping"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
-  </a>
-  <a class="app-icon" href="/app/flare?token={{ token }}">
-    <div class="notif-dot" id="dot-flare"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
-  </a>
-  <a class="app-icon" href="/app/canvas?token={{ token }}">
-    <div class="notif-dot" id="dot-canvas"></div>
-    <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🪞</div>
-  </a>
-</div>
 
 {% endblock %}
 
