@@ -162,7 +162,7 @@ objects:
   glass_of_water:
     display_name: "Glass of water"
     needs_affected:
-      thirst: { base_gain: 20, quality_bonus: 0 }
+      thirst: { base_gain: 5, quality_bonus: 0 }
     cooldown_seconds: 120
     grants_vibe: null
 
@@ -579,7 +579,7 @@ shop_items:
     category: "drinks_free"
     lumen_cost: 0
     need_effects:
-      thirst: 25
+      thirst: 5
     vibe_granted: null
 
   # Food — snacks
