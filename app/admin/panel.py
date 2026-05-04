@@ -268,7 +268,7 @@ async def admin_rotate_specials(request: Request, db=Depends(get_db)):
         and v.get("category") in food_categories
     ]
 
-    count = random.randint(4, min(6, len(pool))) if pool else 0
+    count = random.randint(2, min(2, len(pool))) if pool else 0
     chosen = random.sample(pool, count) if pool else []
 
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
