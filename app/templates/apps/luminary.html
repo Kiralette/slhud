@@ -57,10 +57,10 @@
     font-size: 28px; line-height: 1;
   }
   .horoscope-meta { flex: 1; }
-  .horoscope-sign { font-size: 13px; font-weight: 600; color: var(--ink); }
-  .horoscope-date { font-size: 10px; color: var(--ink3); margin-top: 1px; }
+  .horoscope-sign { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .horoscope-date { font-size: 12px; color: var(--ink3); margin-top: 1px; }
   .horoscope-text {
-    font-size: 13px; color: var(--ink2); line-height: 1.7;
+    font-size: 15px; color: var(--ink2); line-height: 1.7;
     font-style: italic;
   }
 </style>
@@ -111,12 +111,12 @@
 
 {% if not zodiac_sign %}
 <div style="margin:12px 18px;padding:14px;background:var(--gold-light);border:0.5px solid rgba(154,124,78,.25);border-radius:var(--radius);">
-  <div style="font-size:12px;font-weight:600;color:var(--gold);margin-bottom:8px;">✦ Set your zodiac to see your daily horoscope</div>
+  <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:8px;">✦ Set your zodiac to see your daily horoscope</div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;" id="zodiac-picker">
     {% for sign, sym_col in [('aries','♈'),('taurus','♉'),('gemini','♊'),('cancer','♋'),('leo','♌'),('virgo','♍'),('libra','♎'),('scorpio','♏'),('sagittarius','♐'),('capricorn','♑'),('aquarius','♒'),('pisces','♓')] %}
     <button onclick="setZodiac('{{ sign }}')"
-      style="padding:8px 4px;border:0.5px solid var(--border2);background:var(--bg);border-radius:var(--radius-sm);font-family:var(--font);font-size:10px;cursor:pointer;text-align:center;">
-      {{ sym_col }}<br><span style="font-size:9px;color:var(--ink3);">{{ sign|title }}</span>
+      style="padding:8px 4px;border:0.5px solid var(--border2);background:var(--bg);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;cursor:pointer;text-align:center;">
+      {{ sym_col }}<br><span style="font-size:11px;color:var(--ink3);">{{ sign|title }}</span>
     </button>
     {% endfor %}
   </div>
