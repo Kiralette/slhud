@@ -10,3 +10,4 @@ watchfiles
 httpx
 asyncpg
 Jinja2
+httpx
