@@ -702,6 +702,14 @@
 
 {% block extra_script %}
 <script>
+  // Override showTab to scroll active tab into view smoothly
+  const _baseShowTab = window.showTab;
+  window.showTab = function(id) {
+    if (_baseShowTab) _baseShowTab(id);
+    const btn = document.querySelector('[data-tab="' + id + '"]');
+    if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
+
   const TOKEN = "{{ token }}";
 
   // ── Profile save ───────────────────────────────────────────
