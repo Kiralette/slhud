@@ -61,7 +61,7 @@ async def rotate_weekly_specials():
         return
 
     # Pick 4–6 random items, apply 10–30% discount
-    count = random.randint(4, min(6, len(pool)))
+    count = random.randint(2, min(2, len(pool)))
     chosen = random.sample(pool, count)
 
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
