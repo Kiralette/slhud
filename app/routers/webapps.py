@@ -353,7 +353,7 @@ async def sip(
         return "crit"
 
     # All drink shop items
-    drink_items = build_shop_items(cfg, categories=["drinks"])
+    drink_items = build_shop_items(cfg, categories=["drinks", "drinks_free"])
 
     thirst_log = [
         {
