@@ -86,28 +86,28 @@
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
       <span style="font-size:22px;">🌙</span>
       <div>
-        <div style="font-weight:600;font-size:13px;">Bedtime reminder</div>
-        <div style="font-size:11px;color:var(--ink3);">Set the time you want to sleep SLT.</div>
+        <div style="font-weight:600;font-size:15px;">Bedtime reminder</div>
+        <div style="font-size:13px;color:var(--ink3);">Set the time you want to sleep SLT.</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;">
       <input type="time" id="bedtime-input" value="{{ settings.bedtime_slt or '23:00' }}"
-             style="flex:1;border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-family:var(--font);font-size:13px;background:var(--bg);color:var(--ink);">
-      <button onclick="saveBedtime()" style="padding:9px 18px;background:var(--ink);color:var(--bg);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+             style="flex:1;border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-family:var(--font);font-size:15px;background:var(--bg);color:var(--ink);">
+      <button onclick="saveBedtime()" style="padding:9px 18px;background:var(--ink);color:var(--bg);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;">Save</button>
     </div>
   </div>
 
   <div class="card" style="margin:12px 18px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px;">Sleep streak</div>
+        <div style="font-size:14px;color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px;">Sleep streak</div>
         <div style="font-size:28px;font-family:var(--font-head);font-weight:400;color:var(--ink);">
-          {{ settings.sleep_streak_days or 0 }} <span style="font-size:14px;color:var(--ink3);">days</span>
+          {{ settings.sleep_streak_days or 0 }} <span style="font-size:16px;color:var(--ink3);">days</span>
         </div>
       </div>
       <span style="font-size:36px;">🌟</span>
     </div>
-    <div style="font-size:11px;color:var(--ink3);margin-top:8px;">Sleep streaks slow all decay by 5% the next day.</div>
+    <div style="font-size:13px;color:var(--ink3);margin-top:8px;">Sleep streaks slow all decay by 5% the next day.</div>
   </div>
   <div class="scroll-pad"></div>
 </div>
