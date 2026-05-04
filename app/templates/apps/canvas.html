@@ -301,7 +301,6 @@
   <button class="tab"        data-tab="tab-stats"         onclick="showTab('tab-stats')">Stats</button>
   <button class="tab"        data-tab="tab-traits"        onclick="showTab('tab-traits')">Traits</button>
   <button class="tab"        data-tab="tab-occurrences"   onclick="showTab('tab-occurrences')">Life</button>
-  <button class="tab"        data-tab="tab-legacy"        onclick="showTab('tab-legacy')">Legacy</button>
   <button class="tab"        data-tab="tab-notifications" onclick="showTab('tab-notifications')">Alerts</button>
   <button class="tab"        data-tab="tab-settings"      onclick="showTab('tab-settings')">Settings</button>
 </div>
@@ -450,6 +449,13 @@
 
 <!-- ══ OCCURRENCES (LIFE) TAB ════════════════════════════════════════════════ -->
 <div id="tab-occurrences" class="tab-panel">
+  <div class="notif-filter-row" style="margin-bottom:0;">
+    <button class="notif-chip active" onclick="showLifeView('events', this)">Events</button>
+    <button class="notif-chip" onclick="showLifeView('legacy', this)">Legacy</button>
+  </div>
+
+  <!-- Events view -->
+  <div id="life-view-events">
   <div class="section-head">
     <div class="section-head-title">Life Events</div>
     <div class="section-head-sub">Things happening in your story right now</div>
@@ -524,11 +530,10 @@
     </div>
     {% endif %}
   </div>
-  <div class="scroll-pad"></div>
-</div>
+  </div><!-- /life-view-events -->
 
-<!-- ══ LEGACY TAB ════════════════════════════════════════════════════════════ -->
-<div id="tab-legacy" class="tab-panel">
+  <!-- Legacy view -->
+  <div id="life-view-legacy" style="display:none;">
   <div class="legacy-coming">
     <div class="legacy-icon">🏆</div>
     <div class="legacy-title">Achievements coming soon</div>
@@ -537,7 +542,6 @@
       Your legacy builds with every choice you make.
     </div>
   </div>
-
   {% if achievements %}
   <div class="stagger">
   {% for a in achievements %}
@@ -551,6 +555,8 @@
   {% endfor %}
   </div>
   {% endif %}
+  </div><!-- /life-view-legacy -->
+
   <div class="scroll-pad"></div>
 </div>
 
@@ -712,6 +718,13 @@
   }
 
   // ── Notifications filter ───────────────────────────────────
+
+  function showLifeView(view, btn) {
+    document.querySelectorAll('#tab-occurrences .notif-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('life-view-events').style.display = view === 'events' ? '' : 'none';
+    document.getElementById('life-view-legacy').style.display = view === 'legacy' ? '' : 'none';
+  }
 
   function filterNotifs(app, btn) {
     document.querySelectorAll('.notif-chip').forEach(c => c.classList.remove('active'));
