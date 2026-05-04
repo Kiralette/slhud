@@ -265,7 +265,25 @@
     font-size: 20px; font-style: italic; color: var(--ink2); margin-bottom: 6px;
   }
   .legacy-text { font-size: 12px; color: var(--ink4); line-height: 1.7; }
+/* ── Scrollable tabs override ── */
+.tabs {
 
+
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+
+  justify-content: flex-start !important;
+  scrollbar-width: none !important;
+  padding: 0 !important;
+  gap: 4px;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  min-width: unset !important;
+  width: auto !important;
+}
 </style>
 {% endblock %}
 
@@ -283,7 +301,7 @@
 </div>
 
 <!-- TABS (scrollable) -->
-<div class="tabs" id="canvas-tabs" style="overflow-x:auto;scrollbar-width:none;justify-content:flex-start;">
+<div class="tabs" style="overflow-x:auto;scrollbar-width:none;">
   <button class="tab active" data-tab="tab-profile"       onclick="showTab('tab-profile')">Profile</button>
   <button class="tab"        data-tab="tab-stats"         onclick="showTab('tab-stats')">Stats</button>
   <button class="tab"        data-tab="tab-traits"        onclick="showTab('tab-traits')">Traits</button>
