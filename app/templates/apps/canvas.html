@@ -260,30 +260,24 @@
     font-size: 20px; font-style: italic; color: var(--ink2); margin-bottom: 6px;
   }
   .legacy-text { font-size: 12px; color: var(--ink4); line-height: 1.7; }
-/* ── Override base tab behavior ONLY for this page ── */
-/* ── Scrollable snapping tabs (page-only override) ── */
+/* ── Scrollable tabs override ── */
 .tabs {
-  display: flex;
-  flex-wrap: nowrap;
+  display: flex !important;
+  flex-wrap: nowrap !important;
   overflow-x: auto !important;
-  overflow-y: hidden;
-
-  scroll-snap-type: x mandatory;
+  overflow-y: hidden !important;
+  justify-content: flex-start !important;
   -webkit-overflow-scrolling: touch;
-
-  scrollbar-width: none;
-  padding: 0 30px; /* helps center edge tabs */
+  scrollbar-width: none !important;
+  padding: 0 8px !important;
+  gap: 4px;
 }
-
-.tabs::-webkit-scrollbar {
-  display: none;
-}
-
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
   flex: 0 0 auto !important;
-  white-space: nowrap;
-
-  scroll-snap-align: center;
+  white-space: nowrap !important;
+  min-width: unset !important;
+  width: auto !important;
 }
 </style>
 {% endblock %}
