@@ -260,6 +260,24 @@
     font-size: 20px; font-style: italic; color: var(--ink2); margin-bottom: 6px;
   }
   .legacy-text { font-size: 12px; color: var(--ink4); line-height: 1.7; }
+/* ── Override base tab behavior ONLY for this page ── */
+.tabs {
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex: 0 0 auto !important;   /* stop shrinking */
+  white-space: nowrap;         /* prevent text wrapping */
+  min-width: max-content;      /* ensure full label width */
+}
 </style>
 {% endblock %}
 
