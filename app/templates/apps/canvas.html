@@ -300,7 +300,6 @@
   <button class="tab active" data-tab="tab-profile"       onclick="showTab('tab-profile')">Profile</button>
   <button class="tab"        data-tab="tab-stats"         onclick="showTab('tab-stats')">Stats</button>
   <button class="tab"        data-tab="tab-traits"        onclick="showTab('tab-traits')">Traits</button>
-  <button class="tab"        data-tab="tab-vibes"         onclick="showTab('tab-vibes')">Vibes</button>
   <button class="tab"        data-tab="tab-occurrences"   onclick="showTab('tab-occurrences')">Life</button>
   <button class="tab"        data-tab="tab-legacy"        onclick="showTab('tab-legacy')">Legacy</button>
   <button class="tab"        data-tab="tab-notifications" onclick="showTab('tab-notifications')">Alerts</button>
@@ -340,6 +339,25 @@
 <!-- ══ STATS TAB ═════════════════════════════════════════════════════════════  -->
 <div id="tab-stats" class="tab-panel">
   <div class="section-head">
+    <div class="section-head-title">Active Vibes</div>
+    <div class="section-head-sub">Fires automatically based on your needs, traits, and actions</div>
+  </div>
+  {% if vibes %}
+    {% for v in vibes[:20] %}
+    <div class="vibe-row">
+      <div class="vibe-dot {{ 'neg' if v.is_negative else 'pos' }}"></div>
+      <div class="vibe-name">{{ v.vibe_key | replace('_', ' ') | title }}</div>
+      <div class="vibe-since">{{ v.applied_at[:10] if v.applied_at else '' }}</div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">✨</div>
+      <div class="empty-title">No active vibes</div>
+    </div>
+  {% endif %}
+
+  <div class="section-head" style="margin-top:8px;">
     <div class="section-head-title">Lifetime Stats</div>
     <div class="section-head-sub">Everything you've done since day one</div>
   </div>
@@ -426,30 +444,6 @@
       <div class="empty-text">Complete the questionnaire to discover your traits.</div>
     </div>
     <a class="trait-edit-btn" href="/app/questionnaire?token={{ token }}" style="display:block;text-align:center;text-decoration:none;margin-top:12px;">Start Questionnaire →</a>
-  {% endif %}
-  <div class="scroll-pad"></div>
-</div>
-
-<!-- ══ VIBES TAB ══════════════════════════════════════════════════════════════ -->
-<div id="tab-vibes" class="tab-panel">
-  {% set active_vibes = vibes | selectattr('expires_at', 'none') | list %}
-  {% set all_vibes = vibes %}
-
-  {% if vibes | selectattr('is_negative', 'equalto', 0) | list or vibes | selectattr('is_negative', 'equalto', 1) | list %}
-    <div class="vibe-section-title">Active</div>
-    {% for v in vibes[:20] %}
-    <div class="vibe-row">
-      <div class="vibe-dot {{ 'neg' if v.is_negative else 'pos' }}"></div>
-      <div class="vibe-name">{{ v.vibe_key | replace('_', ' ') | title }}</div>
-      <div class="vibe-since">{{ v.applied_at[:10] if v.applied_at else '' }}</div>
-    </div>
-    {% endfor %}
-  {% else %}
-    <div class="empty">
-      <div class="empty-icon">✨</div>
-      <div class="empty-title">No active vibes</div>
-      <div class="empty-text">Vibes fire automatically based on your needs, traits, and what you do.</div>
-    </div>
   {% endif %}
   <div class="scroll-pad"></div>
 </div>
