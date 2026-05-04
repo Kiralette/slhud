@@ -9,12 +9,12 @@
     border-bottom: 0.5px solid var(--border);
   }
   .profile-avatar {
-    width: 72px; height: 72px; border-radius: 50%;
+    width: 100px; height: 100px; border-radius: 50%;
     background: var(--bg3); display: flex;
     align-items: center; justify-content: center;
     font-size: 22px; margin-top: 12px; margin-bottom: 12px;
     border: 0.5px solid var(--border2);
-    overflow: hidden;
+    overflow: hidden; margin-left: 10px;
   }
   .profile-avatar img {
     width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
@@ -22,20 +22,20 @@
   .profile-avatar .avatar-fallback { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
   .profile-name {
     font-family: var(--font-head);
-    font-size: 26px; font-weight: 400; color: var(--ink);
+    font-size: 28px; font-weight: 400; color: var(--ink);
     margin-bottom: 2px; line-height: 1.1; padding-left: 10px;
   }
-  .profile-pronouns { font-size: 11px; color: var(--ink4); margin-bottom: 8px; padding-left: 10px; }
+  .profile-pronouns { font-size: 13px; color: var(--ink4); margin-bottom: 8px; padding-left: 10px; }
   .profile-bio {
-    font-size: 12px; color: var(--ink2); line-height: 1.7;
+    font-size: 14px; color: var(--ink2); line-height: 1.7;
     margin-bottom: 10px; padding-left: 10px;
   }
-  .profile-bio-empty { font-size: 12px; color: var(--ink4); font-style: italic; margin-bottom: 10px; padding-left: 10px; }
+  .profile-bio-empty { font-size: 14px; color: var(--ink4); font-style: italic; margin-bottom: 10px; padding-left: 10px; }
   .profile-meta-row {
     display: flex; gap: 14px; flex-wrap: wrap;
   }
   .profile-meta-item {
-    font-size: 10px; color: var(--ink4); letter-spacing: 0.03em; padding-left: 10px;
+    font-size: 12px; color: var(--ink4); letter-spacing: 0.03em; padding-left: 10px; padding-bottom: 10px;
   }
   .profile-meta-item strong { color: var(--ink3); }
 
@@ -50,7 +50,7 @@
     border: 0.5px solid var(--border2);
     border-radius: var(--radius-sm);
     padding: 9px 12px; font-family: var(--font);
-    font-size: 12px; color: var(--ink); outline: none;
+    font-size: 14px; color: var(--ink); outline: none;
     margin-bottom: 8px;
   }
   .edit-textarea {
@@ -58,14 +58,14 @@
     border: 0.5px solid var(--border2);
     border-radius: var(--radius-sm);
     padding: 9px 12px; font-family: var(--font);
-    font-size: 12px; color: var(--ink); outline: none;
+    font-size: 14px; color: var(--ink); outline: none;
     resize: none; min-height: 70px; line-height: 1.6;
     margin-bottom: 8px;
   }
   .edit-save {
     background: var(--ink); color: var(--bg);
     border: none; border-radius: 99px; padding: 8px 20px;
-    font-size: 10px; font-weight: 600;
+    font-size: 12px; font-weight: 600;
     letter-spacing: 0.08em; text-transform: uppercase;
     cursor: pointer; font-family: var(--font);
   }
@@ -331,12 +331,11 @@
     <div class="profile-meta-row">
       {% if profile.age_group %}<div class="profile-meta-item"><strong>Age</strong> {{ profile.age_group }}</div>{% endif %}
       {% if profile.gender_expression %}<div class="profile-meta-item"><strong>Expression</strong> {{ profile.gender_expression|title }}</div>{% endif %}
-      <div class="profile-meta-item"><strong>Days alive</strong> {{ stats.days_alive or 0 }}</div>
     </div>
   </div>
 
   <div class="edit-form">
-    <div style="font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;">Edit Profile</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;">Edit Profile</div>
     <input class="edit-input" type="text" id="edit-name" placeholder="Display name" value="{{ player.display_name }}" maxlength="40" />
     <input class="edit-input" type="text" id="edit-pronouns" placeholder="Pronouns" value="{{ profile.pronouns or '' }}" maxlength="30" />
     <textarea class="edit-textarea" id="edit-bio" placeholder="Bio (max 300 chars)" maxlength="300">{{ profile.bio or '' }}</textarea>
