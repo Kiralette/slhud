@@ -12,17 +12,19 @@
   }
   .wellbeing-score {
     font-family: var(--font-head);
-    font-size: 48px;
+    font-size: 50px;
     font-weight: 300;
     color: var(--ink);
     line-height: 1;
+    padding-left: 18px;
   }
   .wellbeing-label {
-    font-size: 10px;
+    font-size: 14px;
     text-transform: uppercase;
     letter-spacing: .12em;
     color: var(--ink3);
     margin-top: 4px;
+    padding-left: 18px;
   }
   .needs-mini-grid {
     display: grid;
@@ -36,8 +38,8 @@
     padding: 8px 10px;
     text-align: center;
   }
-  .needs-mini-icon { font-size: 14px; }
-  .needs-mini-val { font-size: 12px; font-weight: 500; margin-top: 2px; }
+  .needs-mini-icon { font-size: 16px; }
+  .needs-mini-val { font-size: 14px; font-weight: 500; margin-top: 2px; }
   .needs-mini-val.ok { color: var(--green); }
   .needs-mini-val.warn { color: var(--amber); }
   .needs-mini-val.crit { color: var(--rose); }
@@ -204,7 +206,7 @@
   <div class="wellbeing-arc">
     <div class="wellbeing-score">{{ "%.0f"|format(wellbeing) }}</div>
     <div class="wellbeing-label">Overall Wellbeing</div>
-    <div style="font-size:11px;color:var(--ink3);margin-top:6px;">Average of all 7 needs · Purpose passively gains above 60</div>
+    <div style="font-size:13px;color:var(--ink3);margin-top:6px;padding-left: 18px;">Average of all 7 needs · Purpose passively gains above 60</div>
   </div>
 
   <div class="section-head">
