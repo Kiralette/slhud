@@ -50,10 +50,12 @@ async def rotate_weekly_specials():
     cfg = get_config()
     shop_items = cfg.get("shop_items", {})
 
-    # Build a pool of items that can go on special (exclude free water)
+    # Build a pool of food items only (exclude drinks and free items)
+    food_categories = {"food_snacks", "food_meals"}
     pool = [
         k for k, v in shop_items.items()
         if v.get("lumen_cost", 0) > 0
+        and v.get("category") in food_categories
     ]
     if not pool:
         return

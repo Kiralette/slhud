@@ -63,7 +63,7 @@
   <div class="chips-row">
     <button class="category-chip active" onclick="filterDrinks('all', this)">All</button>
     <button class="category-chip" onclick="filterDrinks('free', this)">Free</button>
-    <button class="category-chip" onclick="filterDrinks('drinks', this)">Drinks</button>
+    <button class="category-chip" onclick="filterDrinks('drinks', this)">Specialty</button>
   </div>
 
   <div class="section-head">
@@ -156,7 +156,7 @@
       } else if (cat === 'free') {
         el.style.display = (elCat === 'drinks_free') ? '' : 'none';
       } else if (cat === 'drinks') {
-        el.style.display = (elCat === 'drinks_paid') ? '' : 'none';
+        el.style.display = (elCat === 'drinks_paid' || elCat === 'drinks') ? '' : 'none';
       }
     });
   }

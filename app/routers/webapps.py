@@ -74,7 +74,7 @@ def build_shop_items(cfg: dict, categories: list[str] | None = None) -> list[dic
     """Build display-ready shop items from config."""
     items = []
     emoji_map = {
-        "water":         ("💧", "Crisp and free. Always.",          "drinks"),
+        "water":         ("💧", "Crisp and free, always!",          "drinks_free"),
         "basic_snack":   ("🥨", "Quick bite, light hunger fill.",    "snacks"),
         "basic_meal":    ("🍱", "Simple, filling, affordable.",      "meals"),
         "good_meal":     ("🍝", "A proper meal. Hits the spot.",     "meals"),
