@@ -9,12 +9,17 @@
     border-bottom: 0.5px solid var(--border);
   }
   .profile-avatar {
-    width: 52px; height: 52px; border-radius: 50%;
+    width: 72px; height: 72px; border-radius: 50%;
     background: var(--bg3); display: flex;
     align-items: center; justify-content: center;
     font-size: 22px; margin-top: 12px; margin-bottom: 12px;
     border: 0.5px solid var(--border2);
+    overflow: hidden;
   }
+  .profile-avatar img {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+  }
+  .profile-avatar .avatar-fallback { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
   .profile-name {
     font-family: var(--font-head);
     font-size: 26px; font-weight: 400; color: var(--ink);
@@ -308,7 +313,12 @@
 <!-- ══ PROFILE TAB ══════════════════════════════════════════════════════════ -->
 <div id="tab-profile" class="tab-panel active">
   <div class="profile-card">
-    <div class="profile-avatar">✦</div>
+    <div class="profile-avatar">
+      <img src="/players/avatar-image/{{ player.avatar_uuid }}"
+           alt="{{ player.display_name }}"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <span class="avatar-fallback" style="display:none;">✦</span>
+    </div>
     <div class="profile-name" id="display-name">{{ player.display_name }}</div>
     {% if profile.pronouns %}
     <div class="profile-pronouns">{{ profile.pronouns }}</div>
