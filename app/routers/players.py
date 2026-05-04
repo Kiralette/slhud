@@ -4,6 +4,7 @@ Compatible with both SQLite and PostgreSQL.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from app.database import get_db, is_postgres
 from app.services.auth import generate_token
 from app.models.player import RegisterRequest, RegisterResponse, PlayerResponse
@@ -113,3 +114,41 @@ async def get_player(player_id: int, db=Depends(get_db)):
         player_id=p["id"], avatar_uuid=p["avatar_uuid"], display_name=p["display_name"],
         registered_at=p["registered_at"], last_seen=p["last_seen"], is_online=bool(p["is_online"])
     )
+
+
+@router.get("/avatar-image/{avatar_uuid}")
+async def avatar_image(avatar_uuid: str, db=Depends(get_db)):
+    """Proxy SL avatar profile image — looks up stored texture UUID first."""
+    import httpx
+
+    pic_uuid = None
+    if is_postgres():
+        row = await db.fetchrow(
+            "SELECT profile_pic_uuid FROM player_profiles WHERE player_id = (SELECT id FROM players WHERE avatar_uuid = $1)",
+            avatar_uuid)
+        if row:
+            pic_uuid = row["profile_pic_uuid"]
+    else:
+        async with db.execute(
+            "SELECT profile_pic_uuid FROM player_profiles WHERE player_id = (SELECT id FROM players WHERE avatar_uuid = ?)",
+            (avatar_uuid,)
+        ) as cur:
+            row = await cur.fetchone()
+            if row:
+                pic_uuid = row["profile_pic_uuid"]
+
+    if not pic_uuid:
+        raise HTTPException(status_code=404, detail="No profile picture stored.")
+
+    url = f"https://secondlife.com/app/image/{pic_uuid}/1"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(url, follow_redirects=True, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            })
+            if r.status_code == 200:
+                content_type = r.headers.get("content-type", "image/jpeg")
+                return Response(content=r.content, media_type=content_type)
+    except Exception:
+        pass
+    raise HTTPException(status_code=404, detail="Avatar image not found.")
