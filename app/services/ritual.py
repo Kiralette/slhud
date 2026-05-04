@@ -455,3 +455,56 @@ async def _do_upsert_vibe(db, player_id: int, vibe_key: str, is_negative: int):
                VALUES (?, ?, ?)""",
             (player_id, vibe_key, is_negative))
         await db.commit()
+
+
+# ── Bedtime Reminders ─────────────────────────────────────────────────────────
+
+async def run_bedtime_reminders(db=None):
+    """
+    Every 5 min: check if any player's bedtime_slt matches current SLT time.
+    Fires a notification if within a 5-minute window of their set bedtime.
+    """
+    if db is None:
+        return
+
+    slt_now = datetime.now(timezone.utc) - timedelta(hours=7)
+    current_hhmm = slt_now.strftime("%H:%M")
+    current_h = slt_now.hour
+    current_m = slt_now.minute
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT player_id, bedtime_slt FROM player_settings
+               WHERE bedtime_slt IS NOT NULL AND is_muted = 0""")
+    else:
+        async with db.execute(
+            """SELECT player_id, bedtime_slt FROM player_settings
+               WHERE bedtime_slt IS NOT NULL AND is_muted = 0"""
+        ) as cur:
+            rows = await cur.fetchall()
+
+    for row in rows:
+        bedtime = row["bedtime_slt"]  # e.g. "23:00"
+        if not bedtime:
+            continue
+        try:
+            bh, bm = int(bedtime[:2]), int(bedtime[3:5])
+        except Exception:
+            continue
+
+        # Check if current SLT is within 5 minutes of bedtime
+        current_total = current_h * 60 + current_m
+        bedtime_total = bh * 60 + bm
+        diff = abs(current_total - bedtime_total)
+        # Handle midnight wrap
+        diff = min(diff, 1440 - diff)
+
+        if diff <= 4:
+            await push_notification(
+                player_id=row["player_id"],
+                app_source="recharge",
+                title="Bedtime 🌙",
+                body=f"Your bedtime reminder — time to rest.",
+                priority="normal",
+                db=db,
+            )
