@@ -459,52 +459,71 @@ async def _do_upsert_vibe(db, player_id: int, vibe_key: str, is_negative: int):
 
 # ── Bedtime Reminders ─────────────────────────────────────────────────────────
 
-async def run_bedtime_reminders(db=None):
+async def run_bedtime_reminders():
     """
     Every 5 min: check if any player's bedtime_slt matches current SLT time.
     Fires a notification if within a 5-minute window of their set bedtime.
+    Opens its own DB connection like decay.py.
     """
-    if db is None:
-        return
+    from app.database import get_db_url, get_db_path
 
     slt_now = datetime.now(timezone.utc) - timedelta(hours=7)
-    current_hhmm = slt_now.strftime("%H:%M")
     current_h = slt_now.hour
     current_m = slt_now.minute
+    current_total = current_h * 60 + current_m
 
     if is_postgres():
-        rows = await db.fetch(
-            """SELECT player_id, bedtime_slt FROM player_settings
-               WHERE bedtime_slt IS NOT NULL AND is_muted = 0""")
-    else:
-        async with db.execute(
-            """SELECT player_id, bedtime_slt FROM player_settings
-               WHERE bedtime_slt IS NOT NULL AND is_muted = 0"""
-        ) as cur:
-            rows = await cur.fetchall()
-
-    for row in rows:
-        bedtime = row["bedtime_slt"]  # e.g. "23:00"
-        if not bedtime:
-            continue
+        import asyncpg
+        url = get_db_url()
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        conn = await asyncpg.connect(url)
         try:
-            bh, bm = int(bedtime[:2]), int(bedtime[3:5])
-        except Exception:
-            continue
-
-        # Check if current SLT is within 5 minutes of bedtime
-        current_total = current_h * 60 + current_m
-        bedtime_total = bh * 60 + bm
-        diff = abs(current_total - bedtime_total)
-        # Handle midnight wrap
-        diff = min(diff, 1440 - diff)
-
-        if diff <= 4:
-            await push_notification(
-                player_id=row["player_id"],
-                app_source="recharge",
-                title="Bedtime 🌙",
-                body=f"Your bedtime reminder — time to rest.",
-                priority="normal",
-                db=db,
-            )
+            rows = await conn.fetch(
+                """SELECT player_id, bedtime_slt FROM player_settings
+                   WHERE bedtime_slt IS NOT NULL AND is_muted = 0""")
+            for row in rows:
+                bedtime = row["bedtime_slt"]
+                if not bedtime:
+                    continue
+                try:
+                    bh, bm = int(bedtime[:2]), int(bedtime[3:5])
+                except Exception:
+                    continue
+                bedtime_total = bh * 60 + bm
+                diff = abs(current_total - bedtime_total)
+                diff = min(diff, 1440 - diff)
+                if diff <= 4:
+                    await conn.execute(
+                        """INSERT INTO notifications (player_id, app_source, title, body, priority)
+                           VALUES ($1, 'recharge', 'Bedtime 🌙', 'Your bedtime reminder — time to rest.', 'normal')""",
+                        row["player_id"])
+        finally:
+            await conn.close()
+    else:
+        import aiosqlite
+        db_path = get_db_path()
+        async with aiosqlite.connect(db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                """SELECT player_id, bedtime_slt FROM player_settings
+                   WHERE bedtime_slt IS NOT NULL AND is_muted = 0"""
+            ) as cur:
+                rows = await cur.fetchall()
+            for row in rows:
+                bedtime = row["bedtime_slt"]
+                if not bedtime:
+                    continue
+                try:
+                    bh, bm = int(bedtime[:2]), int(bedtime[3:5])
+                except Exception:
+                    continue
+                bedtime_total = bh * 60 + bm
+                diff = abs(current_total - bedtime_total)
+                diff = min(diff, 1440 - diff)
+                if diff <= 4:
+                    await db.execute(
+                        """INSERT INTO notifications (player_id, app_source, title, body, priority)
+                           VALUES (?, 'recharge', 'Bedtime 🌙', 'Your bedtime reminder — time to rest.', 'normal')""",
+                        (row["player_id"],))
+            await db.commit()
