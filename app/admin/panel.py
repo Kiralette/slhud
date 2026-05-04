@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from app.database import get_db, is_postgres
 from app.services.needs import apply_vibe
+from app.services.economy import rotate_weekly_specials as _rotate_specials
 from app.config import get_config
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -135,6 +136,10 @@ async def admin_home(request: Request, db=Depends(get_db)):
       <div class="stat"><div class="stat-val">{events}</div><div class="stat-lbl">Total events logged</div></div>
       <div class="stat"><div class="stat-val">{active_vibes}</div><div class="stat-lbl">Active vibes</div></div>
     </div>
+    <h2>Actions</h2>
+    <form method="post" action="/admin/rotate_specials?secret={secret}">
+      <button type="submit">🔄 Rotate Weekly Specials Now</button>
+    </form>
     <h2>Players</h2>
     <table>
       <tr><th>ID</th><th>Name</th><th>UUID</th><th>Status</th><th>Needs</th><th>Last seen</th></tr>
@@ -245,3 +250,53 @@ async def admin_apply_vibe(player_id: int, request: Request, vibe_key: str = For
     if not is_postgres():
         await db.commit()
     return RedirectResponse(f"/admin/player/{player_id}?secret={secret}", status_code=303)
+
+
+@router.post("/rotate_specials", response_class=HTMLResponse)
+async def admin_rotate_specials(request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    cfg = get_config()
+    shop_items = cfg.get("shop_items", {})
+    import random
+    from datetime import datetime, timezone, timedelta
+
+    food_categories = {"food_snacks", "food_meals"}
+    pool = [
+        k for k, v in shop_items.items()
+        if v.get("lumen_cost", 0) > 0
+        and v.get("category") in food_categories
+    ]
+
+    count = random.randint(4, min(6, len(pool))) if pool else 0
+    chosen = random.sample(pool, count) if pool else []
+
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    next_week = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+
+    if is_postgres():
+        await db.execute("DELETE FROM weekly_specials WHERE is_pinned = 0")
+        for item_key in chosen:
+            base_cost = float(shop_items[item_key]["lumen_cost"])
+            discount = random.uniform(0.10, 0.30)
+            special_price = max(1.0, round(base_cost * (1 - discount)))
+            await db.execute(
+                """INSERT INTO weekly_specials
+                   (item_key, special_price, available_from, available_until, is_pinned, created_at)
+                   VALUES ($1, $2, $3, $4, 0, $5)""",
+                item_key, special_price, now_str, next_week, now_str)
+    else:
+        await db.execute("DELETE FROM weekly_specials WHERE is_pinned = 0")
+        for item_key in chosen:
+            base_cost = float(shop_items[item_key]["lumen_cost"])
+            discount = random.uniform(0.10, 0.30)
+            special_price = max(1.0, round(base_cost * (1 - discount)))
+            await db.execute(
+                """INSERT INTO weekly_specials
+                   (item_key, special_price, available_from, available_until, is_pinned, created_at)
+                   VALUES (?, ?, ?, ?, 0, ?)""",
+                (item_key, special_price, now_str, next_week, now_str))
+        await db.commit()
+
+    print(f"[admin] Manually rotated specials — {len(chosen)} items: {chosen}")
+    return RedirectResponse(f"/admin?secret={secret}", status_code=303)
