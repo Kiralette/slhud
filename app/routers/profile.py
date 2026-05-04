@@ -274,3 +274,37 @@ async def update_settings(body: SettingsUpdate, db=Depends(get_db)):
         await db.commit()
 
     return {"status": "updated"}
+
+
+# ── POST /profile/update-pic ──────────────────────────────────────────────────
+
+class ProfilePicUpdate(BaseModel):
+    token: str
+    profile_pic_uuid: str
+
+
+@router.post("/update-pic")
+async def update_profile_pic(body: ProfilePicUpdate, db=Depends(get_db)):
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    pic_uuid = body.profile_pic_uuid.strip()[:36]
+
+    if is_postgres():
+        await db.execute(
+            "INSERT INTO player_profiles (player_id) VALUES ($1) ON CONFLICT (player_id) DO NOTHING",
+            player_id)
+        await db.execute(
+            "UPDATE player_profiles SET profile_pic_uuid = $1 WHERE player_id = $2",
+            pic_uuid, player_id)
+    else:
+        await db.execute(
+            "INSERT OR IGNORE INTO player_profiles (player_id) VALUES (?)", (player_id,))
+        await db.execute(
+            "UPDATE player_profiles SET profile_pic_uuid = ? WHERE player_id = ?",
+            (pic_uuid, player_id))
+        await db.commit()
+
+    return {"status": "updated"}
