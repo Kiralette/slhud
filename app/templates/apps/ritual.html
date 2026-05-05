@@ -576,8 +576,18 @@
   <div class="scroll-pad"></div>
 </div>
 
-<!-- ── PREGNANCY QUESTIONNAIRE SHEET ── -->
-<div class="preg-sheet-overlay" id="preg-overlay" onclick="closePregSheet()"></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN = "{{ token }}";
+
+  // Inject pregnancy sheet outside app-scale so position:fixed works
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="preg-sheet-overlay" id="preg-overlay" onclick="closePregSheet()"></div>
 <div class="preg-sheet" id="preg-sheet">
   <div class="preg-sheet-handle"></div>
   <div class="preg-sheet-topbar">
@@ -658,14 +668,9 @@
     <div class="preg-subtitle" id="vibes-subtitle">These mood effects are tied to your current trimester and will shift as you progress.</div>
     <div id="preg-vibes-list" style="margin-bottom:6px;"></div>
     <button class="preg-next-btn" id="preg-submit-btn" onclick="submitPregnancy()">Start tracking 🤰</button>
-  </div>
-</div>
-{% endif %}
-{% endblock %}
-
-{% block extra_script %}
-<script>
-  const TOKEN = "{{ token }}";
+  </div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
 
   // ── Calendar state ──────────────────────────────────────────
   const PERIOD_DAYS  = {{ cycle_calendar_days | tojson }};
