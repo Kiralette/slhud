@@ -94,6 +94,7 @@ class AddOccurrence(BaseModel):
     sub_stage: str | None = None
     ends_at: str | None = None   # YYYY-MM-DD, optional
     metadata: dict | None = None
+    meta: dict | None = None     # alias — frontend sends 'meta', merged into metadata
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -186,7 +187,13 @@ async def add_occurrence(body: AddOccurrence, db=Depends(get_db)):
         return {"status": "already_active"}
 
     import json
-    meta = json.dumps(body.metadata or {})
+    # Merge body.meta (frontend key) into body.metadata, with meta taking precedence
+    merged = {}
+    if body.metadata:
+        merged.update(body.metadata)
+    if body.meta:
+        merged.update(body.meta)
+    meta = json.dumps(merged)
 
     sub_stage = body.sub_stage or None
 

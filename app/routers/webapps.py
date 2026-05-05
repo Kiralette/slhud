@@ -946,7 +946,47 @@ async def ritual(
                ORDER BY started_at DESC""", (player_id,)
         ) as cur:
             occurrences_rows = await cur.fetchall()
-    occurrences = [dict(r) for r in occurrences_rows]
+
+    import json as _json
+    from datetime import timedelta as _td
+    occurrences = []
+    for r in occurrences_rows:
+        d = dict(r)
+        # Enrich pregnancy occurrences with calculated date info for the banner
+        if d.get("occurrence_key") == "pregnancy":
+            try:
+                meta = _json.loads(d.get("metadata") or "{}")
+                length_weeks = int(meta.get("pregnancy_length") or 40)
+                length_days  = length_weeks * 7
+                # Resolve conception date
+                conception = None
+                lmp = meta.get("lmp_date")
+                due = meta.get("due_date")
+                if lmp:
+                    conception = date.fromisoformat(lmp[:10])
+                elif due:
+                    conception = date.fromisoformat(due[:10]) - _td(days=length_days)
+                else:
+                    conception = date.fromisoformat(d["started_at"][:10])
+                due_date = conception + _td(days=length_days)
+                weeks_in = max(0, (today - conception).days // 7)
+                t2_day   = round(length_days / 3)
+                t3_day   = round(2 * length_days / 3)
+                t1_end_week = t2_day // 7
+                t2_end_week = t3_day // 7
+                d["pregnancy_info"] = {
+                    "weeks_in":      weeks_in,
+                    "due_date":      due_date.isoformat(),
+                    "total_weeks":   length_weeks,
+                    "t1_end_week":   t1_end_week,
+                    "t2_end_week":   t2_end_week,
+                    "gender_reveal": meta.get("gender_reveal"),
+                    "multiples":     meta.get("multiples", "no"),
+                    "progress_pct":  min(100, round((weeks_in / length_weeks) * 100)),
+                }
+            except Exception:
+                d["pregnancy_info"] = None
+        occurrences.append(d)
 
     return templates.TemplateResponse(request, "apps/ritual.html", {
         "token":                token,

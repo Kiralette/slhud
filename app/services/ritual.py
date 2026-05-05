@@ -252,46 +252,99 @@ async def _update_player_prediction(player_id: int, db):
 
 # ── Pregnancy Progression ─────────────────────────────────────────────────────
 
+# ── Pregnancy Progression ─────────────────────────────────────────────────────
+
+def _calc_pregnancy_dates(started_at_str: str, metadata: dict) -> tuple[date, date, date, date]:
+    """
+    Returns (conception_date, t2_start, t3_start, due_date) based on metadata.
+    pregnancy_length is in weeks (stored as string e.g. '40').
+    Falls back to started_at + 40 weeks if no date info available.
+    """
+    import json
+
+    length_weeks = int(metadata.get("pregnancy_length") or 40)
+    length_days  = length_weeks * 7
+
+    # Resolve conception/start date
+    conception: date | None = None
+
+    lmp_str = metadata.get("lmp_date")
+    due_str = metadata.get("due_date")
+
+    if lmp_str:
+        try:
+            conception = date.fromisoformat(lmp_str[:10])
+        except Exception:
+            pass
+
+    if conception is None and due_str:
+        try:
+            due = date.fromisoformat(due_str[:10])
+            conception = due - timedelta(days=length_days)
+        except Exception:
+            pass
+
+    if conception is None:
+        try:
+            conception = date.fromisoformat(started_at_str[:10])
+        except Exception:
+            conception = date.today()
+
+    due_date = conception + timedelta(days=length_days)
+    t2_start = conception + timedelta(days=round(length_days / 3))
+    t3_start = conception + timedelta(days=round(2 * length_days / 3))
+
+    return conception, t2_start, t3_start, due_date
+
+
 async def run_pregnancy_progression(db=None):
     """
-    Daily midnight: advance pregnancy trimesters at day 14 and 28.
-    Resolve at day 42 and auto-add new_parent occurrence.
+    Daily midnight: advance pregnancy trimesters based on actual dates from metadata.
+    Trimester boundaries are calculated dynamically from pregnancy_length and LMP/due date.
+    Resolves at due date and auto-adds new_parent.
+    Applies/removes fatigue and nesting vibes per player opt-in.
     """
     if db is None:
         return
 
+    import json
     today = date.today()
 
     if is_postgres():
         rows = await db.fetch(
-            """SELECT id, player_id, started_at, sub_stage
+            """SELECT id, player_id, started_at, sub_stage, metadata
                FROM player_occurrences
                WHERE occurrence_key = 'pregnancy' AND is_resolved = 0""")
     else:
         async with db.execute(
-            """SELECT id, player_id, started_at, sub_stage
+            """SELECT id, player_id, started_at, sub_stage, metadata
                FROM player_occurrences
                WHERE occurrence_key = 'pregnancy' AND is_resolved = 0"""
         ) as cur:
             rows = await cur.fetchall()
 
     for row in rows:
+        occ_id    = row["id"]
+        player_id = row["player_id"]
+        current_stage = row["sub_stage"] or "trimester_1"
+
         try:
-            started = date.fromisoformat(row["started_at"][:10])
+            meta = json.loads(row["metadata"] or "{}")
+        except Exception:
+            meta = {}
+
+        try:
+            conception, t2_start, t3_start, due_date = _calc_pregnancy_dates(
+                row["started_at"], meta)
         except Exception:
             continue
 
-        days_in = (today - started).days
-        current_stage = row["sub_stage"] or "trimester_1"
-        occ_id    = row["id"]
-        player_id = row["player_id"]
-
-        if days_in >= 42:
-            # Resolve pregnancy
+        # ── Resolve at due date ──────────────────────────────────────────────
+        if today >= due_date:
             if is_postgres():
                 await db.execute(
-                    "UPDATE player_occurrences SET is_resolved = 1 WHERE id = $1", occ_id)
-                # Auto-add new_parent
+                    "UPDATE player_occurrences SET is_resolved = 1, ends_at = $1 WHERE id = $2",
+                    today.isoformat(), occ_id)
                 await db.execute(
                     """INSERT INTO player_occurrences (player_id, occurrence_key, sub_stage)
                        VALUES ($1, 'new_parent', 'active')
@@ -299,7 +352,8 @@ async def run_pregnancy_progression(db=None):
                     player_id)
             else:
                 await db.execute(
-                    "UPDATE player_occurrences SET is_resolved = 1 WHERE id = ?", (occ_id,))
+                    "UPDATE player_occurrences SET is_resolved = 1, ends_at = ? WHERE id = ?",
+                    (today.isoformat(), occ_id))
                 await db.execute(
                     """INSERT OR IGNORE INTO player_occurrences (player_id, occurrence_key, sub_stage)
                        VALUES (?, 'new_parent', 'active')""",
@@ -309,42 +363,67 @@ async def run_pregnancy_progression(db=None):
                 player_id=player_id,
                 app_source="canvas",
                 title="Pregnancy complete 🌟",
-                body="New chapter beginning.",
+                body="A new chapter is beginning.",
                 priority="normal",
                 db=db,
             )
+            continue
 
-        elif days_in >= 28 and current_stage != "trimester_3":
+        # ── Advance trimester ────────────────────────────────────────────────
+        new_stage = current_stage
+        if today >= t3_start:
+            new_stage = "trimester_3"
+        elif today >= t2_start:
+            new_stage = "trimester_2"
+        else:
+            new_stage = "trimester_1"
+
+        if new_stage != current_stage:
             if is_postgres():
                 await db.execute(
-                    "UPDATE player_occurrences SET sub_stage = 'trimester_3' WHERE id = $1", occ_id)
+                    "UPDATE player_occurrences SET sub_stage = $1 WHERE id = $2",
+                    new_stage, occ_id)
             else:
                 await db.execute(
-                    "UPDATE player_occurrences SET sub_stage = 'trimester_3' WHERE id = ?", (occ_id,))
-            await push_notification(
-                player_id=player_id,
-                app_source="canvas",
-                title="Entering Third Trimester 🤰",
-                body="Almost there.",
-                priority="normal",
-                db=db,
-            )
+                    "UPDATE player_occurrences SET sub_stage = ? WHERE id = ?",
+                    (new_stage, occ_id))
 
-        elif days_in >= 14 and current_stage == "trimester_1":
-            if is_postgres():
-                await db.execute(
-                    "UPDATE player_occurrences SET sub_stage = 'trimester_2' WHERE id = $1", occ_id)
+            labels = {
+                "trimester_2": ("Entering Second Trimester 🤰", "Your pregnancy is progressing."),
+                "trimester_3": ("Entering Third Trimester 🤰", "Almost there."),
+            }
+            if new_stage in labels:
+                title, body = labels[new_stage]
+                await push_notification(
+                    player_id=player_id,
+                    app_source="canvas",
+                    title=title,
+                    body=body,
+                    priority="normal",
+                    db=db,
+                )
+
+        # ── Vibe management ──────────────────────────────────────────────────
+        weeks_in = (today - conception).days // 7
+
+        # Fatigue: trimester 1 (weeks 1-13) and trimester 3 (weeks 27+)
+        if meta.get("vibe_fatigue", True):
+            if new_stage in ("trimester_1", "trimester_3"):
+                await _do_upsert_vibe(db, player_id, "pregnancy_fatigue", 1)
             else:
-                await db.execute(
-                    "UPDATE player_occurrences SET sub_stage = 'trimester_2' WHERE id = ?", (occ_id,))
-            await push_notification(
-                player_id=player_id,
-                app_source="canvas",
-                title="Entering Second Trimester 🤰",
-                body="Your pregnancy is progressing.",
-                priority="normal",
-                db=db,
-            )
+                # Remove fatigue in T2
+                if is_postgres():
+                    await db.execute(
+                        "DELETE FROM vibes WHERE player_id = $1 AND vibe_key = 'pregnancy_fatigue'",
+                        player_id)
+                else:
+                    await db.execute(
+                        "DELETE FROM vibes WHERE player_id = ? AND vibe_key = 'pregnancy_fatigue'",
+                        (player_id,))
+
+        # Nesting: trimester 3 only
+        if meta.get("vibe_nesting", True) and new_stage == "trimester_3":
+            await _do_upsert_vibe(db, player_id, "pregnancy_nesting", 0)
 
     if not is_postgres():
         await db.commit()

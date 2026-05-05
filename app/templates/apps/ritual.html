@@ -193,6 +193,112 @@
   }
   .community-rsvp-btn:active { background: var(--amber-light); }
 
+  /* ── Pregnancy questionnaire sheet ── */
+  .preg-sheet-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(28,24,20,0.45); z-index: 400;
+    backdrop-filter: blur(2px);
+  }
+  .preg-sheet-overlay.open { display: block; }
+  .preg-sheet {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 500px;
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    border-top: 0.5px solid var(--border);
+    padding: 0 0 40px;
+    z-index: 401;
+    max-height: 88vh; overflow-y: auto;
+    transition: transform .35s cubic-bezier(.32,1,.6,1);
+    transform: translateX(-50%) translateY(100%);
+  }
+  .preg-sheet.open { transform: translateX(-50%) translateY(0); }
+  .preg-sheet-handle {
+    width: 36px; height: 4px; background: var(--bg4);
+    border-radius: 2px; margin: 12px auto 0;
+  }
+  .preg-sheet-topbar {
+    padding: 14px 18px 12px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .preg-sheet-back {
+    background: none; border: none; font-family: var(--font);
+    font-size: 12px; color: var(--ink3); cursor: pointer; padding: 0;
+  }
+  .preg-sheet-title {
+    font-family: var(--font-head); font-size: 18px;
+    font-weight: 400; color: var(--ink);
+  }
+  .preg-sheet-step {
+    margin-left: auto; font-size: 10px;
+    color: var(--ink4); font-weight: 500;
+  }
+  .preg-screen { display: none; padding: 20px 18px 20px; }
+  .preg-screen.active { display: block; }
+  .preg-progress { height: 3px; background: var(--bg3); border-radius: 2px; margin-bottom: 22px; }
+  .preg-progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width .3s ease; }
+  .preg-question {
+    font-family: var(--font-head); font-size: 20px;
+    font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 6px;
+  }
+  .preg-subtitle { font-size: 11px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
+  .preg-options { display: flex; flex-direction: column; gap: 10px; }
+  .preg-option {
+    padding: 14px 16px; background: var(--bg2);
+    border: 0.5px solid var(--border); border-radius: var(--radius);
+    font-family: var(--font); font-size: 13px; color: var(--ink2);
+    cursor: pointer; text-align: left; transition: all .15s; width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .preg-option:active, .preg-option.selected {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .preg-option-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .preg-input {
+    width: 100%; padding: 14px 16px;
+    border: 0.5px solid var(--border2); border-radius: var(--radius);
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font); font-size: 14px; outline: none;
+    box-sizing: border-box;
+  }
+  .preg-input:focus { border-color: var(--gold); }
+  .preg-next-btn {
+    width: 100%; margin-top: 14px; padding: 14px;
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: var(--radius);
+    font-family: var(--font); font-size: 14px;
+    font-weight: 500; cursor: pointer;
+  }
+  .preg-next-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .preg-skip {
+    display: block; text-align: center; margin-top: 10px;
+    font-size: 11px; color: var(--ink4); cursor: pointer;
+    background: none; border: none; font-family: var(--font);
+    width: 100%; padding: 6px 0;
+  }
+  .preg-toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .preg-toggle-label { font-size: 13px; color: var(--ink2); }
+  .preg-toggle-sub { font-size: 11px; color: var(--ink4); margin-top: 2px; }
+  .preg-toggle {
+    width: 44px; height: 26px; border-radius: 13px;
+    background: var(--bg4); border: none; cursor: pointer;
+    position: relative; transition: background .2s; flex-shrink: 0;
+  }
+  .preg-toggle.on { background: var(--green); }
+  .preg-toggle::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: white; top: 3px; left: 3px;
+    transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(28,24,20,.2);
+  }
+  .preg-toggle.on::after { transform: translateX(18px); }
+
   /* ── Pregnancy ── */
   .pregnancy-banner {
     margin: 0 18px 14px;
@@ -427,21 +533,29 @@
   {% if pregnancy %}
     {% set stage = pregnancy.sub_stage or 'trimester_1' %}
     {% set started = pregnancy.started_at[:10] if pregnancy.started_at else '' %}
+    {% set info = pregnancy.pregnancy_info %}
     <div class="pregnancy-banner {{ stage }}">
       <div class="pregnancy-trimester">
         {% if stage == 'trimester_1' %}First Trimester
         {% elif stage == 'trimester_2' %}Second Trimester
         {% else %}Third Trimester{% endif %}
-        · Started {{ started }}
+        · Week {{ info.weeks_in if info else '?' }} of {{ info.total_weeks if info else '40' }}
       </div>
-      <div class="pregnancy-title">🤰 Expecting</div>
+      <div class="pregnancy-title">🤰 Expecting{% if info and info.multiples == 'twins' %} Twins{% elif info and info.multiples == 'triplets' %} Triplets{% endif %}</div>
       <div class="pregnancy-sub">
-        {% if stage == 'trimester_1' %}Weeks 1–2 · Early days
-        {% elif stage == 'trimester_2' %}Weeks 3–4 · Things are progressing
-        {% else %}Weeks 5–6 · Almost there{% endif %}
+        {% if info %}
+          {% if stage == 'trimester_1' %}Weeks 1–{{ info.t1_end_week }} · Early days
+          {% elif stage == 'trimester_2' %}Weeks {{ info.t1_end_week + 1 }}–{{ info.t2_end_week }} · Things are progressing
+          {% else %}Weeks {{ info.t2_end_week + 1 }}–{{ info.total_weeks }} · Almost there{% endif %}
+          · Due {{ info.due_date }}
+        {% else %}
+          {% if stage == 'trimester_1' %}Weeks 1–13 · Early days
+          {% elif stage == 'trimester_2' %}Weeks 14–26 · Things are progressing
+          {% else %}Weeks 27–40 · Almost there{% endif %}
+        {% endif %}
       </div>
       <div class="pregnancy-progress">
-        <div class="pregnancy-progress-fill" style="width:{% if stage == 'trimester_1' %}33{% elif stage == 'trimester_2' %}66{% else %}90{% endif %}%;"></div>
+        <div class="pregnancy-progress-fill" style="width:{{ info.progress_pct if info else (33 if stage == 'trimester_1' else (66 if stage == 'trimester_2' else 90)) }}%;"></div>
       </div>
       <button class="cycle-log-btn secondary" onclick="resolvePregnancy({{ pregnancy.id }})">Mark as resolved</button>
     </div>
@@ -449,7 +563,7 @@
     <div class="info-card" style="margin:0 18px 14px;">
       <p>Not currently tracking a pregnancy. Start below if applicable.</p>
     </div>
-    <button class="cycle-log-btn secondary" onclick="startPregnancy()">🤰 Mark as pregnant</button>
+    <button class="cycle-log-btn secondary" onclick="openPregSheet()">🤰 Mark as pregnant</button>
   {% endif %}
 
   <div class="section-head" style="padding-top:18px;">
@@ -483,6 +597,125 @@
   <div class="scroll-pad"></div>
 </div>
 {% endif %}
+<!-- ── PREGNANCY QUESTIONNAIRE SHEET ── -->
+<div class="preg-sheet-overlay" id="preg-overlay" onclick="closePregSheet()"></div>
+<div class="preg-sheet" id="preg-sheet">
+  <div class="preg-sheet-handle"></div>
+  <div class="preg-sheet-topbar">
+    <button class="preg-sheet-back" id="preg-back" onclick="pregBack()" style="display:none;">←</button>
+    <div class="preg-sheet-title" id="preg-title">Pregnancy Setup</div>
+    <div class="preg-sheet-step" id="preg-step"></div>
+  </div>
+
+  <!-- Step 1: Trimester -->
+  <div class="preg-screen active" id="preg-screen-0">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:14%"></div></div>
+    <div class="preg-question">Which trimester are you in?</div>
+    <div class="preg-subtitle">This sets the banner style and milestone tracking.</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="pregPick(this,'sub_stage','trimester_1')">🌱 First Trimester · Weeks 1–13</button>
+      <button class="preg-option" onclick="pregPick(this,'sub_stage','trimester_2')">🌿 Second Trimester · Weeks 14–26</button>
+      <button class="preg-option" onclick="pregPick(this,'sub_stage','trimester_3')">🌸 Third Trimester · Weeks 27–40</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Due date / LMP -->
+  <div class="preg-screen" id="preg-screen-1">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:28%"></div></div>
+    <div class="preg-question">When is your due date?</div>
+    <div class="preg-subtitle">Or your last menstrual period (LMP) date — whichever you know.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Due Date</label>
+      <input class="preg-input" type="date" id="preg-due-date" />
+      <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-top:4px;">LMP Date</label>
+      <input class="preg-input" type="date" id="preg-lmp-date" />
+    </div>
+    <button class="preg-next-btn" onclick="pregNext()">Continue →</button>
+    <button class="preg-skip" onclick="pregSkip()">Skip this step</button>
+  </div>
+
+  <!-- Step 3: Pregnancy length -->
+  <div class="preg-screen" id="preg-screen-2">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:42%"></div></div>
+    <div class="preg-question">Is this a typical length pregnancy?</div>
+    <div class="preg-subtitle">Standard is 40 weeks. Some pregnancies differ — select what applies.</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="pregPick(this,'pregnancy_length','40')">👶 40 weeks · Standard</button>
+      <button class="preg-option" onclick="pregPick(this,'pregnancy_length','37')">⏱️ 37 weeks · Early term</button>
+      <button class="preg-option" onclick="pregPick(this,'pregnancy_length','42')">📅 42 weeks · Post-term</button>
+      <button class="preg-option" onclick="pregPick(this,'pregnancy_length','custom')">✏️ I'll track manually</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Multiples -->
+  <div class="preg-screen" id="preg-screen-3">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:57%"></div></div>
+    <div class="preg-question">Is this a multiple pregnancy?</div>
+    <div class="preg-subtitle">Twins, triplets, or more.</div>
+    <div class="preg-options preg-option-grid">
+      <button class="preg-option" onclick="pregPick(this,'multiples','no')">👶 No, single</button>
+      <button class="preg-option" onclick="pregPick(this,'multiples','twins')">👶👶 Twins</button>
+      <button class="preg-option" onclick="pregPick(this,'multiples','triplets')">👶👶👶 Triplets</button>
+      <button class="preg-option" onclick="pregPick(this,'multiples','unknown')">🤷 Not sure yet</button>
+    </div>
+  </div>
+
+  <!-- Step 5: Gender reveal -->
+  <div class="preg-screen" id="preg-screen-4">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:71%"></div></div>
+    <div class="preg-question">Gender reveal style?</div>
+    <div class="preg-subtitle">This is for in-world reveal vibes only — purely for fun.</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','girl')">💗 Girl</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','boy')">💙 Boy</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','nonbinary')">💜 Nonbinary</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','surprise')">🎀 Keeping it a surprise</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','random')">🎲 Randomise it for me</button>
+    </div>
+  </div>
+
+  <!-- Step 6: Co-parent -->
+  <div class="preg-screen" id="preg-screen-5">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:85%"></div></div>
+    <div class="preg-question">Add a co-parent to track with?</div>
+    <div class="preg-subtitle">Enter their display name to link the pregnancy to their profile too. Both players will see the banner.</div>
+    <input class="preg-input" type="text" id="preg-coparent" placeholder="Display name (optional)" maxlength="40" autocomplete="off" />
+    <button class="preg-next-btn" onclick="pregNext()">Continue →</button>
+    <button class="preg-skip" onclick="pregSkip()">No co-parent</button>
+  </div>
+
+  <!-- Step 7: Vibes opt-in -->
+  <div class="preg-screen" id="preg-screen-6">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:100%"></div></div>
+    <div class="preg-question">Pregnancy-related vibes</div>
+    <div class="preg-subtitle">These are optional mood and status effects that trigger during pregnancy milestones.</div>
+    <div style="margin-bottom:6px;">
+      <div class="preg-toggle-row">
+        <div>
+          <div class="preg-toggle-label">Nesting vibe</div>
+          <div class="preg-toggle-sub">Boost to home / comfort needs in trimester 3</div>
+        </div>
+        <button class="preg-toggle on" id="toggle-nesting" onclick="togglePreg(this,'vibe_nesting')"></button>
+      </div>
+      <div class="preg-toggle-row">
+        <div>
+          <div class="preg-toggle-label">Fatigue vibe</div>
+          <div class="preg-toggle-sub">Slight energy drain during trimester 1 & 3</div>
+        </div>
+        <button class="preg-toggle on" id="toggle-fatigue" onclick="togglePreg(this,'vibe_fatigue')"></button>
+      </div>
+      <div class="preg-toggle-row" style="border-bottom:none;">
+        <div>
+          <div class="preg-toggle-label">Milestone notifications</div>
+          <div class="preg-toggle-sub">Weekly check-ins and milestone pings</div>
+        </div>
+        <button class="preg-toggle on" id="toggle-milestones" onclick="togglePreg(this,'vibe_milestones')"></button>
+      </div>
+    </div>
+    <button class="preg-next-btn" id="preg-submit-btn" onclick="submitPregnancy()">Start tracking 🤰</button>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_script %}
@@ -684,20 +917,139 @@
     } catch(e) { toast('Connection error'); }
   }
 
- async function startPregnancy() {
-  const res = await fetch('/occurrences/add', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ token: TOKEN, occurrence_key: 'pregnancy', sub_stage: 'trimester_1' })
-  });
+  // ── Pregnancy questionnaire ────────────────────────────────────────────────
 
-  if (res.ok) {
-    toast('Pregnancy tracking started 🤰');
-    setTimeout(() => location.reload(), 1500);
-  } else {
-    toast('Something went wrong.');
+  const PREG_TOTAL_STEPS = 7;
+  let pregStep = 0;
+  let pregData = {
+    sub_stage: 'trimester_1',
+    due_date: null,
+    lmp_date: null,
+    pregnancy_length: '40',
+    multiples: 'no',
+    gender_reveal: 'surprise',
+    coparent: null,
+    vibe_nesting: true,
+    vibe_fatigue: true,
+    vibe_milestones: true,
+  };
+
+  function openPregSheet() {
+    pregStep = 0;
+    pregData = {
+      sub_stage: 'trimester_1', due_date: null, lmp_date: null,
+      pregnancy_length: '40', multiples: 'no', gender_reveal: 'surprise',
+      coparent: null, vibe_nesting: true, vibe_fatigue: true, vibe_milestones: true,
+    };
+    // Reset toggles
+    ['toggle-nesting','toggle-fatigue','toggle-milestones'].forEach(id => {
+      document.getElementById(id)?.classList.add('on');
+    });
+    showPregScreen(0);
+    document.getElementById('preg-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('preg-sheet').classList.add('open'), 10);
+    document.getElementById('preg-back').style.display = 'none';
+    document.getElementById('preg-step').textContent = '1 / ' + PREG_TOTAL_STEPS;
+    document.getElementById('preg-title').textContent = 'Pregnancy Setup';
   }
-}
+
+  function closePregSheet() {
+    document.getElementById('preg-sheet').classList.remove('open');
+    document.getElementById('preg-overlay').classList.remove('open');
+  }
+
+  function showPregScreen(n) {
+    document.querySelectorAll('.preg-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('preg-screen-' + n)?.classList.add('active');
+    document.getElementById('preg-step').textContent = (n + 1) + ' / ' + PREG_TOTAL_STEPS;
+    document.getElementById('preg-back').style.display = n > 0 ? 'block' : 'none';
+    document.getElementById('preg-sheet').scrollTop = 0;
+  }
+
+  function pregBack() {
+    if (pregStep > 0) { pregStep--; showPregScreen(pregStep); }
+  }
+
+  function pregPick(btn, key, val) {
+    // Deselect siblings
+    btn.closest('.preg-options, .preg-option-grid')
+      .querySelectorAll('.preg-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    pregData[key] = val;
+    setTimeout(pregNext, 280);
+  }
+
+  function pregNext() {
+    // Collect any input-based step values before advancing
+    if (pregStep === 1) {
+      pregData.due_date = document.getElementById('preg-due-date').value || null;
+      pregData.lmp_date = document.getElementById('preg-lmp-date').value || null;
+    }
+    if (pregStep === 5) {
+      pregData.coparent = document.getElementById('preg-coparent').value.trim() || null;
+    }
+    pregStep++;
+    if (pregStep < PREG_TOTAL_STEPS) showPregScreen(pregStep);
+  }
+
+  function pregSkip() {
+    pregStep++;
+    if (pregStep < PREG_TOTAL_STEPS) showPregScreen(pregStep);
+  }
+
+  function togglePreg(btn, key) {
+    btn.classList.toggle('on');
+    pregData[key] = btn.classList.contains('on');
+  }
+
+  async function submitPregnancy() {
+    const btn = document.getElementById('preg-submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    // Randomise gender if requested
+    if (pregData.gender_reveal === 'random') {
+      const opts = ['girl', 'boy', 'nonbinary'];
+      pregData.gender_reveal = opts[Math.floor(Math.random() * opts.length)];
+    }
+
+    try {
+      const res = await fetch('/occurrences/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          token: TOKEN,
+          occurrence_key: 'pregnancy',
+          sub_stage: pregData.sub_stage,
+          meta: {
+            due_date:         pregData.due_date,
+            lmp_date:         pregData.lmp_date,
+            pregnancy_length: pregData.pregnancy_length,
+            multiples:        pregData.multiples,
+            gender_reveal:    pregData.gender_reveal,
+            coparent:         pregData.coparent,
+            vibe_nesting:     pregData.vibe_nesting,
+            vibe_fatigue:     pregData.vibe_fatigue,
+            vibe_milestones:  pregData.vibe_milestones,
+          }
+        })
+      });
+
+      if (res.ok) {
+        closePregSheet();
+        toast('Pregnancy tracking started 🤰');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        toast('Something went wrong.');
+        btn.disabled = false;
+        btn.textContent = 'Start tracking 🤰';
+      }
+    } catch(e) {
+      toast('Connection error');
+      btn.disabled = false;
+      btn.textContent = 'Start tracking 🤰';
+    }
+  }
 
   async function resolvePregnancy(occId) {
     const res = await fetch(`/occurrences/${occId}?token=${TOKEN}`, { method: 'DELETE' });
