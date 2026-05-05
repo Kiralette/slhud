@@ -294,6 +294,62 @@
   .pregnancy-sub { font-size: 11px; color: var(--ink3); margin-bottom: 12px; }
   .pregnancy-progress { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
   .pregnancy-progress-fill { height: 100%; border-radius: 2px; background: var(--rose); }
+
+  /* ── Cycle sheet ── */
+  .cycle-sheet-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(28,24,20,0.45); z-index: 400;
+    backdrop-filter: blur(2px);
+  }
+  .cycle-sheet-overlay.open { display: block; }
+  .cycle-sheet {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 500px;
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    border-top: 0.5px solid var(--border);
+    padding: 0 0 48px; z-index: 401;
+    max-height: 80vh; overflow-y: auto;
+    transition: transform .35s cubic-bezier(.32,1,.6,1);
+  }
+  .cycle-sheet.open { transform: translateX(-50%) translateY(0); }
+  .cycle-sheet-handle { width: 36px; height: 4px; background: var(--bg4); border-radius: 2px; margin: 12px auto 0; }
+  .cycle-sheet-topbar {
+    padding: 14px 18px 12px; border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .cycle-sheet-title { font-family: var(--font-head); font-size: 18px; font-weight: 400; color: var(--ink); }
+  .cycle-screen { display: none; padding: 20px 18px; }
+  .cycle-screen.active { display: block; }
+  .cycle-question { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
+  .cycle-subtitle { font-size: 11px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
+  .cycle-options { display: flex; flex-direction: column; gap: 10px; }
+  .cycle-option {
+    padding: 14px 16px; background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius); font-family: var(--font); font-size: 13px; color: var(--ink2);
+    cursor: pointer; text-align: left; transition: all .15s; width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cycle-option:active, .cycle-option.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .cycle-next-btn {
+    width: 100%; margin-top: 14px; padding: 14px; background: var(--ink); color: var(--bg);
+    border: none; border-radius: var(--radius); font-family: var(--font);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .cycle-next-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .cycle-input {
+    width: 100%; padding: 14px 16px; border: 0.5px solid var(--border2);
+    border-radius: var(--radius); background: var(--bg); color: var(--ink);
+    font-family: var(--font); font-size: 14px; outline: none; box-sizing: border-box;
+    margin-bottom: 10px;
+  }
+  .cycle-input:focus { border-color: var(--gold); }
+  .cycle-dur-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  .cycle-dur-btn {
+    padding: 12px 6px; background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px;
+    color: var(--ink2); cursor: pointer; text-align: center; transition: all .15s;
+  }
+  .cycle-dur-btn.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 </style>
 {% endblock %}
 
@@ -500,9 +556,7 @@
   </div>
   {% endif %}
 
-  <button class="cycle-log-btn" onclick="logCycleStart()">🌙 I started today</button>
-  <button class="cycle-log-btn secondary" onclick="logCycleEnd()">✓ I finished today</button>
-  <button class="cycle-log-btn secondary" onclick="skipCycle()">↷ Skip this cycle</button>
+  <button class="cycle-log-btn" onclick="openCycleSheet()">🌙 Log cycle</button>
 
   <div class="section-head" style="padding-top:18px;">
     <div class="section-head-title">Pregnancy</div>
@@ -583,6 +637,56 @@
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
+
+  // Inject cycle sheet outside app-scale
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="cycle-sheet-overlay" id="cycle-overlay" onclick="closeCycleSheet()"></div>
+<div class="cycle-sheet" id="cycle-sheet">
+  <div class="cycle-sheet-handle"></div>
+  <div class="cycle-sheet-topbar">
+    <div class="cycle-sheet-title">Cycle Log</div>
+  </div>
+
+  <!-- Screen 0: What's happening -->
+  <div class="cycle-screen active" id="cycle-screen-0">
+    <div class="cycle-question">What's happening?</div>
+    <div class="cycle-subtitle">Log where you are in your cycle today.</div>
+    <div class="cycle-options">
+      <button class="cycle-option" onclick="cyclePick(this,'action','start')">🌙 My period started</button>
+      <button class="cycle-option" onclick="cyclePick(this,'action','end')">✓ My period ended</button>
+      <button class="cycle-option" onclick="cyclePick(this,'action','skip')">↷ Skip / no period this cycle</button>
+    </div>
+    <button class="cycle-next-btn" id="cycle-next-0" onclick="cycleNext()" disabled>Continue →</button>
+  </div>
+
+  <!-- Screen 1: Duration (only for start) -->
+  <div class="cycle-screen" id="cycle-screen-1">
+    <div class="cycle-question">How long does it usually last?</div>
+    <div class="cycle-subtitle">Pick the closest number of days. You can adjust later.</div>
+    <div class="cycle-dur-row" id="cycle-dur-row">
+      <button class="cycle-dur-btn" onclick="cycleDur(this, 3)">3d</button>
+      <button class="cycle-dur-btn" onclick="cycleDur(this, 4)">4d</button>
+      <button class="cycle-dur-btn" onclick="cycleDur(this, 5)">5d</button>
+      <button class="cycle-dur-btn" onclick="cycleDur(this, 6)">6d</button>
+      <button class="cycle-dur-btn" onclick="cycleDur(this, 7)">7d</button>
+      <button class="cycle-dur-btn" onclick="cycleDur(this, 8)">8d</button>
+    </div>
+    <button class="cycle-next-btn" id="cycle-next-1" onclick="cycleNext()" disabled>Continue →</button>
+  </div>
+
+  <!-- Screen 2: Date -->
+  <div class="cycle-screen" id="cycle-screen-2">
+    <div class="cycle-question">Which date?</div>
+    <div class="cycle-subtitle">Defaults to today — change if you're logging retroactively.</div>
+    <input class="cycle-input" type="date" id="cycle-date-input" />
+    <button class="cycle-next-btn" onclick="submitCycle()">Log it ✓</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+    // Set default date
+    document.getElementById('cycle-date-input').value = todayStr();
+  })();
 
   // Inject pregnancy sheet outside app-scale so position:fixed works
   (function() {
@@ -819,51 +923,84 @@
     } catch(e) { btn.disabled = false; btn.textContent = 'RSVP'; }
   }
 
-  // ── Cycle logging ───────────────────────────────────────────
+  // ── Cycle sheet ─────────────────────────────────────────────
 
-  async function logCycleStart() {
-    const dur = parseInt(prompt('How many days does your period usually last? (3–8)', '5'));
-    if (!dur || isNaN(dur)) return;
-    const today = todayStr();
-    try {
-      const res = await fetch('/cycle/log-start', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token: TOKEN, cycle_start_slt: today, period_duration_days: dur })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast('Period logged 🌙');
-        setTimeout(() => location.reload(), 1400);
-      } else {
-        toast(data.detail || 'Could not log');
-      }
-    } catch(e) { toast('Connection error'); }
+  let cycleData = { action: null, duration: 5, screen: 0 };
+
+  function openCycleSheet() {
+    cycleData = { action: null, duration: 5, screen: 0 };
+    document.querySelectorAll('.cycle-option').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.cycle-dur-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('cycle-next-0').disabled = true;
+    document.getElementById('cycle-next-1').disabled = true;
+    document.getElementById('cycle-date-input').value = todayStr();
+    showCycleScreen(0);
+    document.getElementById('cycle-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('cycle-sheet').classList.add('open'), 10);
   }
 
-  async function logCycleEnd() {
-    const today = todayStr();
-    try {
-      const res = await fetch('/cycle/log-end', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token: TOKEN, cycle_end_slt: today })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast(`Period ended — ${data.cycle_length_days}d cycle ✓`);
-        setTimeout(() => location.reload(), 1400);
-      } else {
-        toast(data.detail || 'Could not log');
-      }
-    } catch(e) { toast('Connection error'); }
+  function closeCycleSheet() {
+    document.getElementById('cycle-sheet').classList.remove('open');
+    document.getElementById('cycle-overlay').classList.remove('open');
   }
 
-  async function skipCycle() {
+  function showCycleScreen(n) {
+    document.querySelectorAll('.cycle-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('cycle-screen-' + n).classList.add('active');
+    cycleData.screen = n;
+  }
+
+  function cyclePick(btn, key, val) {
+    btn.closest('.cycle-options').querySelectorAll('.cycle-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    cycleData[key] = val;
+    document.getElementById('cycle-next-0').disabled = false;
+  }
+
+  function cycleDur(btn, val) {
+    document.querySelectorAll('.cycle-dur-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    cycleData.duration = val;
+    document.getElementById('cycle-next-1').disabled = false;
+  }
+
+  function cycleNext() {
+    if (cycleData.screen === 0) {
+      if (cycleData.action === 'skip') { submitCycle(); return; }
+      if (cycleData.action === 'start') { showCycleScreen(1); return; }
+      if (cycleData.action === 'end') { showCycleScreen(2); return; }
+    }
+    if (cycleData.screen === 1) { showCycleScreen(2); return; }
+  }
+
+  async function submitCycle() {
+    const date = document.getElementById('cycle-date-input') ?
+      document.getElementById('cycle-date-input').value || todayStr() : todayStr();
+    closeCycleSheet();
     try {
-      const res = await fetch('/cycle/skip', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token: TOKEN })
-      });
-      if (res.ok) toast('Cycle skipped');
+      if (cycleData.action === 'start') {
+        const res = await fetch('/cycle/log-start', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: TOKEN, cycle_start_slt: date, period_duration_days: cycleData.duration })
+        });
+        const data = await res.json();
+        if (res.ok) { toast('Period logged 🌙'); setTimeout(() => location.reload(), 1400); }
+        else toast(data.detail || 'Could not log');
+      } else if (cycleData.action === 'end') {
+        const res = await fetch('/cycle/log-end', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: TOKEN, cycle_end_slt: date })
+        });
+        const data = await res.json();
+        if (res.ok) { toast('Period ended ✓'); setTimeout(() => location.reload(), 1400); }
+        else toast(data.detail || 'Could not log');
+      } else if (cycleData.action === 'skip') {
+        const res = await fetch('/cycle/skip', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: TOKEN })
+        });
+        if (res.ok) { toast('Cycle skipped ↷'); setTimeout(() => location.reload(), 1400); }
+      }
     } catch(e) { toast('Connection error'); }
   }
 
