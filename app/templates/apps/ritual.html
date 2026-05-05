@@ -578,6 +578,91 @@
 {% endif %}
 {% endblock %}
 
+<!-- ── PREGNANCY QUESTIONNAIRE SHEET ── -->
+<div class="preg-sheet-overlay" id="preg-overlay" onclick="closePregSheet()"></div>
+<div class="preg-sheet" id="preg-sheet">
+  <div class="preg-sheet-handle"></div>
+  <div class="preg-sheet-topbar">
+    <button class="preg-sheet-back" id="preg-back" onclick="pregBack()" style="display:none;">←</button>
+    <div class="preg-sheet-title" id="preg-title">Pregnancy Setup</div>
+    <div class="preg-sheet-step" id="preg-step"></div>
+  </div>
+
+  <!-- Step 0: Trimester -->
+  <div class="preg-screen active" id="preg-screen-0">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:16%"></div></div>
+    <div class="preg-question">Where are you in your pregnancy?</div>
+    <div class="preg-subtitle">Pick the stage that feels right — this is for your narrative, not a medical calculation. You can update it anytime.</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="pregPick(this,'sub_stage','trimester_1')">🌱 First Trimester · The beginning. Lots of feelings, big news.</button>
+      <button class="preg-option" onclick="pregPick(this,'sub_stage','trimester_2')">🌿 Second Trimester · The bloom. Showing, moving, glowing.</button>
+      <button class="preg-option" onclick="pregPick(this,'sub_stage','trimester_3')">🌸 Third Trimester · The home stretch. Almost ready.</button>
+    </div>
+  </div>
+
+  <!-- Step 1: Pregnancy length -->
+  <div class="preg-screen" id="preg-screen-1">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:33%"></div></div>
+    <div class="preg-question">How long is your pregnancy?</div>
+    <div class="preg-subtitle">Standard is 40 weeks. In Second Life, fast pregnancies are common — slide down for a shorter term. This sets how quickly trimesters advance and when you're due.</div>
+    <div class="preg-slider-wrap">
+      <div class="preg-slider-val" id="slider-display">40 weeks</div>
+      <div class="preg-slider-sub" id="slider-sub">~280 days · Standard term</div>
+      <input class="preg-slider" type="range" min="1" max="40" value="40" id="preg-length-slider" oninput="updateSlider(this.value)" />
+      <div class="preg-slider-label"><span>1 wk</span><span>10 wks</span><span>20 wks</span><span>30 wks</span><span>40 wks</span></div>
+    </div>
+    <button class="preg-next-btn" onclick="pregNext()">Continue →</button>
+  </div>
+
+  <!-- Step 2: Due date / LMP -->
+  <div class="preg-screen" id="preg-screen-2">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:50%"></div></div>
+    <div class="preg-question">Do you have a due date?</div>
+    <div class="preg-subtitle">Optional. If you know your due date or last period date, add it and the system will calculate trimester transitions automatically. Skip if you're just tracking narratively.</div>
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Due Date</label>
+    <input class="preg-input" type="date" id="preg-due-date" style="margin-bottom:14px;" />
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Last Period (LMP)</label>
+    <input class="preg-input" type="date" id="preg-lmp-date" />
+    <button class="preg-next-btn" onclick="pregNext()">Continue →</button>
+    <button class="preg-skip" onclick="pregSkip()">Skip — I'll track manually</button>
+  </div>
+
+  <!-- Step 3: Multiples -->
+  <div class="preg-screen" id="preg-screen-3">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:66%"></div></div>
+    <div class="preg-question">Is this a multiple pregnancy?</div>
+    <div class="preg-options preg-option-grid">
+      <button class="preg-option" onclick="pregPick(this,'multiples','no')">👶 Single</button>
+      <button class="preg-option" onclick="pregPick(this,'multiples','twins')">👶👶 Twins</button>
+      <button class="preg-option" onclick="pregPick(this,'multiples','triplets')">👶👶👶 Triplets</button>
+      <button class="preg-option" onclick="pregPick(this,'multiples','unknown')">🤷 Not sure</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Gender reveal -->
+  <div class="preg-screen" id="preg-screen-4">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:83%"></div></div>
+    <div class="preg-question">Gender reveal style?</div>
+    <div class="preg-subtitle">In-world flavor only — just for fun.</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','girl')">💗 Girl</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','boy')">💙 Boy</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','nonbinary')">💜 Nonbinary</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','surprise')">🎀 Keeping it a surprise</button>
+      <button class="preg-option" onclick="pregPick(this,'gender_reveal','random')">🎲 Randomise it for me</button>
+    </div>
+  </div>
+
+  <!-- Step 5: Vibes (trimester-aware) -->
+  <div class="preg-screen" id="preg-screen-5">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:100%"></div></div>
+    <div class="preg-question">Pregnancy vibes</div>
+    <div class="preg-subtitle" id="vibes-subtitle">These mood effects are tied to your current trimester and will shift as you progress.</div>
+    <div id="preg-vibes-list" style="margin-bottom:6px;"></div>
+    <button class="preg-next-btn" id="preg-submit-btn" onclick="submitPregnancy()">Start tracking 🤰</button>
+  </div>
+</div>
+
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
