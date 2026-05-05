@@ -404,26 +404,48 @@ async def run_pregnancy_progression(db=None):
                 )
 
         # ── Vibe management ──────────────────────────────────────────────────
-        weeks_in = (today - conception).days // 7
+        # vibes dict in metadata stores per-vibe opt-in: {"morning_sickness": true, ...}
+        vibe_prefs = meta.get("vibes", {})
 
-        # Fatigue: trimester 1 (weeks 1-13) and trimester 3 (weeks 27+)
-        if meta.get("vibe_fatigue", True):
-            if new_stage in ("trimester_1", "trimester_3"):
-                await _do_upsert_vibe(db, player_id, "pregnancy_fatigue", 1)
+        # Vibes that auto-apply or randomly fire per trimester
+        # Only apply if player opted in (default True if key missing — opt-in by default)
+        T1_AUTO = ["so_tired"]       # conditional auto-vibes we can apply directly
+        T2_AUTO = []
+        T3_AUTO = ["nesting_hard", "almost_there"]
+
+        # Remove vibes from other trimesters when stage changes
+        ALL_PREG_VIBES = [
+            "morning_sickness", "pregnancy_glowing", "so_tired", "telling_people",
+            "nesting", "uncomfortable", "feeling_movements",
+            "nesting_hard", "ready_now_please", "almost_there",
+        ]
+
+        STAGE_VIBES = {
+            "trimester_1": ["morning_sickness", "pregnancy_glowing", "so_tired", "telling_people"],
+            "trimester_2": ["nesting", "uncomfortable", "feeling_movements"],
+            "trimester_3": ["nesting_hard", "ready_now_please", "almost_there"],
+        }
+
+        # Clear vibes from stages we're no longer in
+        stale_vibes = [v for v in ALL_PREG_VIBES if v not in STAGE_VIBES.get(new_stage, [])]
+        for vk in stale_vibes:
+            if is_postgres():
+                await db.execute(
+                    "DELETE FROM vibes WHERE player_id = $1 AND vibe_key = $2", player_id, vk)
             else:
-                # Remove fatigue in T2
-                if is_postgres():
-                    await db.execute(
-                        "DELETE FROM vibes WHERE player_id = $1 AND vibe_key = 'pregnancy_fatigue'",
-                        player_id)
-                else:
-                    await db.execute(
-                        "DELETE FROM vibes WHERE player_id = ? AND vibe_key = 'pregnancy_fatigue'",
-                        (player_id,))
+                await db.execute(
+                    "DELETE FROM vibes WHERE player_id = ? AND vibe_key = ?", (player_id, vk))
 
-        # Nesting: trimester 3 only
-        if meta.get("vibe_nesting", True) and new_stage == "trimester_3":
-            await _do_upsert_vibe(db, player_id, "pregnancy_nesting", 0)
+        # Apply nesting_hard in T3 if opted in
+        if new_stage == "trimester_3" and vibe_prefs.get("nesting_hard", True):
+            await _do_upsert_vibe(db, player_id, "nesting_hard", 0)
+
+        # almost_there fires in final days of T3
+        if new_stage == "trimester_3" and vibe_prefs.get("almost_there", True):
+            total_days = (pregData_length := meta.get("pregnancy_length", 40)) and int(pregData_length) * 7
+            days_in_t3 = (today - t3_start).days
+            if days_in_t3 >= (int(meta.get("pregnancy_length", 40)) * 7 // 3) - 2:
+                await _do_upsert_vibe(db, player_id, "almost_there", 0)
 
     if not is_postgres():
         await db.commit()
