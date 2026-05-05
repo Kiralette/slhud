@@ -933,8 +933,23 @@ async def ritual(
     holidays_this_month = {k: v["emoji"] for k, v in all_holidays.items()
                            if k.startswith(f"{current_month:02d}-")}
 
+    # Active occurrences (pregnancy, period, etc.)
+    if is_postgres():
+        occurrences_rows = await db.fetch(
+            """SELECT * FROM player_occurrences
+               WHERE player_id = $1 AND is_resolved = 0
+               ORDER BY started_at DESC""", player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM player_occurrences
+               WHERE player_id = ? AND is_resolved = 0
+               ORDER BY started_at DESC""", (player_id,)
+        ) as cur:
+            occurrences_rows = await cur.fetchall()
+    occurrences = [dict(r) for r in occurrences_rows]
+
     return templates.TemplateResponse(request, "apps/ritual.html", {
-"token":                token,
+        "token":                token,
         "player":               player,
         "today":                today.isoformat(),
         "current_year":         current_year,
@@ -949,6 +964,7 @@ async def ritual(
         "cycle_prediction":     cycle_prediction,
         "cycle_calendar_days":  cycle_prediction.get("calendar_days", {}),
         "holidays_this_month":  holidays_this_month,
+        "occurrences":          occurrences,
     })
 
 
