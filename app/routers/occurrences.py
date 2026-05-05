@@ -91,6 +91,7 @@ OCCURRENCE_DISPLAY = {
 class AddOccurrence(BaseModel):
     token: str
     occurrence_key: str
+    sub_stage: str | None = None
     ends_at: str | None = None   # YYYY-MM-DD, optional
     metadata: dict | None = None
 
@@ -187,19 +188,21 @@ async def add_occurrence(body: AddOccurrence, db=Depends(get_db)):
     import json
     meta = json.dumps(body.metadata or {})
 
+    sub_stage = body.sub_stage or None
+
     if is_postgres():
         occ_id = await db.fetchval(
             """INSERT INTO player_occurrences
-               (player_id, occurrence_key, ends_at, metadata)
-               VALUES ($1, $2, $3, $4)
+               (player_id, occurrence_key, sub_stage, ends_at, metadata)
+               VALUES ($1, $2, $3, $4, $5)
                RETURNING id""",
-            player_id, key, body.ends_at, meta)
+            player_id, key, sub_stage, body.ends_at, meta)
     else:
         async with db.execute(
             """INSERT INTO player_occurrences
-               (player_id, occurrence_key, ends_at, metadata)
-               VALUES (?, ?, ?, ?)""",
-            (player_id, key, body.ends_at, meta)
+               (player_id, occurrence_key, sub_stage, ends_at, metadata)
+               VALUES (?, ?, ?, ?, ?)""",
+            (player_id, key, sub_stage, body.ends_at, meta)
         ) as cur:
             occ_id = cur.lastrowid
         await db.commit()
