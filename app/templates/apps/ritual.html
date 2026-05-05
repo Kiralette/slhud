@@ -192,6 +192,22 @@
     transition: background .15s;
   }
   .community-rsvp-btn:active { background: var(--amber-light); }
+
+  /* ── Pregnancy ── */
+  .pregnancy-banner {
+    margin: 0 18px 14px;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    border: 0.5px solid var(--border2);
+  }
+  .pregnancy-banner.trimester_1 { background: var(--bg2); }
+  .pregnancy-banner.trimester_2 { background: #fdf6e8; border-color: rgba(154,124,78,0.2); }
+  .pregnancy-banner.trimester_3 { background: var(--rose-light); border-color: rgba(156,80,80,0.2); }
+  .pregnancy-trimester { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink3); margin-bottom: 4px; }
+  .pregnancy-title { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); margin-bottom: 2px; }
+  .pregnancy-sub { font-size: 11px; color: var(--ink3); margin-bottom: 12px; }
+  .pregnancy-progress { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+  .pregnancy-progress-fill { height: 100%; border-radius: 2px; background: var(--rose); }
 </style>
 {% endblock %}
 
@@ -401,6 +417,40 @@
   <button class="cycle-log-btn" onclick="logCycleStart()">🌙 I started today</button>
   <button class="cycle-log-btn secondary" onclick="logCycleEnd()">✓ I finished today</button>
   <button class="cycle-log-btn secondary" onclick="skipCycle()">↷ Skip this cycle</button>
+
+  <div class="section-head" style="padding-top:18px;">
+    <div class="section-head-title">Pregnancy</div>
+  </div>
+
+  {% set pregnancy = occurrences | selectattr('occurrence_key', 'equalto', 'pregnancy') | list | first | default(none) %}
+
+  {% if pregnancy %}
+    {% set stage = pregnancy.sub_stage or 'trimester_1' %}
+    {% set started = pregnancy.started_at[:10] if pregnancy.started_at else '' %}
+    <div class="pregnancy-banner {{ stage }}">
+      <div class="pregnancy-trimester">
+        {% if stage == 'trimester_1' %}First Trimester
+        {% elif stage == 'trimester_2' %}Second Trimester
+        {% else %}Third Trimester{% endif %}
+        · Started {{ started }}
+      </div>
+      <div class="pregnancy-title">🤰 Expecting</div>
+      <div class="pregnancy-sub">
+        {% if stage == 'trimester_1' %}Weeks 1–2 · Early days
+        {% elif stage == 'trimester_2' %}Weeks 3–4 · Things are progressing
+        {% else %}Weeks 5–6 · Almost there{% endif %}
+      </div>
+      <div class="pregnancy-progress">
+        <div class="pregnancy-progress-fill" style="width:{% if stage == 'trimester_1' %}33{% elif stage == 'trimester_2' %}66{% else %}90{% endif %}%;"></div>
+      </div>
+      <button class="cycle-log-btn secondary" onclick="resolvePregnancy({{ pregnancy.id }})">Mark as resolved</button>
+    </div>
+  {% else %}
+    <div class="info-card" style="margin:0 18px 14px;">
+      <p>Not currently tracking a pregnancy. Start below if applicable.</p>
+    </div>
+    <button class="cycle-log-btn secondary" onclick="startPregnancy()">🤰 Mark as pregnant</button>
+  {% endif %}
 
   <div class="section-head" style="padding-top:18px;">
     <div class="section-head-title">History</div>
@@ -632,6 +682,22 @@
       });
       if (res.ok) toast('Cycle skipped');
     } catch(e) { toast('Connection error'); }
+  }
+
+  async function startPregnancy() {
+    const res = await fetch('/occurrences/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token: TOKEN, occurrence_key: 'pregnancy', sub_stage: 'trimester_1' })
+    });
+    if (res.ok) { showToast('Pregnancy tracking started 🤰'); setTimeout(() => location.reload(), 1500); }
+    else showToast('Something went wrong.');
+  }
+
+  async function resolvePregnancy(occId) {
+    const res = await fetch(`/occurrences/${occId}?token=${TOKEN}`, { method: 'DELETE' });
+    if (res.ok) { showToast('Pregnancy resolved ✓'); setTimeout(() => location.reload(), 1500); }
+    else showToast('Something went wrong.');
   }
 </script>
 {% endblock %}
