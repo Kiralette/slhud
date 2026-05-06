@@ -467,6 +467,65 @@ async def _init_sqlite():
         """)
 
         await db.commit()
+
+        # ── Cycle & Reproductive Health Migrations ────────────────────────────
+        # Safe ALTER TABLE pattern for SQLite (ignore if column already exists)
+        migrations_sqlite = [
+            # player_profiles — cycle tracking fields
+            "ALTER TABLE player_profiles ADD COLUMN cycle_tracking_mode TEXT DEFAULT NULL",
+            "ALTER TABLE player_profiles ADD COLUMN cycle_setup_completed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE player_profiles ADD COLUMN avg_period_duration INTEGER DEFAULT 5",
+            "ALTER TABLE player_profiles ADD COLUMN default_cycle_length INTEGER DEFAULT 28",
+            "ALTER TABLE player_profiles ADD COLUMN infertility_flag INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE player_profiles ADD COLUMN birth_control_active INTEGER NOT NULL DEFAULT 0",
+            # cycle_log — phase and override fields
+            "ALTER TABLE cycle_log ADD COLUMN cycle_phase TEXT DEFAULT NULL",
+            "ALTER TABLE cycle_log ADD COLUMN ovulation_date_slt TEXT DEFAULT NULL",
+            "ALTER TABLE cycle_log ADD COLUMN is_override INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE cycle_log ADD COLUMN override_note TEXT DEFAULT NULL",
+            # player_occurrences — surrogate/partner linking
+            "ALTER TABLE player_occurrences ADD COLUMN linked_player_uuid TEXT DEFAULT NULL",
+        ]
+        for sql in migrations_sqlite:
+            try:
+                await db.execute(sql)
+            except Exception:
+                pass  # Column already exists
+
+        # New tables
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS intimacy_log (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id    INTEGER NOT NULL REFERENCES players(id),
+                logged_date  TEXT    NOT NULL,
+                cycle_log_id INTEGER DEFAULT NULL REFERENCES cycle_log(id),
+                partner_uuid TEXT    DEFAULT NULL,
+                logged_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS cycle_phase_log (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id    INTEGER NOT NULL REFERENCES players(id),
+                phase        TEXT    NOT NULL,
+                start_date   TEXT    NOT NULL,
+                end_date     TEXT    DEFAULT NULL,
+                cycle_log_id INTEGER DEFAULT NULL REFERENCES cycle_log(id)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS ttc_conception_checks (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                cycle_log_id    INTEGER NOT NULL REFERENCES cycle_log(id),
+                intimacy_count  INTEGER NOT NULL DEFAULT 0,
+                peak_day_hit    INTEGER NOT NULL DEFAULT 0,
+                result          TEXT    DEFAULT NULL,
+                checked_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        await db.commit()
         print("   Database tables ready (SQLite)")
 
 
@@ -873,5 +932,57 @@ async def _init_postgres():
         """)
 
         print("   Database tables ready (PostgreSQL)")
+
+        # ── Cycle & Reproductive Health Migrations (Postgres) ─────────────────
+        migrations_pg = [
+            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS cycle_tracking_mode TEXT DEFAULT NULL",
+            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS cycle_setup_completed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS avg_period_duration INTEGER DEFAULT 5",
+            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS default_cycle_length INTEGER DEFAULT 28",
+            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS infertility_flag INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS birth_control_active INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS cycle_phase TEXT DEFAULT NULL",
+            "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS ovulation_date_slt TEXT DEFAULT NULL",
+            "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS is_override INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS override_note TEXT DEFAULT NULL",
+            "ALTER TABLE player_occurrences ADD COLUMN IF NOT EXISTS linked_player_uuid TEXT DEFAULT NULL",
+        ]
+        for sql in migrations_pg:
+            try:
+                await conn.execute(sql)
+            except Exception:
+                pass
+
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS intimacy_log (
+                id           SERIAL PRIMARY KEY,
+                player_id    INTEGER NOT NULL REFERENCES players(id),
+                logged_date  TEXT    NOT NULL,
+                cycle_log_id INTEGER DEFAULT NULL REFERENCES cycle_log(id),
+                partner_uuid TEXT    DEFAULT NULL,
+                logged_at    TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS cycle_phase_log (
+                id           SERIAL PRIMARY KEY,
+                player_id    INTEGER NOT NULL REFERENCES players(id),
+                phase        TEXT    NOT NULL,
+                start_date   TEXT    NOT NULL,
+                end_date     TEXT    DEFAULT NULL,
+                cycle_log_id INTEGER DEFAULT NULL REFERENCES cycle_log(id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS ttc_conception_checks (
+                id              SERIAL PRIMARY KEY,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                cycle_log_id    INTEGER NOT NULL REFERENCES cycle_log(id),
+                intimacy_count  INTEGER NOT NULL DEFAULT 0,
+                peak_day_hit    INTEGER NOT NULL DEFAULT 0,
+                result          TEXT    DEFAULT NULL,
+                checked_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
     finally:
         await conn.close()

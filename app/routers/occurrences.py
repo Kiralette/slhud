@@ -37,6 +37,9 @@ VALID_OCCURRENCES = {
     # Physical health
     "injury", "illness", "recovery", "surgery", "chronic_condition",
     "pregnancy", "new_parent",
+    # Reproductive / cycle
+    "ttc_traditional", "ttc_ivf", "ttc_surrogate_intended", "ttc_surrogate_carrier",
+    "period", "fertile_window_active", "postpartum",
     # Life transitions
     "moving", "new_home", "studying", "graduation", "loss_of_loved_one",
     "major_birthday", "new_pet",
@@ -67,6 +70,13 @@ OCCURRENCE_DISPLAY = {
     "chronic_condition":   ("Chronic Condition 💊",   "physical_health"),
     "pregnancy":           ("Pregnant 🤰",            "physical_health"),
     "new_parent":          ("New Parent 🍼",          "physical_health"),
+    "ttc_traditional":     ("Trying to Conceive 🌸",  "reproductive"),
+    "ttc_ivf":             ("IVF Journey 💙",          "reproductive"),
+    "ttc_surrogate_intended": ("Expecting via Surrogate 💛", "reproductive"),
+    "ttc_surrogate_carrier":  ("Surrogate Carrier 💜",      "reproductive"),
+    "period":              ("Period 🌙",               "reproductive"),
+    "fertile_window_active": ("Fertile Window 🌿",    "reproductive"),
+    "postpartum":          ("Postpartum 🌱",           "reproductive"),
     "moving":              ("Moving 📦",              "life_transition"),
     "new_home":            ("Settled In 🏠",          "life_transition"),
     "studying":            ("Studying 📚",            "life_transition"),
@@ -92,9 +102,10 @@ class AddOccurrence(BaseModel):
     token: str
     occurrence_key: str
     sub_stage: str | None = None
-    ends_at: str | None = None   # YYYY-MM-DD, optional
+    ends_at: str | None = None
     metadata: dict | None = None
-    meta: dict | None = None     # alias — frontend sends 'meta', merged into metadata
+    meta: dict | None = None          # alias — frontend sends 'meta'
+    linked_player_uuid: str | None = None  # for surrogate/partner linking
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -196,20 +207,21 @@ async def add_occurrence(body: AddOccurrence, db=Depends(get_db)):
     meta = json.dumps(merged)
 
     sub_stage = body.sub_stage or None
+    linked_uuid = body.linked_player_uuid or None
 
     if is_postgres():
         occ_id = await db.fetchval(
             """INSERT INTO player_occurrences
-               (player_id, occurrence_key, sub_stage, ends_at, metadata)
-               VALUES ($1, $2, $3, $4, $5)
+               (player_id, occurrence_key, sub_stage, ends_at, metadata, linked_player_uuid)
+               VALUES ($1, $2, $3, $4, $5, $6)
                RETURNING id""",
-            player_id, key, sub_stage, body.ends_at, meta)
+            player_id, key, sub_stage, body.ends_at, meta, linked_uuid)
     else:
         async with db.execute(
             """INSERT INTO player_occurrences
-               (player_id, occurrence_key, sub_stage, ends_at, metadata)
-               VALUES (?, ?, ?, ?, ?)""",
-            (player_id, key, sub_stage, body.ends_at, meta)
+               (player_id, occurrence_key, sub_stage, ends_at, metadata, linked_player_uuid)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (player_id, key, sub_stage, body.ends_at, meta, linked_uuid)
         ) as cur:
             occ_id = cur.lastrowid
         await db.commit()

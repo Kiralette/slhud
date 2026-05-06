@@ -1219,6 +1219,110 @@ occurrence_vibes:
     daily_chance: 0.3
     trimester: 3
 
+  # ── Cycle phases ──────────────────────────────────────────────────────────
+  phase_follicular:
+    vibe_key:    "phase_follicular"
+    display:     "Rising Energy ✨"
+    description: "Follicular phase — Energy restores faster, Social gains +10%."
+    is_negative: 0
+    auto: true
+
+  phase_ovulatory:
+    vibe_key:    "phase_ovulatory"
+    display:     "Peak Energy 🌟"
+    description: "Ovulatory phase — Social +15%, confidence at its highest."
+    is_negative: 0
+    auto: true
+
+  phase_luteal:
+    vibe_key:    "phase_luteal"
+    display:     "Turning Inward 🌙"
+    description: "Luteal phase — Fun decay slightly faster, Purpose gains more meaningful."
+    is_negative: 0
+    auto: true
+
+  phase_pms:
+    vibe_key:    "phase_pms"
+    display:     "PMS 😤"
+    description: "Late luteal — Energy -5, Social drains faster, craving boost."
+    is_negative: 1
+    auto: true
+    daily_chance: 0.6
+
+  # ── TTC — Trying to Conceive ──────────────────────────────────────────────
+  ttc_hopeful:
+    vibe_key:    "ttc_hopeful"
+    display:     "Hopeful 🌸"
+    description: "Trying to conceive — Purpose +5 passive, gentle optimism."
+    is_negative: 0
+    auto: true
+
+  ttc_stress:
+    vibe_key:    "ttc_stress"
+    display:     "The Wait 😞"
+    description: "Been trying a while — Fun -5, Social slightly draining."
+    is_negative: 1
+    daily_chance: 0.4
+
+  fertile_window:
+    vibe_key:    "fertile_window"
+    display:     "Fertile Window 🌿"
+    description: "Peak fertile days — Social +5, Purpose +8."
+    is_negative: 0
+    auto: true
+
+  cycle_aware:
+    vibe_key:    "cycle_aware"
+    display:     "Cycle Aware 📅"
+    description: "Tracking your cycle actively — Knowledge XP +5% passive."
+    is_negative: 0
+    auto: true
+
+  # ── IVF ───────────────────────────────────────────────────────────────────
+  ivf_hopeful:
+    vibe_key:    "ivf_hopeful"
+    display:     "Hopeful 🌸"
+    description: "IVF journey — Purpose +8, emotional resilience."
+    is_negative: 0
+    auto: true
+
+  ivf_exhausted:
+    vibe_key:    "ivf_exhausted"
+    display:     "Exhausted 😮‍💨"
+    description: "Stimulation phase — Energy -10, needs decay faster."
+    is_negative: 1
+    auto: true
+
+  ivf_anxious:
+    vibe_key:    "ivf_anxious"
+    display:     "The Wait 🌀"
+    description: "Two week wait — Fun harder to restore, Purpose fluctuates."
+    is_negative: 1
+    auto: true
+
+  # ── Surrogacy ─────────────────────────────────────────────────────────────
+  surrogate_anticipating:
+    vibe_key:    "surrogate_anticipating"
+    display:     "Anticipating 💛"
+    description: "Waiting for your baby — Purpose +10, Social warmth."
+    is_negative: 0
+    auto: true
+
+  surrogate_carrying:
+    vibe_key:    "surrogate_carrying"
+    display:     "Carrying for Someone 💜"
+    description: "Surrogate carrier — Purpose +15, all pregnancy phase vibes apply."
+    is_negative: 0
+    auto: true
+
+  # ── Postpartum (placeholder) ──────────────────────────────────────────────
+  postpartum_recovering:
+    vibe_key:    "postpartum_recovering"
+    display:     "Recovering 🌱"
+    description: "Postpartum — gentle energy restoration, Purpose finding its way back."
+    is_negative: 0
+    auto: true
+
   # New parent
   sleep_deprived:
     vibe_key:    "sleep_deprived"

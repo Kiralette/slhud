@@ -19,7 +19,7 @@ from app.services.flare import run_follower_engine, run_brand_deal_check
 from app.services.ritual import (
     run_calendar_reminders, run_holiday_vibe_engine,
     run_cycle_prediction_update, run_pregnancy_progression, run_period_vibe_engine,
-    run_bedtime_reminders
+    run_bedtime_reminders, run_phase_vibe_engine, run_ttc_conception_checks
 )
 from app.services.unexpected import run_unexpected_event_engine
 from app.services.traits import run_trait_vibe_engine
@@ -49,6 +49,8 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(run_cycle_prediction_update, "cron", hour=0, minute=2, id="cycle_prediction")
     scheduler.add_job(run_pregnancy_progression, "cron", hour=0, minute=3, id="pregnancy_progression")
     scheduler.add_job(run_period_vibe_engine, "cron", hour=0, minute=4, id="period_vibes")
+    scheduler.add_job(run_phase_vibe_engine, "cron", hour=0, minute=6, id="phase_vibes")
+    scheduler.add_job(run_ttc_conception_checks, "cron", hour=0, minute=7, id="ttc_conception")
     scheduler.add_job(run_unexpected_event_engine, "cron", hour=0, minute=5, id="unexpected_events")
     scheduler.add_job(run_trait_vibe_engine, "cron", hour=0, minute=10, id="trait_vibes")
     scheduler.start()

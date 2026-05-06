@@ -803,7 +803,25 @@ async def ritual(
             profile_row = await cur.fetchone()
 
     agab = (dict(profile_row)["biology_agab"] if profile_row else "") or ""
-    show_cycle_tab = agab.lower() in ("female", "intersex")
+
+    # Cycle tab: show to anyone who's set it up, or who has female/intersex biology
+    if is_postgres():
+        cycle_profile_row = await db.fetchrow(
+            """SELECT cycle_setup_completed, cycle_tracking_mode, default_cycle_length,
+                      avg_period_duration, infertility_flag, birth_control_active
+               FROM player_profiles WHERE player_id = $1""", player_id)
+    else:
+        async with db.execute(
+            """SELECT cycle_setup_completed, cycle_tracking_mode, default_cycle_length,
+                      avg_period_duration, infertility_flag, birth_control_active
+               FROM player_profiles WHERE player_id = ?""", (player_id,)
+        ) as cur:
+            cycle_profile_row = await cur.fetchone()
+
+    cycle_profile     = dict(cycle_profile_row) if cycle_profile_row else {}
+    cycle_setup_done  = bool(cycle_profile.get("cycle_setup_completed"))
+    cycle_mode        = cycle_profile.get("cycle_tracking_mode") or ""
+    show_cycle_tab    = agab.lower() in ("female", "intersex") or cycle_setup_done
 
     # Events for current month
     month_start = f"{current_year:04d}-{current_month:02d}-01"
@@ -877,56 +895,175 @@ async def ritual(
             friends_event_rows = await cur.fetchall()
 
     # Cycle data
-    cycle_history = []
+    cycle_history    = []
     cycle_prediction = {"has_data": False, "calendar_days": {}}
+    cycle_phase_data = {}
+    fertile_window   = {}
+    ttc_occurrence   = None
+
     if show_cycle_tab:
+        cycle_len  = int(cycle_profile.get("default_cycle_length") or 28)
+        period_dur = int(cycle_profile.get("avg_period_duration") or 5)
+
         if is_postgres():
             ch_rows = await db.fetch(
-                "SELECT * FROM cycle_log WHERE player_id = $1 ORDER BY cycle_start_slt DESC LIMIT 24", player_id)
+                "SELECT * FROM cycle_log WHERE player_id = $1 ORDER BY cycle_start_slt DESC LIMIT 24",
+                player_id)
             latest_cycle = await db.fetchrow(
-                """SELECT avg_cycle_length, next_predicted_start, period_duration_days
-                   FROM cycle_log WHERE player_id = $1 ORDER BY cycle_start_slt DESC LIMIT 1""", player_id)
+                """SELECT avg_cycle_length, next_predicted_start, period_duration_days,
+                          cycle_start_slt, cycle_length_days
+                   FROM cycle_log WHERE player_id = $1 ORDER BY cycle_start_slt DESC LIMIT 1""",
+                player_id)
         else:
             async with db.execute(
-                "SELECT * FROM cycle_log WHERE player_id = ? ORDER BY cycle_start_slt DESC LIMIT 24", (player_id,)) as cur:
+                "SELECT * FROM cycle_log WHERE player_id = ? ORDER BY cycle_start_slt DESC LIMIT 24",
+                (player_id,)) as cur:
                 ch_rows = await cur.fetchall()
             async with db.execute(
-                """SELECT avg_cycle_length, next_predicted_start, period_duration_days
-                   FROM cycle_log WHERE player_id = ? ORDER BY cycle_start_slt DESC LIMIT 1""", (player_id,)) as cur:
+                """SELECT avg_cycle_length, next_predicted_start, period_duration_days,
+                          cycle_start_slt, cycle_length_days
+                   FROM cycle_log WHERE player_id = ? ORDER BY cycle_start_slt DESC LIMIT 1""",
+                (player_id,)) as cur:
                 latest_cycle = await cur.fetchone()
 
         cycle_history = [dict(r) for r in ch_rows]
 
-        if latest_cycle and latest_cycle["avg_cycle_length"]:
-            from datetime import date, timedelta
+        if latest_cycle:
+            from app.routers.cycle import _calc_cycle_phase, PHASE_ADVICE
             calendar_days = {}
             for c in cycle_history:
                 if c.get("cycle_start_slt"):
                     try:
-                        s = date.fromisoformat(c["cycle_start_slt"][:10])
-                        dur = c.get("period_duration_days") or 5
+                        s   = date.fromisoformat(c["cycle_start_slt"][:10])
+                        dur = c.get("period_duration_days") or period_dur
                         for i in range(dur):
                             calendar_days[(s + timedelta(days=i)).isoformat()] = "confirmed_period"
-                        end = date.fromisoformat(c["cycle_end_slt"][:10]) if c.get("cycle_end_slt") else s + timedelta(days=dur)
+                        end = date.fromisoformat(c["cycle_end_slt"][:10]) if c.get("cycle_end_slt") \
+                              else s + timedelta(days=dur)
                         for i in range(1, 4):
                             k = (end + timedelta(days=i)).isoformat()
                             if k not in calendar_days:
                                 calendar_days[k] = "post_glow"
                     except Exception:
                         pass
+
+            # Phase calendar for current cycle
+            try:
+                s        = date.fromisoformat(latest_cycle["cycle_start_slt"][:10])
+                used_len = latest_cycle["cycle_length_days"] or cycle_len
+                used_dur = latest_cycle["period_duration_days"] or period_dur
+                ov_day   = used_len - 14
+                fs, fe   = ov_day - 4, ov_day + 1
+                pms_s    = used_len - 5
+                for i in range(used_len):
+                    d   = s + timedelta(days=i)
+                    key = d.isoformat()
+                    if key in calendar_days:
+                        continue
+                    if i < used_dur:
+                        pass
+                    elif fs <= i <= fe:
+                        calendar_days[key] = "ovulatory" if i == ov_day else "fertile_window"
+                    elif i < fs:
+                        calendar_days[key] = "phase_follicular"
+                    elif i >= pms_s:
+                        calendar_days[key] = "phase_pms"
+                    else:
+                        calendar_days[key] = "phase_luteal"
+            except Exception:
+                pass
+
             nxt = latest_cycle["next_predicted_start"]
             if nxt:
                 try:
-                    ns = date.fromisoformat(nxt[:10])
-                    dur = latest_cycle["period_duration_days"] or 5
+                    ns  = date.fromisoformat(nxt[:10])
+                    dur = latest_cycle["period_duration_days"] or period_dur
+                    avg = latest_cycle["avg_cycle_length"] or cycle_len
                     for i in range(-3, dur + 3):
                         k = (ns + timedelta(days=i)).isoformat()
                         if k not in calendar_days:
                             calendar_days[k] = "predicted_start" if 0 <= i < dur else "predicted_window"
+                    p_ov = ns + timedelta(days=round(avg) - 14)
+                    p_fs = p_ov - timedelta(days=4)
+                    p_fe = p_ov + timedelta(days=1)
+                    d = p_fs
+                    while d <= p_fe:
+                        k = d.isoformat()
+                        if k not in calendar_days:
+                            calendar_days[k] = "ovulatory" if d == p_ov else "fertile_window"
+                        d += timedelta(days=1)
                 except Exception:
                     pass
-            cycle_prediction = {"has_data": True, "avg_cycle_length": latest_cycle["avg_cycle_length"],
-                                 "next_predicted_start": nxt, "calendar_days": calendar_days}
+
+            cycle_prediction = {
+                "has_data":             True,
+                "avg_cycle_length":     latest_cycle["avg_cycle_length"],
+                "next_predicted_start": nxt,
+                "calendar_days":        calendar_days,
+            }
+
+            # Current phase
+            try:
+                cs        = date.fromisoformat(latest_cycle["cycle_start_slt"][:10])
+                used_len2 = latest_cycle["cycle_length_days"] or cycle_len
+                used_dur2 = latest_cycle["period_duration_days"] or period_dur
+                pinfo     = _calc_cycle_phase(cs, today, used_dur2, used_len2)
+                phase     = pinfo["phase"]
+                advice    = PHASE_ADVICE.get(phase, PHASE_ADVICE["luteal"])
+                cycle_phase_data = {**pinfo, **advice}
+            except Exception:
+                cycle_phase_data = {}
+
+            # Fertile window (for TTC players)
+            if cycle_mode in ("ttc_traditional",):
+                try:
+                    cs2       = date.fromisoformat(latest_cycle["cycle_start_slt"][:10])
+                    ul2       = latest_cycle["cycle_length_days"] or cycle_len
+                    ov_dt     = cs2 + timedelta(days=ul2 - 14)
+                    fw_start  = ov_dt - timedelta(days=4)
+                    fw_end    = ov_dt + timedelta(days=1)
+                    fs2, fe2  = fw_start.isoformat(), fw_end.isoformat()
+                    if is_postgres():
+                        ic = await db.fetchval(
+                            """SELECT COUNT(*) FROM intimacy_log
+                               WHERE player_id=$1 AND logged_date>=$2 AND logged_date<=$3""",
+                            player_id, fs2, fe2)
+                    else:
+                        async with db.execute(
+                            """SELECT COUNT(*) as cnt FROM intimacy_log
+                               WHERE player_id=? AND logged_date>=? AND logged_date<=?""",
+                            (player_id, fs2, fe2)
+                        ) as cur:
+                            rr = await cur.fetchone()
+                            ic = rr["cnt"] if rr else 0
+                    fertile_window = {
+                        "has_data":           True,
+                        "fertile_start":      fs2,
+                        "fertile_end":        fe2,
+                        "ovulation_date":     ov_dt.isoformat(),
+                        "is_fertile_today":   fw_start <= today <= fw_end,
+                        "is_ovulation_today": today == ov_dt,
+                        "days_to_window":     max(0, (fw_start - today).days) if today < fw_start else 0,
+                        "intimacy_count":     ic,
+                    }
+                except Exception:
+                    fertile_window = {}
+
+        # TTC occurrence
+        if cycle_mode.startswith("ttc_"):
+            if is_postgres():
+                ttc_row = await db.fetchrow(
+                    """SELECT * FROM player_occurrences
+                       WHERE player_id=$1 AND occurrence_key LIKE 'ttc_%' AND is_resolved=0
+                       ORDER BY started_at DESC LIMIT 1""", player_id)
+            else:
+                async with db.execute(
+                    """SELECT * FROM player_occurrences
+                       WHERE player_id=? AND occurrence_key LIKE 'ttc_%' AND is_resolved=0
+                       ORDER BY started_at DESC LIMIT 1""", (player_id,)
+                ) as cur:
+                    ttc_row = await cur.fetchone()
+            ttc_occurrence = dict(ttc_row) if ttc_row else None
 
     # Holidays for this month as {MM-DD: emoji}
     all_holidays = cfg.get("holidays", {})
@@ -1000,9 +1137,15 @@ async def ritual(
         "friends_events":       [dict(r) for r in friends_event_rows],
         "community":            [dict(r) for r in community_rows],
         "show_cycle_tab":       show_cycle_tab,
+        "cycle_setup_done":     cycle_setup_done,
+        "cycle_mode":           cycle_mode,
+        "cycle_profile":        cycle_profile,
         "cycle_history":        cycle_history,
         "cycle_prediction":     cycle_prediction,
         "cycle_calendar_days":  cycle_prediction.get("calendar_days", {}),
+        "cycle_phase":          cycle_phase_data,
+        "fertile_window":       fertile_window,
+        "ttc_occurrence":       ttc_occurrence,
         "holidays_this_month":  holidays_this_month,
         "occurrences":          occurrences,
     })

@@ -530,44 +530,57 @@
 <!-- ── CYCLE TAB ── -->
 {% if show_cycle_tab %}
 <div id="tab-cycle" class="tab-panel">
-  <div style="padding:16px 18px 0;">
-    <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);">Cycle Tracking</div>
-    <div style="font-size:11px;color:var(--ink4);margin-top:3px;">Private — only you can see this</div>
+
+  {% if not cycle_setup_done %}
+  <!-- ── Setup prompt ── -->
+  <div style="padding:40px 18px;text-align:center;">
+    <div style="font-size:32px;margin-bottom:14px;">🌸</div>
+    <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);margin-bottom:8px;">Cycle Tracking</div>
+    <div style="font-size:13px;color:var(--ink3);line-height:1.7;margin-bottom:24px;">Track your period, fertility, and reproductive health — all in one place. Private, always.</div>
+    <button class="cycle-log-btn" onclick="openCycleSetup()" style="margin:0 auto;max-width:280px;">Get started →</button>
   </div>
 
-  {% if cycle_prediction and cycle_prediction.has_data %}
-  <div class="cycle-stat-row">
-    <div class="cycle-stat">
-      <div class="cycle-stat-val">{{ "%.0f"|format(cycle_prediction.avg_cycle_length or 0) }}d</div>
-      <div class="cycle-stat-label">Avg Cycle</div>
-    </div>
-    <div class="cycle-stat">
-      <div class="cycle-stat-val">{{ cycle_prediction.next_predicted_start[:7] if cycle_prediction.next_predicted_start else '—' }}</div>
-      <div class="cycle-stat-label">Next Predicted</div>
-    </div>
-    <div class="cycle-stat">
-      <div class="cycle-stat-val">{{ cycle_history|length }}</div>
-      <div class="cycle-stat-label">Cycles Logged</div>
-    </div>
-  </div>
   {% else %}
-  <div class="info-card" style="margin-top:14px;">
-    <p>Log 2+ cycles to see predictions. Tap below to log your first.</p>
+  <!-- ── Today card ── -->
+  {% if cycle_phase and cycle_phase.phase %}
+  <div class="info-card" style="margin:14px 18px 0;background:var(--bg2);">
+    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Today · Day {{ cycle_phase.cycle_day }} of {{ cycle_phase.cycle_length }}</div>
+    <div style="font-family:var(--font-head);font-size:18px;color:var(--ink);margin-bottom:2px;">{{ cycle_phase.headline }}</div>
+    <div style="font-size:12px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ cycle_phase.body }}</div>
+    {% if cycle_phase.eats %}
+    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
+    <div style="font-size:12px;color:var(--ink2);">{{ cycle_phase.eats | join(' · ') }}</div>
+    {% endif %}
+    {% if cycle_phase.haul %}
+    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
+    <div style="font-size:12px;color:var(--ink2);">{{ cycle_phase.haul | join(' · ') }}</div>
+    {% endif %}
   </div>
   {% endif %}
 
-  <button class="cycle-log-btn" onclick="openCycleSheet()">🌙 Log cycle</button>
-
-  <div class="section-head" style="padding-top:18px;">
-    <div class="section-head-title">Pregnancy</div>
+  <!-- ── Fertile window (TTC only) ── -->
+  {% if fertile_window and fertile_window.has_data %}
+  <div class="info-card" style="margin:10px 18px 0;background:{% if fertile_window.is_fertile_today %}var(--green-light){% else %}var(--bg2){% endif %};border-color:{% if fertile_window.is_fertile_today %}var(--green){% else %}var(--border){% endif %};">
+    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:{% if fertile_window.is_fertile_today %}var(--green){% else %}var(--ink4){% endif %};margin-bottom:4px;">
+      {% if fertile_window.is_fertile_today %}🌿 Fertile Window — Active Today{% elif fertile_window.days_to_window == 0 %}🌿 Fertile Window{% else %}🌿 Fertile Window in {{ fertile_window.days_to_window }} days{% endif %}
+    </div>
+    {% if fertile_window.is_ovulation_today %}
+    <div style="font-size:13px;color:var(--green);font-weight:500;">Peak day — highest probability</div>
+    {% endif %}
+    <div style="font-size:12px;color:var(--ink3);margin-top:2px;">{{ fertile_window.fertile_start }} → {{ fertile_window.fertile_end }} · Ovulation {{ fertile_window.ovulation_date }}</div>
+    {% if fertile_window.intimacy_count > 0 %}
+    <div style="font-size:11px;color:var(--ink4);margin-top:6px;">{{ fertile_window.intimacy_count }} intimacy log{{ 's' if fertile_window.intimacy_count != 1 }} this window</div>
+    {% endif %}
+    <button class="cycle-log-btn secondary" onclick="logIntimacy()" style="margin-top:10px;">💕 Log intimacy</button>
   </div>
+  {% endif %}
 
+  <!-- ── Pregnancy banner ── -->
   {% set pregnancy = occurrences | selectattr('occurrence_key', 'equalto', 'pregnancy') | list | first | default(none) %}
-
   {% if pregnancy %}
     {% set stage = pregnancy.sub_stage or 'trimester_1' %}
     {% set info = pregnancy.pregnancy_info if pregnancy.pregnancy_info is defined else none %}
-    <div class="pregnancy-banner {{ stage }}">
+    <div class="pregnancy-banner {{ stage }}" style="margin-top:10px;">
       <div class="pregnancy-trimester">
         {% if stage == 'trimester_1' %}First Trimester
         {% elif stage == 'trimester_2' %}Second Trimester
@@ -592,27 +605,56 @@
       </div>
       <button class="cycle-log-btn secondary" onclick="resolvePregnancy({{ pregnancy.id }})">Mark as resolved</button>
     </div>
-  {% else %}
-    <div class="info-card" style="margin:0 18px 14px;">
-      <p>Not currently tracking a pregnancy. Start below if applicable.</p>
-    </div>
-    <button class="cycle-log-btn secondary" onclick="openPregSheet()">🤰 Mark as pregnant</button>
   {% endif %}
 
+  <!-- ── Quick actions ── -->
+  <div style="padding:14px 18px 0;display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="cycle-log-btn" onclick="logPeriodStart()" style="flex:1;min-width:130px;margin:0;">🌙 Period started</button>
+    <button class="cycle-log-btn secondary" onclick="logPeriodEnd()" style="flex:1;min-width:130px;margin:0;">✓ Period ended</button>
+  </div>
+  <div style="padding:8px 18px 0;display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="cycle-log-btn secondary" onclick="openOverrideSheet()" style="flex:1;min-width:130px;margin:0;">✏️ Override prediction</button>
+    <button class="cycle-log-btn secondary" onclick="logIntimacy()" style="flex:1;min-width:130px;margin:0;">💕 Log intimacy</button>
+  </div>
+
+  {% if not pregnancy and cycle_mode != 'pregnant' %}
+  <div style="padding:8px 18px 0;">
+    <button class="cycle-log-btn secondary" style="margin:0;background:var(--rose-light);color:var(--rose);border-color:rgba(156,80,80,0.2);" onclick="openPregSheet()">🤰 I'm pregnant</button>
+  </div>
+  {% endif %}
+
+  <!-- ── Stats row ── -->
+  {% if cycle_prediction and cycle_prediction.has_data %}
+  <div class="cycle-stat-row" style="margin-top:14px;">
+    <div class="cycle-stat">
+      <div class="cycle-stat-val">{{ "%.0f"|format(cycle_prediction.avg_cycle_length or 0) }}d</div>
+      <div class="cycle-stat-label">Avg Cycle</div>
+    </div>
+    <div class="cycle-stat">
+      <div class="cycle-stat-val">{{ cycle_prediction.next_predicted_start[5:] if cycle_prediction.next_predicted_start else '—' }}</div>
+      <div class="cycle-stat-label">Next Period</div>
+    </div>
+    <div class="cycle-stat">
+      <div class="cycle-stat-val">{{ cycle_history|length }}</div>
+      <div class="cycle-stat-label">Logged</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── History ── -->
   <div class="section-head" style="padding-top:18px;">
     <div class="section-head-title">History</div>
   </div>
-
   {% if cycle_history %}
     {% for c in cycle_history[:12] %}
     <div class="cycle-history-row">
-      <div class="cycle-dot"></div>
+      <div class="cycle-dot" style="{% if c.is_override %}background:var(--amber){% endif %}"></div>
       <div class="cycle-dates">
-        {{ c.cycle_start_slt }}
-        {% if c.cycle_end_slt %} → {{ c.cycle_end_slt }}{% endif %}
+        {{ c.cycle_start_slt }}{% if c.cycle_end_slt %} → {{ c.cycle_end_slt }}{% endif %}
+        {% if c.is_override %}<span style="font-size:10px;color:var(--amber);margin-left:4px;">override</span>{% endif %}
       </div>
       {% if c.cycle_length_days %}
-      <div class="cycle-length">{{ c.cycle_length_days }}d cycle</div>
+      <div class="cycle-length">{{ c.cycle_length_days }}d</div>
       {% elif c.is_manual_override %}
       <div class="cycle-length">skipped</div>
       {% else %}
@@ -624,15 +666,130 @@
     <div class="empty">
       <div class="empty-icon">🌸</div>
       <div class="empty-title">No cycles logged yet</div>
-      <div class="empty-text">Start tracking above to see predictions and history.</div>
+      <div class="empty-text">Tap "Period started" above to begin tracking.</div>
     </div>
   {% endif %}
+
+  <!-- ── Settings ── -->
+  <div class="section-head" style="padding-top:18px;">
+    <div class="section-head-title">Settings</div>
+  </div>
+  <div class="info-card" style="margin:0 18px 8px;">
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">
+      Currently tracking: <strong style="color:var(--ink);">
+        {% if cycle_mode == 'period_only' %}Period only
+        {% elif cycle_mode == 'ttc_traditional' %}Trying to conceive
+        {% elif cycle_mode == 'ttc_ivf' %}IVF journey
+        {% elif cycle_mode == 'ttc_surrogate_intended' %}Surrogacy (intended parent)
+        {% elif cycle_mode == 'ttc_surrogate_carrier' %}Surrogacy (carrier)
+        {% elif cycle_mode == 'infertile' %}Not tracking pregnancy
+        {% elif cycle_mode == 'not_applicable' %}Not applicable
+        {% else %}{{ cycle_mode }}{% endif %}
+      </strong>
+    </div>
+    <button class="cycle-log-btn secondary" onclick="openCycleSetup()" style="margin:0;">Change tracking mode</button>
+  </div>
+
   <div class="scroll-pad"></div>
 </div>
 
 </div>
 {% endif %}
 {% endblock %}
+
+<!-- ── CYCLE SETUP SHEET ── -->
+<div class="preg-sheet-overlay" id="cycle-overlay" onclick="closeCycleSetup()"></div>
+<div class="preg-sheet" id="cycle-sheet">
+  <div class="preg-sheet-handle"></div>
+  <div class="preg-sheet-topbar">
+    <button class="preg-sheet-back" id="cycle-back" onclick="cycleSetupBack()" style="display:none;">←</button>
+    <div class="preg-sheet-title" id="cycle-title">Cycle Setup</div>
+    <div class="preg-sheet-step" id="cycle-step"></div>
+  </div>
+
+  <!-- Q0: What brings you here -->
+  <div class="preg-screen active" id="cycle-screen-0">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:20%"></div></div>
+    <div class="preg-question">What would you like to track?</div>
+    <div class="preg-subtitle">You can change this at any time in settings.</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','period_only')">📅 My period · phases, predictions, history</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_traditional')">🌸 Trying to conceive · period + ovulation + intimacy</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_ivf')">💙 IVF journey · stage tracking + emotional vibes</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_surrogate_intended')">💛 Using a surrogate · anticipation tracking</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_surrogate_carrier')">💜 I am a surrogate · physical + purpose tracking</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','pregnant')">🤰 I'm currently pregnant · skip to pregnancy setup</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','infertile')">⚪ Not tracking pregnancy · period / mood only</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','not_applicable')">— None of these apply to me</button>
+    </div>
+  </div>
+
+  <!-- Q1: Last period -->
+  <div class="preg-screen" id="cycle-screen-1">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:40%"></div></div>
+    <div class="preg-question">When did your last period start?</div>
+    <div class="preg-subtitle">This helps us predict your next period and ovulation window right away.</div>
+    <div class="preg-options" style="margin-bottom:12px;">
+      <button class="preg-option" id="period-currently-btn" onclick="toggleCurrentlyOn()">🩸 I'm on my period right now</button>
+    </div>
+    <div id="period-date-inputs">
+      <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Start date</label>
+      <input class="preg-input" type="date" id="cycle-period-start" style="margin-bottom:12px;" />
+      <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">End date (if finished)</label>
+      <input class="preg-input" type="date" id="cycle-period-end" />
+    </div>
+    <button class="preg-next-btn" onclick="cycleSetupNext()" style="margin-top:14px;">Continue →</button>
+    <button class="preg-skip" onclick="cycleSetupSkip()">Skip — I'll log manually</button>
+  </div>
+
+  <!-- Q2: Cycle length -->
+  <div class="preg-screen" id="cycle-screen-2">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:60%"></div></div>
+    <div class="preg-question">How long is your typical cycle?</div>
+    <div class="preg-subtitle">Day 1 of your period to day 1 of your next period. Most cycles are 21–35 days.</div>
+    <div class="preg-slider-wrap">
+      <div class="preg-slider-val" id="cycle-len-display">28 days</div>
+      <input class="preg-slider" type="range" min="21" max="45" value="28" id="cycle-len-slider" oninput="document.getElementById('cycle-len-display').textContent=this.value+' days'" />
+      <div class="preg-slider-label"><span>21d</span><span>28d</span><span>35d</span><span>45d</span></div>
+    </div>
+    <div style="font-size:11px;color:var(--ink4);margin-bottom:14px;">Not sure? We'll use 28 days and update as you log more cycles.</div>
+    <button class="preg-next-btn" onclick="cycleSetupNext()">Continue →</button>
+  </div>
+
+  <!-- Q3: TTC method details (conditional) -->
+  <div class="preg-screen" id="cycle-screen-3">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:80%"></div></div>
+    <div class="preg-question" id="cycle-q3-title">A little more detail</div>
+    <div class="preg-subtitle" id="cycle-q3-sub"></div>
+    <div id="cycle-q3-content"></div>
+    <button class="preg-next-btn" id="cycle-q3-next" onclick="cycleSetupNext()">Finish setup →</button>
+    <button class="preg-skip" onclick="cycleSetupSkip()">Skip this step</button>
+  </div>
+
+</div>
+
+<!-- ── CYCLE OVERRIDE SHEET ── -->
+<div class="preg-sheet-overlay" id="override-overlay" onclick="closeOverrideSheet()"></div>
+<div class="preg-sheet" id="override-sheet">
+  <div class="preg-sheet-handle"></div>
+  <div class="preg-sheet-topbar">
+    <div class="preg-sheet-title">Override Prediction</div>
+  </div>
+  <div style="padding:20px 18px;">
+    <div class="preg-question" style="font-size:17px;margin-bottom:6px;">What do you want to adjust?</div>
+    <div class="preg-subtitle">Use this if your period came early, late, ended sooner, or didn't come at all. Your predictions will update.</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="submitOverride('late_start')">📅 My period started later than predicted</button>
+      <button class="preg-option" onclick="submitOverride('early_end')">✓ My period ended earlier than expected</button>
+      <button class="preg-option" onclick="submitOverride('skip')">↷ I skipped this cycle</button>
+      <button class="preg-option" onclick="submitOverride('spotting')">🩸 Spotting — not a full period</button>
+    </div>
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-top:14px;margin-bottom:6px;">Date</label>
+    <input class="preg-input" type="date" id="override-date" />
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-top:10px;margin-bottom:6px;">Note (optional)</label>
+    <input class="preg-input" type="text" id="override-note" placeholder="e.g. stress, travel, illness" maxlength="100" />
+  </div>
+</div>
 
 {% block extra_script %}
 <script>
@@ -923,92 +1080,220 @@
     } catch(e) { btn.disabled = false; btn.textContent = 'RSVP'; }
   }
 
-  // ── Cycle sheet ─────────────────────────────────────────────
+  // ── Cycle quick actions ───────────────────────────────────────────────────
 
-  let cycleData = { action: null, duration: 5, screen: 0 };
+  async function logPeriodStart() {
+    const dur = parseInt(prompt('How many days does your period usually last? (2–10)', '5'));
+    if (!dur || isNaN(dur)) return;
+    try {
+      const res = await fetch('/cycle/log-start', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, cycle_start_slt: todayStr(), period_duration_days: dur })
+      });
+      const data = await res.json();
+      if (res.ok) { toast('Period logged 🌙'); setTimeout(() => location.reload(), 1400); }
+      else toast(data.detail || 'Could not log');
+    } catch(e) { toast('Connection error'); }
+  }
 
-  function openCycleSheet() {
-    cycleData = { action: null, duration: 5, screen: 0 };
-    document.querySelectorAll('.cycle-option').forEach(b => b.classList.remove('selected'));
-    document.querySelectorAll('.cycle-dur-btn').forEach(b => b.classList.remove('selected'));
-    document.getElementById('cycle-next-0').disabled = true;
-    document.getElementById('cycle-next-1').disabled = true;
-    document.getElementById('cycle-date-input').value = todayStr();
-    showCycleScreen(0);
+  async function logPeriodEnd() {
+    try {
+      const res = await fetch('/cycle/log-end', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, cycle_end_slt: todayStr() })
+      });
+      const data = await res.json();
+      if (res.ok) { toast(`Period ended — ${data.cycle_length_days}d cycle`); setTimeout(() => location.reload(), 1400); }
+      else toast(data.detail || 'No open cycle to end');
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function logIntimacy() {
+    try {
+      const res = await fetch('/cycle/intimacy', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, logged_date: todayStr() })
+      });
+      if (res.ok) { toast('Logged'); }
+      else toast('Could not log');
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function resolvePregnancy(occId) {
+    const res = await fetch(`/occurrences/${occId}?token=${TOKEN}`, { method: 'DELETE' });
+    if (res.ok) { toast('Pregnancy resolved'); setTimeout(() => location.reload(), 1500); }
+    else toast('Something went wrong.');
+  }
+
+  // ── Cycle setup sheet ─────────────────────────────────────────────────────
+
+  const CYCLE_SETUP_TOTAL = 4;
+  let cycleSetupStep = 0;
+  let cycleSetupData = {
+    tracking_mode: 'period_only', last_period_start: null, last_period_end: null,
+    period_ongoing: false, cycle_length: 28, period_duration: 5,
+    ivf_stage: null, ttc_duration_months: 0, linked_player_uuid: null,
+  };
+
+  function openCycleSetup() {
+    cycleSetupStep = 0;
+    cycleSetupData = { tracking_mode: 'period_only', last_period_start: null,
+      last_period_end: null, period_ongoing: false, cycle_length: 28,
+      period_duration: 5, ivf_stage: null, ttc_duration_months: 0, linked_player_uuid: null };
+    showCycleSetupScreen(0);
     document.getElementById('cycle-overlay').classList.add('open');
     setTimeout(() => document.getElementById('cycle-sheet').classList.add('open'), 10);
   }
 
-  function closeCycleSheet() {
+  function closeCycleSetup() {
     document.getElementById('cycle-sheet').classList.remove('open');
     document.getElementById('cycle-overlay').classList.remove('open');
   }
 
-  function showCycleScreen(n) {
-    document.querySelectorAll('.cycle-screen').forEach(s => s.classList.remove('active'));
-    document.getElementById('cycle-screen-' + n).classList.add('active');
-    cycleData.screen = n;
+  function showCycleSetupScreen(n) {
+    document.querySelectorAll('#cycle-sheet .preg-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('cycle-screen-' + n)?.classList.add('active');
+    document.getElementById('cycle-step').textContent = (n + 1) + ' / ' + CYCLE_SETUP_TOTAL;
+    document.getElementById('cycle-back').style.display = n > 0 ? 'block' : 'none';
+    document.getElementById('cycle-sheet').scrollTop = 0;
+    if (n === 3) buildCycleQ3();
   }
 
-  function cyclePick(btn, key, val) {
-    btn.closest('.cycle-options').querySelectorAll('.cycle-option').forEach(b => b.classList.remove('selected'));
+  function cycleSetupBack() {
+    if (cycleSetupStep > 0) { cycleSetupStep--; showCycleSetupScreen(cycleSetupStep); }
+  }
+
+  function cycleSetupPick(btn, key, val) {
+    btn.closest('.preg-options').querySelectorAll('.preg-option')
+      .forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    cycleData[key] = val;
-    document.getElementById('cycle-next-0').disabled = false;
-  }
-
-  function cycleDur(btn, val) {
-    document.querySelectorAll('.cycle-dur-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    cycleData.duration = val;
-    document.getElementById('cycle-next-1').disabled = false;
-  }
-
-  function cycleNext() {
-    if (cycleData.screen === 0) {
-      if (cycleData.action === 'skip') { submitCycle(); return; }
-      if (cycleData.action === 'start') { showCycleScreen(1); return; }
-      if (cycleData.action === 'end') { showCycleScreen(2); return; }
+    cycleSetupData[key] = val;
+    if (key === 'tracking_mode' && val === 'pregnant') {
+      closeCycleSetup(); setTimeout(() => openPregSheet(), 300); return;
     }
-    if (cycleData.screen === 1) { showCycleScreen(2); return; }
+    if (key === 'tracking_mode' && val === 'not_applicable') {
+      setTimeout(() => submitCycleSetup(), 280); return;
+    }
+    setTimeout(cycleSetupNext, 280);
   }
 
-  async function submitCycle() {
-    const date = document.getElementById('cycle-date-input') ?
-      document.getElementById('cycle-date-input').value || todayStr() : todayStr();
-    closeCycleSheet();
+  function toggleCurrentlyOn() {
+    const btn = document.getElementById('period-currently-btn');
+    cycleSetupData.period_ongoing = !cycleSetupData.period_ongoing;
+    btn.classList.toggle('selected', cycleSetupData.period_ongoing);
+    document.getElementById('cycle-period-start').value = cycleSetupData.period_ongoing ? todayStr() : '';
+    document.getElementById('cycle-period-end').value = '';
+    document.getElementById('period-date-inputs').style.opacity = cycleSetupData.period_ongoing ? '0.5' : '1';
+  }
+
+  function cycleSetupNext() {
+    if (cycleSetupStep === 1) {
+      cycleSetupData.last_period_start = document.getElementById('cycle-period-start').value || null;
+      cycleSetupData.last_period_end   = document.getElementById('cycle-period-end').value || null;
+    }
+    if (cycleSetupStep === 2) {
+      cycleSetupData.cycle_length = parseInt(document.getElementById('cycle-len-slider').value) || 28;
+    }
+    const mode = cycleSetupData.tracking_mode;
+    const needsQ3 = ['ttc_traditional','ttc_ivf','ttc_surrogate_intended','ttc_surrogate_carrier'].includes(mode);
+    cycleSetupStep++;
+    if (cycleSetupStep === 3 && !needsQ3) { submitCycleSetup(); return; }
+    if (cycleSetupStep < CYCLE_SETUP_TOTAL) showCycleSetupScreen(cycleSetupStep);
+    else submitCycleSetup();
+  }
+
+  function cycleSetupSkip() {
+    if (cycleSetupStep === 1) { cycleSetupData.last_period_start = null; cycleSetupData.last_period_end = null; }
+    cycleSetupStep++;
+    const mode = cycleSetupData.tracking_mode;
+    const needsQ3 = ['ttc_traditional','ttc_ivf','ttc_surrogate_intended','ttc_surrogate_carrier'].includes(mode);
+    if (cycleSetupStep === 3 && !needsQ3) { submitCycleSetup(); return; }
+    if (cycleSetupStep < CYCLE_SETUP_TOTAL) showCycleSetupScreen(cycleSetupStep);
+    else submitCycleSetup();
+  }
+
+  function buildCycleQ3() {
+    const mode = cycleSetupData.tracking_mode;
+    document.getElementById('cycle-q3-content').innerHTML = '';
+    if (mode === 'ttc_traditional') {
+      document.getElementById('cycle-q3-title').textContent = 'How long have you been trying?';
+      document.getElementById('cycle-q3-sub').textContent   = 'Helps us tailor your vibes.';
+      document.getElementById('cycle-q3-content').innerHTML = `
+        <div class="preg-options">
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',0)">Just starting out</button>
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',2)">1-3 months</button>
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',4)">3-6 months</button>
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',7)">6+ months</button>
+        </div>`;
+    } else if (mode === 'ttc_ivf') {
+      document.getElementById('cycle-q3-title').textContent = 'Where are you in the process?';
+      document.getElementById('cycle-q3-sub').textContent   = 'Each stage has its own vibe profile.';
+      document.getElementById('cycle-q3-content').innerHTML = `
+        <div class="preg-options">
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','preparing')">Preparing - consultations and tests</button>
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','stimulation')">Stimulation phase</button>
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','transfer_wait')">Transfer / two week wait</button>
+          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','successful')">Successful transfer</button>
+        </div>`;
+    } else if (mode === 'ttc_surrogate_intended' || mode === 'ttc_surrogate_carrier') {
+      document.getElementById('cycle-q3-title').textContent = 'Link with your surrogate partner?';
+      document.getElementById('cycle-q3-sub').textContent   = 'Enter their avatar UUID to connect your occurrences.';
+      document.getElementById('cycle-q3-content').innerHTML = `
+        <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Avatar UUID</label>
+        <input class="preg-input" type="text" id="cycle-linked-uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" maxlength="36" style="font-family:monospace;font-size:12px;" />
+        <div style="font-size:11px;color:var(--ink4);margin-top:6px;">Optional - you can add this later.</div>`;
+    }
+  }
+
+  function cycleSetupPickQ3(btn, key, val) {
+    btn.closest('.preg-options').querySelectorAll('.preg-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    cycleSetupData[key] = val;
+  }
+
+  async function submitCycleSetup() {
+    closeCycleSetup();
+    const uuidEl = document.getElementById('cycle-linked-uuid');
+    if (uuidEl) cycleSetupData.linked_player_uuid = uuidEl.value.trim() || null;
     try {
-      if (cycleData.action === 'start') {
-        const res = await fetch('/cycle/log-start', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ token: TOKEN, cycle_start_slt: date, period_duration_days: cycleData.duration })
-        });
-        const data = await res.json();
-        if (res.ok) { toast('Period logged 🌙'); setTimeout(() => location.reload(), 1400); }
-        else toast(data.detail || 'Could not log');
-      } else if (cycleData.action === 'end') {
-        const res = await fetch('/cycle/log-end', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ token: TOKEN, cycle_end_slt: date })
-        });
-        const data = await res.json();
-        if (res.ok) { toast('Period ended ✓'); setTimeout(() => location.reload(), 1400); }
-        else toast(data.detail || 'Could not log');
-      } else if (cycleData.action === 'skip') {
-        const res = await fetch('/cycle/skip', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ token: TOKEN })
-        });
-        if (res.ok) { toast('Cycle skipped ↷'); setTimeout(() => location.reload(), 1400); }
-      }
+      const res = await fetch('/cycle/setup', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, ...cycleSetupData })
+      });
+      if (res.ok) { toast('Cycle tracking set up'); setTimeout(() => location.reload(), 1400); }
+      else { const d = await res.json(); toast(d.detail || 'Something went wrong'); }
     } catch(e) { toast('Connection error'); }
   }
 
- async function resolvePregnancy(occId) {
-    const res = await fetch(`/occurrences/${occId}?token=${TOKEN}`, { method: 'DELETE' });
-    if (res.ok) { toast('Pregnancy resolved ✓'); setTimeout(() => location.reload(), 1500); }
-    else toast('Something went wrong.');
+  // ── Override sheet ────────────────────────────────────────────────────────
+
+  function openOverrideSheet() {
+    document.getElementById('override-date').value = todayStr();
+    document.getElementById('override-note').value = '';
+    document.getElementById('override-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('override-sheet').classList.add('open'), 10);
   }
+
+  function closeOverrideSheet() {
+    document.getElementById('override-sheet').classList.remove('open');
+    document.getElementById('override-overlay').classList.remove('open');
+  }
+
+  async function submitOverride(action) {
+    const dateVal = document.getElementById('override-date').value || todayStr();
+    const note    = document.getElementById('override-note').value.trim() || null;
+    closeOverrideSheet();
+    try {
+      const res = await fetch('/cycle/override', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, action, date_slt: dateVal, note })
+      });
+      if (res.ok) { toast('Override saved'); setTimeout(() => location.reload(), 1400); }
+      else { const d = await res.json(); toast(d.detail || 'Could not save'); }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Pregnancy questionnaire sheet ─────────────────────────────────────────
 
   // ── Pregnancy questionnaire sheet ────────────────────────────────────────
 

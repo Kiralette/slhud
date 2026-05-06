@@ -628,3 +628,313 @@ async def run_bedtime_reminders():
                            VALUES (?, 'recharge', 'Bedtime 🌙', 'Your bedtime reminder — time to rest.', 'normal')""",
                         (row["player_id"],))
             await db.commit()
+
+
+# ── Phase Vibe Engine ─────────────────────────────────────────────────────────
+
+async def run_phase_vibe_engine(db=None):
+    """
+    Daily midnight: detect current cycle phase for all active cycle-tracking
+    players and apply/remove the correct phase vibes.
+    Also fires fertile_window vibe if TTC and in ovulatory phase.
+    Also fires ttc_stress vibe if TTC > 3 months.
+    """
+    if db is None:
+        return
+
+    today = date.today()
+
+    # Phase vibe mapping
+    PHASE_VIBE_MAP = {
+        "menstrual":  None,            # period vibes handled by existing period_active
+        "follicular": "phase_follicular",
+        "ovulatory":  "phase_ovulatory",
+        "luteal":     "phase_luteal",
+        "pms":        "phase_pms",
+    }
+    ALL_PHASE_VIBES = set(PHASE_VIBE_MAP.values()) - {None}
+    ALL_PHASE_VIBES.update({"fertile_window", "ttc_hopeful", "ttc_stress"})
+
+    if is_postgres():
+        players = await db.fetch(
+            """SELECT pp.player_id, pp.cycle_tracking_mode, pp.default_cycle_length,
+                      pp.avg_period_duration
+               FROM player_profiles pp
+               WHERE pp.cycle_setup_completed = 1
+                 AND pp.cycle_tracking_mode NOT IN ('not_applicable', 'infertile',
+                                                    'ttc_surrogate_intended')""")
+    else:
+        async with db.execute(
+            """SELECT pp.player_id, pp.cycle_tracking_mode, pp.default_cycle_length,
+                      pp.avg_period_duration
+               FROM player_profiles pp
+               WHERE pp.cycle_setup_completed = 1
+                 AND pp.cycle_tracking_mode NOT IN ('not_applicable', 'infertile',
+                                                    'ttc_surrogate_intended')"""
+        ) as cur:
+            players = await cur.fetchall()
+
+    for p in players:
+        pid        = p["player_id"]
+        mode       = p["cycle_tracking_mode"] or "period_only"
+        cycle_len  = int(p["default_cycle_length"] or 28)
+        period_dur = int(p["avg_period_duration"] or 5)
+
+        # Get latest cycle log
+        if is_postgres():
+            latest = await db.fetchrow(
+                """SELECT * FROM cycle_log WHERE player_id=$1
+                   ORDER BY cycle_start_slt DESC LIMIT 1""", pid)
+        else:
+            async with db.execute(
+                """SELECT * FROM cycle_log WHERE player_id=?
+                   ORDER BY cycle_start_slt DESC LIMIT 1""", (pid,)
+            ) as cur:
+                latest = await cur.fetchone()
+
+        if not latest:
+            continue
+
+        try:
+            cycle_start = date.fromisoformat(latest["cycle_start_slt"][:10])
+            used_len    = latest["cycle_length_days"] or cycle_len
+            used_dur    = latest["period_duration_days"] or period_dur
+        except Exception:
+            continue
+
+        days_in      = (today - cycle_start).days
+        ov_day       = used_len - 14
+        fert_start   = ov_day - 4
+        fert_end     = ov_day + 1
+        pms_start    = used_len - 5
+
+        if days_in < 0:
+            continue
+        if days_in < used_dur:
+            phase = "menstrual"
+        elif days_in < fert_start:
+            phase = "follicular"
+        elif days_in <= fert_end:
+            phase = "ovulatory"
+        elif days_in >= pms_start:
+            phase = "pms"
+        else:
+            phase = "luteal"
+
+        # Clear all phase vibes first
+        for vk in ALL_PHASE_VIBES:
+            if is_postgres():
+                await db.execute(
+                    "DELETE FROM vibes WHERE player_id=$1 AND vibe_key=$2", pid, vk)
+            else:
+                await db.execute(
+                    "DELETE FROM vibes WHERE player_id=? AND vibe_key=?", (pid, vk))
+
+        # Apply current phase vibe
+        vibe = PHASE_VIBE_MAP.get(phase)
+        if vibe:
+            if is_postgres():
+                await db.execute(
+                    """INSERT INTO vibes (player_id, vibe_key, is_negative)
+                       VALUES ($1,$2,0) ON CONFLICT (player_id,vibe_key) DO NOTHING""",
+                    pid, vibe)
+            else:
+                await db.execute(
+                    """INSERT OR IGNORE INTO vibes (player_id, vibe_key, is_negative)
+                       VALUES (?,?,0)""", (pid, vibe, 0))
+
+        # TTC-specific vibes
+        is_ttc = mode in ("ttc_traditional", "ttc_ivf", "ttc_surrogate_carrier")
+        if is_ttc:
+            # ttc_hopeful always on while TTC
+            if is_postgres():
+                await db.execute(
+                    """INSERT INTO vibes (player_id, vibe_key, is_negative)
+                       VALUES ($1,'ttc_hopeful',0)
+                       ON CONFLICT (player_id,vibe_key) DO NOTHING""", pid)
+            else:
+                await db.execute(
+                    """INSERT OR IGNORE INTO vibes (player_id, vibe_key, is_negative)
+                       VALUES (?,'ttc_hopeful',0)""", (pid,))
+
+            # fertile_window vibe in ovulatory phase
+            if phase == "ovulatory" and mode == "ttc_traditional":
+                if is_postgres():
+                    await db.execute(
+                        """INSERT INTO vibes (player_id, vibe_key, is_negative)
+                           VALUES ($1,'fertile_window',0)
+                           ON CONFLICT (player_id,vibe_key) DO NOTHING""", pid)
+                else:
+                    await db.execute(
+                        """INSERT OR IGNORE INTO vibes (player_id, vibe_key, is_negative)
+                           VALUES (?,'fertile_window',0)""", (pid,))
+
+            # ttc_stress if trying > 3 months (opt-in check via TTC occurrence metadata)
+            if is_postgres():
+                ttc_occ = await db.fetchrow(
+                    """SELECT metadata, started_at FROM player_occurrences
+                       WHERE player_id=$1 AND occurrence_key LIKE 'ttc_%' AND is_resolved=0
+                       ORDER BY started_at DESC LIMIT 1""", pid)
+            else:
+                async with db.execute(
+                    """SELECT metadata, started_at FROM player_occurrences
+                       WHERE player_id=? AND occurrence_key LIKE 'ttc_%' AND is_resolved=0
+                       ORDER BY started_at DESC LIMIT 1""", (pid,)
+                ) as cur:
+                    ttc_occ = await cur.fetchone()
+
+            if ttc_occ:
+                import json as _j
+                try:
+                    meta = _j.loads(ttc_occ["metadata"] or "{}")
+                    dur_months = int(meta.get("ttc_duration_months") or 0)
+                    # Also count months since occurrence started
+                    occ_start = date.fromisoformat(ttc_occ["started_at"][:10])
+                    months_since = (today - occ_start).days // 30
+                    total_months = dur_months + months_since
+                    if total_months >= 3:
+                        if is_postgres():
+                            await db.execute(
+                                """INSERT INTO vibes (player_id, vibe_key, is_negative)
+                                   VALUES ($1,'ttc_stress',1)
+                                   ON CONFLICT (player_id,vibe_key) DO NOTHING""", pid)
+                        else:
+                            await db.execute(
+                                """INSERT OR IGNORE INTO vibes (player_id, vibe_key, is_negative)
+                                   VALUES (?,'ttc_stress',1)""", (pid,))
+                except Exception:
+                    pass
+
+    if not is_postgres():
+        await db.commit()
+
+
+# ── TTC Daily Conception Check Runner ────────────────────────────────────────
+
+async def run_ttc_conception_checks(db=None):
+    """
+    Daily: run conception probability check for all TTC traditional players
+    whose fertile window just closed. Delegates to the cycle router logic.
+    """
+    if db is None:
+        return
+
+    today = date.today()
+
+    if is_postgres():
+        players = await db.fetch(
+            """SELECT pp.player_id FROM player_profiles pp
+               WHERE pp.cycle_tracking_mode = 'ttc_traditional'
+                 AND pp.birth_control_active = 0
+                 AND pp.infertility_flag = 0""")
+    else:
+        async with db.execute(
+            """SELECT pp.player_id FROM player_profiles pp
+               WHERE pp.cycle_tracking_mode = 'ttc_traditional'
+                 AND pp.birth_control_active = 0
+                 AND pp.infertility_flag = 0"""
+        ) as cur:
+            players = await cur.fetchall()
+
+    for p in players:
+        pid = p["player_id"]
+
+        if is_postgres():
+            latest = await db.fetchrow(
+                """SELECT * FROM cycle_log WHERE player_id=$1
+                   ORDER BY cycle_start_slt DESC LIMIT 1""", pid)
+            profile = await db.fetchrow(
+                "SELECT default_cycle_length FROM player_profiles WHERE player_id=$1", pid)
+        else:
+            async with db.execute(
+                """SELECT * FROM cycle_log WHERE player_id=?
+                   ORDER BY cycle_start_slt DESC LIMIT 1""", (pid,)
+            ) as cur:
+                latest = await cur.fetchone()
+            async with db.execute(
+                "SELECT default_cycle_length FROM player_profiles WHERE player_id=?", (pid,)
+            ) as cur:
+                profile = await cur.fetchone()
+
+        if not latest or not profile:
+            continue
+
+        try:
+            import random as _r
+            cycle_start  = date.fromisoformat(latest["cycle_start_slt"][:10])
+            cycle_len    = latest["cycle_length_days"] or int(profile["default_cycle_length"] or 28)
+            ovulation_dt = cycle_start + timedelta(days=cycle_len - 14)
+            fert_start   = ovulation_dt - timedelta(days=4)
+            fert_end     = ovulation_dt + timedelta(days=1)
+        except Exception:
+            continue
+
+        # Only run day after window closes
+        if today != fert_end + timedelta(days=1):
+            continue
+
+        # Check already done
+        if is_postgres():
+            already = await db.fetchrow(
+                "SELECT id FROM ttc_conception_checks WHERE player_id=$1 AND cycle_log_id=$2",
+                pid, latest["id"])
+        else:
+            async with db.execute(
+                "SELECT id FROM ttc_conception_checks WHERE player_id=? AND cycle_log_id=?",
+                (pid, latest["id"])
+            ) as cur:
+                already = await cur.fetchone()
+        if already:
+            continue
+
+        # Count intimacy
+        if is_postgres():
+            ic = await db.fetchval(
+                """SELECT COUNT(*) FROM intimacy_log
+                   WHERE player_id=$1 AND logged_date>=$2 AND logged_date<=$3""",
+                pid, fert_start.isoformat(), fert_end.isoformat())
+            pc = await db.fetchval(
+                """SELECT COUNT(*) FROM intimacy_log
+                   WHERE player_id=$1 AND logged_date=$2""",
+                pid, ovulation_dt.isoformat())
+        else:
+            async with db.execute(
+                """SELECT COUNT(*) as cnt FROM intimacy_log
+                   WHERE player_id=? AND logged_date>=? AND logged_date<=?""",
+                (pid, fert_start.isoformat(), fert_end.isoformat())
+            ) as cur:
+                r = await cur.fetchone(); ic = r["cnt"] if r else 0
+            async with db.execute(
+                """SELECT COUNT(*) as cnt FROM intimacy_log
+                   WHERE player_id=? AND logged_date=?""",
+                (pid, ovulation_dt.isoformat())
+            ) as cur:
+                r = await cur.fetchone(); pc = r["cnt"] if r else 0
+
+        peak_hit  = pc > 0
+        prob      = min(0.30, (ic * 0.08) + (0.12 if peak_hit else 0))
+        conceived = _r.random() < prob
+        result    = "conceived" if conceived else "not_conceived"
+
+        if is_postgres():
+            await db.execute(
+                """INSERT INTO ttc_conception_checks
+                   (player_id, cycle_log_id, intimacy_count, peak_day_hit, result)
+                   VALUES ($1,$2,$3,$4,$5)""",
+                pid, latest["id"], ic, int(peak_hit), result)
+        else:
+            await db.execute(
+                """INSERT INTO ttc_conception_checks
+                   (player_id, cycle_log_id, intimacy_count, peak_day_hit, result)
+                   VALUES (?,?,?,?,?)""",
+                (pid, latest["id"], ic, int(peak_hit), result))
+
+        if conceived:
+            await push_notification(
+                player_id=pid, app_source="ritual",
+                title="Something might be different this cycle… 🌸",
+                body="Tap to confirm your pregnancy.",
+                priority="normal", db=db)
+
+    if not is_postgres():
+        await db.commit()
