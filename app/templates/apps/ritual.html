@@ -5,15 +5,15 @@
 <style>
   /* ── Month navigation ── */
   .month-nav {
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: nowrap; width: 100%; box-sizing: border-box;
+    display: flex !important; flex-direction: row !important;
+    align-items: center !important; justify-content: space-between !important;
+    flex-wrap: nowrap !important; width: 100%; box-sizing: border-box;
     padding: 14px 18px 10px;
   }
   .month-nav-btn {
     background: none; border: none; cursor: pointer;
     font-size: 18px; color: var(--ink3); padding: 4px 8px;
     border-radius: var(--radius-sm); transition: color .15s;
-    display: inline-flex; align-items: center; flex-shrink: 0;
   }
   .month-nav-btn:active { color: var(--ink); }
   .month-title {
