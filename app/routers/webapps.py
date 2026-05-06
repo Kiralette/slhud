@@ -124,7 +124,25 @@ def build_shop_items(cfg: dict, categories: list[str] | None = None) -> list[dic
     return items
 
 
-# ── LUMEN EATS ───────────────────────────────────────────────
+# ── STARTUP SPLASH ───────────────────────────────────────────
+@router.get("/startup", response_class=HTMLResponse)
+async def startup(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    """
+    Startup animation splash page.
+    LSL calls llLoadURL to open this on HUD attach/reattach.
+    Plays the branded video then auto-redirects to /app/home.
+    Token is passed through to the redirect — no auth gate needed here.
+    """
+    return templates.TemplateResponse(request, "apps/startup.html", {
+        "token": token,
+    })
+
+
+# ── LUMEN EATS ───────────────────────────────────────────────────
 @router.get("/lumen-eats", response_class=HTMLResponse)
 async def lumen_eats(
     request: Request,
