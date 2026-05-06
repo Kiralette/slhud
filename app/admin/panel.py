@@ -635,45 +635,58 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
     check_admin(request)
     secret = request.query_params.get("secret", "")
 
-    child_tables = [
-        # engagement/message children first
-        "post_engagements", "messages", "message_threads",
-        # social
-        "follows", "proximity_log",
-        # career
-        "odd_job_log", "career_history", "employment", "streaming_sessions",
-        # economy
-        "transactions", "wallets", "weekly_specials",
-        # needs / vibes / traits
-        "needs", "skills", "vibes", "vibe_log", "occurrence_vibe_log",
-        "player_traits", "player_achievements",
-        # flare / social stats
-        "posts", "flare_stats",
-        # calendar / cycle
-        "calendar_events", "cycle_log", "cycle_phase_log",
-        "intimacy_log", "ttc_conception_checks",
-        # occurrences
-        "player_occurrences",
-        # notifications / logs
-        "notifications", "event_log",
-        # profile / settings
-        "player_profiles", "player_stats", "player_settings",
-        "workout_plans", "subscriptions",
-    ]
-
     if is_postgres():
-        for table in child_tables:
-            try:
-                await db.execute(f"DELETE FROM {table} WHERE player_id = $1", player_id)
-            except Exception:
-                pass
+        # Use a single transaction with TRUNCATE cascade approach —
+        # delete via raw SQL in one shot so FK order doesn't matter
+        await db.execute("""
+            DO $$
+            DECLARE r RECORD;
+            BEGIN
+              FOR r IN
+                SELECT tc.table_name
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                  ON tc.constraint_name = kcu.constraint_name
+                JOIN information_schema.referential_constraints rc
+                  ON tc.constraint_name = rc.constraint_name
+                JOIN information_schema.key_column_usage ccu
+                  ON rc.unique_constraint_name = ccu.constraint_name
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                  AND ccu.table_name = 'players'
+                  AND kcu.column_name = 'player_id'
+              LOOP
+                EXECUTE 'DELETE FROM ' || r.table_name || ' WHERE player_id = ' || ;
+              END LOOP;
+            END $$;
+        """, player_id)
+        # Also handle tables with non-standard FK column names
+        await db.execute("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", player_id)
+        await db.execute("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", player_id)
         await db.execute("DELETE FROM players WHERE id = $1", player_id)
     else:
+        # SQLite: PRAGMA foreign_keys is off by default so order matters less,
+        # but be explicit anyway
+        child_tables = [
+            "post_engagements", "messages", "message_threads",
+            "follows", "proximity_log", "odd_job_log", "career_history",
+            "employment", "streaming_sessions", "transactions", "wallets",
+            "needs", "skills", "vibes", "vibe_log", "occurrence_vibe_log",
+            "player_traits", "player_achievements", "posts", "flare_stats",
+            "calendar_events", "cycle_log", "cycle_phase_log", "intimacy_log",
+            "ttc_conception_checks", "player_occurrences", "notifications",
+            "event_log", "player_profiles", "player_stats", "player_settings",
+            "workout_plans", "subscriptions",
+        ]
         for table in child_tables:
             try:
                 await db.execute(f"DELETE FROM {table} WHERE player_id = ?", (player_id,))
             except Exception:
                 pass
+        try:
+            await db.execute("DELETE FROM follows WHERE follower_id = ? OR following_id = ?", (player_id, player_id))
+            await db.execute("DELETE FROM message_threads WHERE player_a_id = ? OR player_b_id = ?", (player_id, player_id))
+        except Exception:
+            pass
         await db.execute("DELETE FROM players WHERE id = ?", (player_id,))
         await db.commit()
 
