@@ -27,14 +27,14 @@ async def _register_pg(body, conn):
     )
     if existing:
         await conn.execute(
-            "UPDATE players SET display_name = $1, last_seen = now()::text, is_online = 1 WHERE avatar_uuid = $2",
-            body.display_name, body.avatar_uuid
+            "UPDATE players SET last_seen = now()::text, is_online = 1 WHERE avatar_uuid = $1",
+            body.avatar_uuid
         )
         return RegisterResponse(
             success=True,
             player_id=existing["id"],
             token=existing["token"],
-            display_name=body.display_name,
+            display_name=existing["display_name"],
             is_new=False
         )
 
@@ -70,12 +70,12 @@ async def _register_sqlite(body, db):
 
     if existing:
         await db.execute(
-            "UPDATE players SET display_name = ?, last_seen = datetime('now'), is_online = 1 WHERE avatar_uuid = ?",
-            (body.display_name, body.avatar_uuid)
+            "UPDATE players SET last_seen = datetime('now'), is_online = 1 WHERE avatar_uuid = ?",
+            (body.avatar_uuid,)
         )
         await db.commit()
         p = dict(existing)
-        return RegisterResponse(success=True, player_id=p["id"], token=p["token"], display_name=body.display_name, is_new=False)
+        return RegisterResponse(success=True, player_id=p["id"], token=p["token"], display_name=p["display_name"], is_new=False)
 
     token = generate_token()
     async with db.execute(
