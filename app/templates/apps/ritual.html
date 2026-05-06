@@ -5,9 +5,10 @@
 <style>
   /* ── Month navigation ── */
   .month-nav {
-    display: flex !important; flex-direction: row !important;
-    align-items: center !important; justify-content: space-between !important;
-    flex-wrap: nowrap !important; width: 100%; box-sizing: border-box;
+    display: grid !important;
+    grid-template-columns: 40px 1fr 40px !important;
+    align-items: center !important;
+    width: 100%; box-sizing: border-box;
     padding: 14px 18px 10px;
   }
   .month-nav-btn {
