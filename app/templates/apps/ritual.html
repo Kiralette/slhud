@@ -1403,22 +1403,27 @@
   function confirmDeleteCycle(scope) {
     _deleteScope = scope;
     const labels = _deleteLabels[scope];
-    document.getElementById('delete-confirm-title').textContent = labels.title;
-    document.getElementById('delete-confirm-body').textContent  = labels.body;
-    document.getElementById('delete-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('delete-sheet').classList.add('open'), 10);
+    const titleEl = document.getElementById('delete-confirm-title');
+    const bodyEl  = document.getElementById('delete-confirm-body');
+    if (titleEl) titleEl.textContent = labels.title;
+    if (bodyEl)  bodyEl.textContent  = labels.body;
+    document.getElementById('delete-overlay')?.classList.add('open');
+    setTimeout(() => document.getElementById('delete-sheet')?.classList.add('open'), 10);
   }
 
   function cancelDeleteCycle() {
-    document.getElementById('delete-sheet').classList.remove('open');
-    document.getElementById('delete-overlay').classList.remove('open');
+    document.getElementById('delete-sheet')?.classList.remove('open');
+    document.getElementById('delete-overlay')?.classList.remove('open');
     _deleteScope = null;
   }
 
   async function executeDeleteCycle() {
     if (!_deleteScope) return;
     const scope = _deleteScope;
-    cancelDeleteCycle();
+    _deleteScope = null;
+    // Close sheet first, safely
+    document.getElementById('delete-sheet')?.classList.remove('open');
+    document.getElementById('delete-overlay')?.classList.remove('open');
     try {
       const res = await fetch('/cycle/delete', {
         method: 'POST', headers: {'Content-Type':'application/json'},
