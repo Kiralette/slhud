@@ -690,13 +690,21 @@
     <button class="cycle-log-btn secondary" onclick="openCycleSetup()" style="margin:0;">Change tracking mode</button>
   </div>
 
-  {% endif %}{# end if not cycle_setup_done #}
+  {% endif %}{# end cycle_setup_done #}
   <div class="scroll-pad"></div>
 </div>
 
-{% endif %}{# end if show_cycle_tab #}
-<!-- ── CYCLE SETUP SHEET ── -->
-<div class="preg-sheet-overlay" id="cycle-overlay" onclick="closeCycleSetup()"></div>
+{% endif %}{# end show_cycle_tab #}
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN = "{{ token }}";
+
+  // Inject cycle setup sheet outside app-scale so position:fixed works
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="preg-sheet-overlay" id="cycle-overlay" onclick="closeCycleSetup()"></div>
 <div class="preg-sheet" id="cycle-sheet">
   <div class="preg-sheet-handle"></div>
   <div class="preg-sheet-topbar">
@@ -705,7 +713,6 @@
     <div class="preg-sheet-step" id="cycle-step"></div>
   </div>
 
-  <!-- Q0: What brings you here -->
   <div class="preg-screen active" id="cycle-screen-0">
     <div class="preg-progress"><div class="preg-progress-fill" style="width:20%"></div></div>
     <div class="preg-question">What would you like to track?</div>
@@ -722,11 +729,10 @@
     </div>
   </div>
 
-  <!-- Q1: Last period -->
   <div class="preg-screen" id="cycle-screen-1">
     <div class="preg-progress"><div class="preg-progress-fill" style="width:40%"></div></div>
     <div class="preg-question">When did your last period start?</div>
-    <div class="preg-subtitle">This helps us predict your next period and ovulation window right away.</div>
+    <div class="preg-subtitle">Helps us predict your next period and ovulation right away.</div>
     <div class="preg-options" style="margin-bottom:12px;">
       <button class="preg-option" id="period-currently-btn" onclick="toggleCurrentlyOn()">🩸 I'm on my period right now</button>
     </div>
@@ -740,21 +746,19 @@
     <button class="preg-skip" onclick="cycleSetupSkip()">Skip — I'll log manually</button>
   </div>
 
-  <!-- Q2: Cycle length -->
   <div class="preg-screen" id="cycle-screen-2">
     <div class="preg-progress"><div class="preg-progress-fill" style="width:60%"></div></div>
     <div class="preg-question">How long is your typical cycle?</div>
-    <div class="preg-subtitle">Day 1 of your period to day 1 of your next period. Most cycles are 21–35 days.</div>
+    <div class="preg-subtitle">Day 1 to day 1 of your next period. Most cycles are 21–35 days.</div>
     <div class="preg-slider-wrap">
       <div class="preg-slider-val" id="cycle-len-display">28 days</div>
       <input class="preg-slider" type="range" min="21" max="45" value="28" id="cycle-len-slider" oninput="document.getElementById('cycle-len-display').textContent=this.value+' days'" />
       <div class="preg-slider-label"><span>21d</span><span>28d</span><span>35d</span><span>45d</span></div>
     </div>
-    <div style="font-size:11px;color:var(--ink4);margin-bottom:14px;">Not sure? We'll use 28 days and update as you log more cycles.</div>
+    <div style="font-size:11px;color:var(--ink4);margin-bottom:14px;">Not sure? We'll use 28 days and update as you log more.</div>
     <button class="preg-next-btn" onclick="cycleSetupNext()">Continue →</button>
   </div>
 
-  <!-- Q3: TTC method details (conditional) -->
   <div class="preg-screen" id="cycle-screen-3">
     <div class="preg-progress"><div class="preg-progress-fill" style="width:80%"></div></div>
     <div class="preg-question" id="cycle-q3-title">A little more detail</div>
@@ -763,11 +767,14 @@
     <button class="preg-next-btn" id="cycle-q3-next" onclick="cycleSetupNext()">Finish setup →</button>
     <button class="preg-skip" onclick="cycleSetupSkip()">Skip this step</button>
   </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
 
-</div>
-
-<!-- ── CYCLE OVERRIDE SHEET ── -->
-<div class="preg-sheet-overlay" id="override-overlay" onclick="closeOverrideSheet()"></div>
+  // Inject override sheet outside app-scale so position:fixed works
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="preg-sheet-overlay" id="override-overlay" onclick="closeOverrideSheet()"></div>
 <div class="preg-sheet" id="override-sheet">
   <div class="preg-sheet-handle"></div>
   <div class="preg-sheet-topbar">
@@ -775,7 +782,7 @@
   </div>
   <div style="padding:20px 18px;">
     <div class="preg-question" style="font-size:17px;margin-bottom:6px;">What do you want to adjust?</div>
-    <div class="preg-subtitle">Use this if your period came early, late, ended sooner, or didn't come at all. Your predictions will update.</div>
+    <div class="preg-subtitle">Use this if your period came early, late, ended sooner, or didn't come at all.</div>
     <div class="preg-options">
       <button class="preg-option" onclick="submitOverride('late_start')">📅 My period started later than predicted</button>
       <button class="preg-option" onclick="submitOverride('early_end')">✓ My period ended earlier than expected</button>
@@ -787,63 +794,9 @@
     <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-top:10px;margin-bottom:6px;">Note (optional)</label>
     <input class="preg-input" type="text" id="override-note" placeholder="e.g. stress, travel, illness" maxlength="100" />
   </div>
-</div>
-
-
-{% endblock %}
-
-{% block extra_script %}
-<script>
-  const TOKEN = "{{ token }}";
-
-  // Inject cycle sheet outside app-scale
-  (function() {
-    const el = document.createElement('div');
-    el.innerHTML = `<div class="cycle-sheet-overlay" id="cycle-overlay" onclick="closeCycleSheet()"></div>
-<div class="cycle-sheet" id="cycle-sheet">
-  <div class="cycle-sheet-handle"></div>
-  <div class="cycle-sheet-topbar">
-    <div class="cycle-sheet-title">Cycle Log</div>
-  </div>
-
-  <!-- Screen 0: What's happening -->
-  <div class="cycle-screen active" id="cycle-screen-0">
-    <div class="cycle-question">What's happening?</div>
-    <div class="cycle-subtitle">Log where you are in your cycle today.</div>
-    <div class="cycle-options">
-      <button class="cycle-option" onclick="cyclePick(this,'action','start')">🌙 My period started</button>
-      <button class="cycle-option" onclick="cyclePick(this,'action','end')">✓ My period ended</button>
-      <button class="cycle-option" onclick="cyclePick(this,'action','skip')">↷ Skip / no period this cycle</button>
-    </div>
-    <button class="cycle-next-btn" id="cycle-next-0" onclick="cycleNext()" disabled>Continue →</button>
-  </div>
-
-  <!-- Screen 1: Duration (only for start) -->
-  <div class="cycle-screen" id="cycle-screen-1">
-    <div class="cycle-question">How long does it usually last?</div>
-    <div class="cycle-subtitle">Pick the closest number of days. You can adjust later.</div>
-    <div class="cycle-dur-row" id="cycle-dur-row">
-      <button class="cycle-dur-btn" onclick="cycleDur(this, 3)">3d</button>
-      <button class="cycle-dur-btn" onclick="cycleDur(this, 4)">4d</button>
-      <button class="cycle-dur-btn" onclick="cycleDur(this, 5)">5d</button>
-      <button class="cycle-dur-btn" onclick="cycleDur(this, 6)">6d</button>
-      <button class="cycle-dur-btn" onclick="cycleDur(this, 7)">7d</button>
-      <button class="cycle-dur-btn" onclick="cycleDur(this, 8)">8d</button>
-    </div>
-    <button class="cycle-next-btn" id="cycle-next-1" onclick="cycleNext()" disabled>Continue →</button>
-  </div>
-
-  <!-- Screen 2: Date -->
-  <div class="cycle-screen" id="cycle-screen-2">
-    <div class="cycle-question">Which date?</div>
-    <div class="cycle-subtitle">Defaults to today — change if you're logging retroactively.</div>
-    <input class="cycle-input" type="date" id="cycle-date-input" />
-    <button class="cycle-next-btn" onclick="submitCycle()">Log it ✓</button>
-  </div>
 </div>`;
     while (el.firstChild) document.body.appendChild(el.firstChild);
-    // Set default date
-    document.getElementById('cycle-date-input').value = todayStr();
+    document.getElementById('override-date').value = todayStr();
   })();
 
   // Inject pregnancy sheet outside app-scale so position:fixed works
