@@ -779,17 +779,17 @@
   <div class="info-card" style="margin:0 18px 8px;">
     <div style="font-size:14px;color:var(--ink3);margin-bottom:8px;">
       Currently tracking: <strong style="color:var(--ink);">
-        {% if cycle_mode == 'period_only' %}Period only
+        {% if cycle_mode == 'period_only' %}My period — open to pregnancy later
         {% elif cycle_mode == 'ttc_traditional' %}Trying to conceive
         {% elif cycle_mode == 'ttc_ivf' %}IVF journey
-        {% elif cycle_mode == 'ttc_surrogate_intended' %}Surrogacy (intended parent)
-        {% elif cycle_mode == 'ttc_surrogate_carrier' %}Surrogacy (carrier)
+        {% elif cycle_mode == 'ttc_surrogate_intended' %}Surrogacy — intended parent
+        {% elif cycle_mode == 'ttc_surrogate_carrier' %}Surrogate carrier
         {% elif cycle_mode == 'infertile' %}Period tracking only
         {% elif cycle_mode == 'not_applicable' %}Not tracking
         {% else %}{{ cycle_mode }}{% endif %}
       </strong>
     </div>
-    <button class="cycle-log-btn secondary" onclick="openCycleSetup()">Change tracking mode</button>
+    <button class="cycle-log-btn secondary" onclick="openCycleSetup()">Update my tracking setup</button>
     {% if cycle_mode == 'ttc_ivf' %}
     <button class="cycle-log-btn secondary" onclick="openIVFStageSheet()">💙 Update IVF stage</button>
     {% endif %}
@@ -831,25 +831,39 @@
     <div class="preg-sheet-step" id="cycle-step"></div>
   </div>
 
+  <!-- Screen 0: Do you have a period? -->
   <div class="preg-screen active" id="cycle-screen-0">
     <div class="preg-progress"><div class="preg-progress-fill" style="width:20%"></div></div>
-    <div class="preg-question">What would you like to track?</div>
-    <div class="preg-subtitle">You can change this at any time in settings.</div>
+    <div class="preg-question">Do you have a period?</div>
+    <div class="preg-subtitle">This helps us know what to track for you. You can always change it later.</div>
     <div class="preg-options">
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','period_only')">📅 My period · phases, predictions, history</button>
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_traditional')">🌸 Trying to conceive · period + ovulation + intimacy</button>
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_ivf')">💙 IVF journey · stage tracking + emotional vibes</button>
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_surrogate_intended')">💛 Using a surrogate · anticipation tracking</button>
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_surrogate_carrier')">💜 I am a surrogate · physical + purpose tracking</button>
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','pregnant')">🤰 I'm currently pregnant · skip to pregnancy setup</button>
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','infertile')">⚪ Tracking my period only — no pregnancy tracking</button>
+      <button class="preg-option" onclick="cyclePeriodPick(this,'regular')">🌙 Yes, it's fairly regular</button>
+      <button class="preg-option" onclick="cyclePeriodPick(this,'irregular')">🌊 Yes, but it's irregular or hard to predict</button>
+      <button class="preg-option" onclick="cyclePeriodPick(this,'none')">⚪ No — this doesn't apply to me</button>
     </div>
   </div>
 
+  <!-- Screen 1: Pregnancy relationship -->
   <div class="preg-screen" id="cycle-screen-1">
-    <div class="preg-progress"><div class="preg-progress-fill" style="width:40%"></div></div>
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:38%"></div></div>
+    <div class="preg-question" id="cycle-preg-q">What's your relationship with pregnancy right now?</div>
+    <div class="preg-subtitle">No right answer. Just helps us tailor what you see.</div>
+    <div class="preg-options" id="cycle-preg-options">
+      <button class="preg-option" onclick="cyclePregnancyPick(this,'pregnant')">🤰 I'm currently pregnant</button>
+      <button class="preg-option" onclick="cyclePregnancyPick(this,'ttc_traditional')">🌸 I'm trying to conceive</button>
+      <button class="preg-option" onclick="cyclePregnancyPick(this,'ttc_ivf')">💙 I'm doing IVF</button>
+      <button class="preg-option" onclick="cyclePregnancyPick(this,'ttc_surrogate_intended')">💛 Someone is carrying for me</button>
+      <button class="preg-option" onclick="cyclePregnancyPick(this,'ttc_surrogate_carrier')">💜 I'm carrying for someone else</button>
+      <button class="preg-option" onclick="cyclePregnancyPick(this,'period_only')">✨ Open to it someday — not thinking about it now</button>
+      <button class="preg-option" onclick="cyclePregnancyPick(this,'infertile')">🌿 Pregnancy isn't part of my path</button>
+    </div>
+  </div>
+
+  <!-- Screen 2: Last period date (skipped if no periods) -->
+  <div class="preg-screen" id="cycle-screen-2">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:58%"></div></div>
     <div class="preg-question">When did your last period start?</div>
-    <div class="preg-subtitle">Helps us predict your next period and ovulation right away.</div>
+    <div class="preg-subtitle">Helps us set up predictions right away. Skip if you're not sure.</div>
     <div class="preg-options" style="margin-bottom:12px;">
       <button class="preg-option" id="period-currently-btn" onclick="toggleCurrentlyOn()">🩸 I'm on my period right now</button>
     </div>
@@ -863,25 +877,27 @@
     <button class="preg-skip" onclick="cycleSetupSkip()">Skip — I'll log manually</button>
   </div>
 
-  <div class="preg-screen" id="cycle-screen-2">
-    <div class="preg-progress"><div class="preg-progress-fill" style="width:60%"></div></div>
-    <div class="preg-question">How long is your typical cycle?</div>
-    <div class="preg-subtitle">Day 1 to day 1 of your next period. Most cycles are 21–35 days.</div>
+  <!-- Screen 3: Cycle length (skipped if no periods) -->
+  <div class="preg-screen" id="cycle-screen-3">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:78%"></div></div>
+    <div class="preg-question" id="cycle-len-q">How long is your typical cycle?</div>
+    <div class="preg-subtitle" id="cycle-len-sub">Day 1 of your period to day 1 of the next. Most cycles are 21–35 days.</div>
     <div class="preg-slider-wrap">
       <div class="preg-slider-val" id="cycle-len-display">28 days</div>
       <input class="preg-slider" type="range" min="21" max="45" value="28" id="cycle-len-slider" oninput="document.getElementById('cycle-len-display').textContent=this.value+' days'" />
       <div class="preg-slider-label"><span>21d</span><span>28d</span><span>35d</span><span>45d</span></div>
     </div>
-    <div style="font-size:13px;color:var(--ink4);margin-bottom:14px;">Not sure? We'll use 28 days and update as you log more.</div>
+    <div style="font-size:13px;color:var(--ink4);margin-bottom:14px;" id="cycle-len-note">Not sure? We'll use 28 days and refine it as you log more cycles.</div>
     <button class="preg-next-btn" onclick="cycleSetupNext()">Continue →</button>
   </div>
 
-  <div class="preg-screen" id="cycle-screen-3">
-    <div class="preg-progress"><div class="preg-progress-fill" style="width:80%"></div></div>
-    <div class="preg-question" id="cycle-q3-title">A little more detail</div>
-    <div class="preg-subtitle" id="cycle-q3-sub"></div>
-    <div id="cycle-q3-content"></div>
-    <button class="preg-next-btn" id="cycle-q3-next" onclick="cycleSetupNext()">Finish setup →</button>
+  <!-- Screen 4: Extra details (TTC / IVF / Surrogate) -->
+  <div class="preg-screen" id="cycle-screen-4">
+    <div class="preg-progress"><div class="preg-progress-fill" style="width:92%"></div></div>
+    <div class="preg-question" id="cycle-q4-title">A little more detail</div>
+    <div class="preg-subtitle" id="cycle-q4-sub"></div>
+    <div id="cycle-q4-content"></div>
+    <button class="preg-next-btn" id="cycle-q4-next" onclick="cycleSetupNext()">Finish setup →</button>
     <button class="preg-skip" onclick="cycleSetupSkip()">Skip this step</button>
   </div>
 </div>`;
@@ -1430,50 +1446,84 @@
 
   // ── Cycle setup sheet ─────────────────────────────────────────────────────
 
-  const CYCLE_SETUP_TOTAL = 4;
+  // ── Cycle setup — new two-question flow ─────────────────────────────────────
+  // Screen 0: period status  → Screen 1: pregnancy relationship
+  // Screen 2: last period date (skipped if no periods)
+  // Screen 3: cycle length   (skipped if no periods)
+  // Screen 4: TTC/IVF/surrogate details (only when relevant)
+
+  const CYCLE_SETUP_TOTAL = 5;
   let cycleSetupStep = 0;
   let cycleSetupData = {
-    tracking_mode: 'period_only', last_period_start: null, last_period_end: null,
+    tracking_mode: 'period_only',
+    period_status: 'regular',      // regular | irregular | none
+    last_period_start: null, last_period_end: null,
     period_ongoing: false, cycle_length: 28, period_duration: 5,
     ivf_stage: null, ttc_duration_months: 0, linked_player_uuid: null,
+    ivf_auto_progress: false, ivf_stimulation_start: null,
+    ivf_retrieval_date: null, ivf_transfer_date: null, ivf_beta_date: null,
   };
 
   function openCycleSetup() {
     cycleSetupStep = 0;
-    cycleSetupData = { tracking_mode: 'period_only', last_period_start: null,
-      last_period_end: null, period_ongoing: false, cycle_length: 28,
-      period_duration: 5, ivf_stage: null, ttc_duration_months: 0, linked_player_uuid: null };
+    cycleSetupData = {
+      tracking_mode: 'period_only', period_status: 'regular',
+      last_period_start: null, last_period_end: null,
+      period_ongoing: false, cycle_length: 28, period_duration: 5,
+      ivf_stage: null, ttc_duration_months: 0, linked_player_uuid: null,
+      ivf_auto_progress: false, ivf_stimulation_start: null,
+      ivf_retrieval_date: null, ivf_transfer_date: null, ivf_beta_date: null,
+    };
     showCycleSetupScreen(0);
-    document.getElementById('cycle-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('cycle-sheet').classList.add('open'), 10);
+    document.getElementById('cycle-overlay')?.classList.add('open');
+    setTimeout(() => document.getElementById('cycle-sheet')?.classList.add('open'), 10);
   }
 
   function closeCycleSetup() {
-    document.getElementById('cycle-sheet').classList.remove('open');
-    document.getElementById('cycle-overlay').classList.remove('open');
+    document.getElementById('cycle-sheet')?.classList.remove('open');
+    document.getElementById('cycle-overlay')?.classList.remove('open');
   }
 
   function showCycleSetupScreen(n) {
     document.querySelectorAll('#cycle-sheet .preg-screen').forEach(s => s.classList.remove('active'));
     document.getElementById('cycle-screen-' + n)?.classList.add('active');
-    document.getElementById('cycle-step').textContent = (n + 1) + ' / ' + CYCLE_SETUP_TOTAL;
     document.getElementById('cycle-back').style.display = n > 0 ? 'block' : 'none';
     document.getElementById('cycle-sheet').scrollTop = 0;
-    if (n === 3) buildCycleQ3();
+    // Update step indicator — hide for screens without a numbered step feel
+    document.getElementById('cycle-step').textContent = '';
+    if (n === 4) buildCycleQ4();
+    // Tailor cycle length screen copy for irregular
+    if (n === 3 && cycleSetupData.period_status === 'irregular') {
+      document.getElementById('cycle-len-q').textContent = 'How long does a typical cycle tend to run?';
+      document.getElementById('cycle-len-sub').textContent = "It doesn't have to be exact — give us a rough idea and we'll adjust as you log more.";
+      document.getElementById('cycle-len-note').textContent = "Irregular cycles are totally valid. We'll update predictions as your pattern becomes clearer.";
+    }
   }
 
   function cycleSetupBack() {
     if (cycleSetupStep > 0) { cycleSetupStep--; showCycleSetupScreen(cycleSetupStep); }
   }
 
-  function cycleSetupPick(btn, key, val) {
-    btn.closest('.preg-options').querySelectorAll('.preg-option')
-      .forEach(b => b.classList.remove('selected'));
+  // Screen 0 pick — period status
+  function cyclePeriodPick(btn, status) {
+    btn.closest('.preg-options').querySelectorAll('.preg-option').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    cycleSetupData[key] = val;
-    if (key === 'tracking_mode' && val === 'pregnant') {
+    cycleSetupData.period_status = status;
+    setTimeout(() => {
+      cycleSetupStep = 1;
+      showCycleSetupScreen(1);
+    }, 280);
+  }
+
+  // Screen 1 pick — pregnancy relationship
+  function cyclePregnancyPick(btn, mode) {
+    btn.closest('.preg-options').querySelectorAll('.preg-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    cycleSetupData.tracking_mode = mode;
+
+    // Pregnant → fire setup then open preg sheet
+    if (mode === 'pregnant') {
       closeCycleSetup();
-      // Mark setup as complete with pregnant mode before opening preg sheet
       fetch('/cycle/setup', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: TOKEN, tracking_mode: 'pregnant', cycle_length: 28, period_duration: 5 })
@@ -1481,7 +1531,23 @@
       setTimeout(() => openPregSheet(), 300);
       return;
     }
-    setTimeout(cycleSetupNext, 280);
+
+    setTimeout(() => {
+      cycleSetupStep = 2;
+      const hasperiods = cycleSetupData.period_status !== 'none';
+      // No periods: skip date and length screens, go straight to Q4 or submit
+      if (!hasperiods) {
+        const needsQ4 = ['ttc_traditional','ttc_ivf','ttc_surrogate_intended','ttc_surrogate_carrier'].includes(mode);
+        if (needsQ4) {
+          cycleSetupStep = 4;
+          showCycleSetupScreen(4);
+        } else {
+          submitCycleSetup();
+        }
+      } else {
+        showCycleSetupScreen(2);
+      }
+    }, 280);
   }
 
   function toggleCurrentlyOn() {
@@ -1494,65 +1560,117 @@
   }
 
   function cycleSetupNext() {
-    if (cycleSetupStep === 1) {
-      cycleSetupData.last_period_start = document.getElementById('cycle-period-start').value || null;
-      cycleSetupData.last_period_end   = document.getElementById('cycle-period-end').value || null;
-    }
     if (cycleSetupStep === 2) {
-      cycleSetupData.cycle_length = parseInt(document.getElementById('cycle-len-slider').value) || 28;
+      cycleSetupData.last_period_start = document.getElementById('cycle-period-start')?.value || null;
+      cycleSetupData.last_period_end   = document.getElementById('cycle-period-end')?.value || null;
+      cycleSetupStep = 3;
+      showCycleSetupScreen(3);
+      return;
     }
-    const mode = cycleSetupData.tracking_mode;
-    const needsQ3 = ['ttc_traditional','ttc_ivf','ttc_surrogate_intended','ttc_surrogate_carrier'].includes(mode);
-    cycleSetupStep++;
-    if (cycleSetupStep === 3 && !needsQ3) { submitCycleSetup(); return; }
-    if (cycleSetupStep < CYCLE_SETUP_TOTAL) showCycleSetupScreen(cycleSetupStep);
-    else submitCycleSetup();
+    if (cycleSetupStep === 3) {
+      cycleSetupData.cycle_length = parseInt(document.getElementById('cycle-len-slider')?.value) || 28;
+      const mode    = cycleSetupData.tracking_mode;
+      const needsQ4 = ['ttc_traditional','ttc_ivf','ttc_surrogate_intended','ttc_surrogate_carrier'].includes(mode);
+      if (needsQ4) {
+        cycleSetupStep = 4;
+        showCycleSetupScreen(4);
+      } else {
+        submitCycleSetup();
+      }
+      return;
+    }
+    if (cycleSetupStep === 4) {
+      submitCycleSetup();
+      return;
+    }
   }
 
   function cycleSetupSkip() {
-    if (cycleSetupStep === 1) { cycleSetupData.last_period_start = null; cycleSetupData.last_period_end = null; }
-    cycleSetupStep++;
-    const mode = cycleSetupData.tracking_mode;
-    const needsQ3 = ['ttc_traditional','ttc_ivf','ttc_surrogate_intended','ttc_surrogate_carrier'].includes(mode);
-    if (cycleSetupStep === 3 && !needsQ3) { submitCycleSetup(); return; }
-    if (cycleSetupStep < CYCLE_SETUP_TOTAL) showCycleSetupScreen(cycleSetupStep);
-    else submitCycleSetup();
-  }
-
-  function buildCycleQ3() {
-    const mode = cycleSetupData.tracking_mode;
-    document.getElementById('cycle-q3-content').innerHTML = '';
-    if (mode === 'ttc_traditional') {
-      document.getElementById('cycle-q3-title').textContent = 'How long have you been trying?';
-      document.getElementById('cycle-q3-sub').textContent   = 'Helps us tailor your vibes.';
-      document.getElementById('cycle-q3-content').innerHTML = `
-        <div class="preg-options">
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',0)">Just starting out</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',2)">1-3 months</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',4)">3-6 months</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',7)">6+ months</button>
-        </div>`;
-    } else if (mode === 'ttc_ivf') {
-      document.getElementById('cycle-q3-title').textContent = 'Where are you in the process?';
-      document.getElementById('cycle-q3-sub').textContent   = 'Each stage has its own vibe profile.';
-      document.getElementById('cycle-q3-content').innerHTML = `
-        <div class="preg-options">
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','preparing')">Preparing - consultations and tests</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','stimulation')">Stimulation phase</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','transfer_wait')">Transfer / two week wait</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','successful')">Successful transfer</button>
-        </div>`;
-    } else if (mode === 'ttc_surrogate_intended' || mode === 'ttc_surrogate_carrier') {
-      document.getElementById('cycle-q3-title').textContent = 'Link with your surrogate partner?';
-      document.getElementById('cycle-q3-sub').textContent   = 'Enter their avatar UUID to connect your occurrences.';
-      document.getElementById('cycle-q3-content').innerHTML = `
-        <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Avatar UUID</label>
-        <input class="preg-input" type="text" id="cycle-linked-uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" maxlength="36" style="font-family:monospace;font-size:14px;" />
-        <div style="font-size:13px;color:var(--ink4);margin-top:6px;">Optional - you can add this later.</div>`;
+    if (cycleSetupStep === 2) {
+      cycleSetupData.last_period_start = null;
+      cycleSetupData.last_period_end   = null;
+      cycleSetupStep = 3;
+      showCycleSetupScreen(3);
+      return;
+    }
+    if (cycleSetupStep === 3) {
+      const mode    = cycleSetupData.tracking_mode;
+      const needsQ4 = ['ttc_traditional','ttc_ivf','ttc_surrogate_intended','ttc_surrogate_carrier'].includes(mode);
+      if (needsQ4) {
+        cycleSetupStep = 4;
+        showCycleSetupScreen(4);
+      } else {
+        submitCycleSetup();
+      }
+      return;
+    }
+    if (cycleSetupStep === 4) {
+      submitCycleSetup();
+      return;
     }
   }
 
-  function cycleSetupPickQ3(btn, key, val) {
+  function buildCycleQ4() {
+    const mode = cycleSetupData.tracking_mode;
+    const titleEl   = document.getElementById('cycle-q4-title');
+    const subEl     = document.getElementById('cycle-q4-sub');
+    const contentEl = document.getElementById('cycle-q4-content');
+    contentEl.innerHTML = '';
+
+    if (mode === 'ttc_traditional') {
+      titleEl.textContent  = 'How long have you been trying?';
+      subEl.textContent    = 'This shapes your vibes — no wrong answer.';
+      contentEl.innerHTML  = `
+        <div class="preg-options">
+          <button class="preg-option" onclick="cycleSetupPickQ4(this,'ttc_duration_months',0)">Just starting out 🌱</button>
+          <button class="preg-option" onclick="cycleSetupPickQ4(this,'ttc_duration_months',2)">A few months</button>
+          <button class="preg-option" onclick="cycleSetupPickQ4(this,'ttc_duration_months',4)">Three to six months</button>
+          <button class="preg-option" onclick="cycleSetupPickQ4(this,'ttc_duration_months',7)">Six months or more</button>
+        </div>`;
+    } else if (mode === 'ttc_ivf') {
+      titleEl.textContent  = 'How would you like to track your IVF stages?';
+      subEl.textContent    = 'You can enter your key dates and we'll advance automatically, or update your stage yourself.';
+      contentEl.innerHTML  = `
+        <div class="preg-options" style="margin-bottom:14px;">
+          <button class="preg-option" id="ivf-auto-btn" onclick="selectIVFMode(this,'auto')">📅 Enter my dates — advance automatically</button>
+          <button class="preg-option" id="ivf-manual-btn" onclick="selectIVFMode(this,'manual')">✏️ I'll update my stage myself</button>
+        </div>
+        <div id="ivf-date-inputs" style="display:none;">
+          <div style="font-size:13px;color:var(--ink4);margin-bottom:10px;">Enter what you know — fill in the rest later.</div>
+          <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Stimulation start</label>
+          <input class="preg-input" type="date" id="ivf-stim-date" style="margin-bottom:10px;" />
+          <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Retrieval date</label>
+          <input class="preg-input" type="date" id="ivf-retrieval-date" style="margin-bottom:10px;" />
+          <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Transfer date</label>
+          <input class="preg-input" type="date" id="ivf-transfer-date" style="margin-bottom:10px;" />
+          <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Beta (blood test) date</label>
+          <input class="preg-input" type="date" id="ivf-beta-date" style="margin-bottom:4px;" />
+        </div>
+        <div id="ivf-manual-stage" style="display:none;">
+          <div style="font-size:13px;color:var(--ink4);margin-bottom:10px;">Where are you right now?</div>
+          <div class="preg-options">
+            <button class="preg-option" onclick="cycleSetupPickQ4(this,'ivf_stage','preparing')">📋 Preparing — consultations and tests</button>
+            <button class="preg-option" onclick="cycleSetupPickQ4(this,'ivf_stage','stimulation')">💉 Stimulation phase</button>
+            <button class="preg-option" onclick="cycleSetupPickQ4(this,'ivf_stage','retrieval')">🌱 Retrieval</button>
+            <button class="preg-option" onclick="cycleSetupPickQ4(this,'ivf_stage','fertilization_wait')">⏳ Waiting on fertilization news</button>
+            <button class="preg-option" onclick="cycleSetupPickQ4(this,'ivf_stage','transfer')">✨ Transfer</button>
+            <button class="preg-option" onclick="cycleSetupPickQ4(this,'ivf_stage','transfer_wait')">🕯️ Two week wait</button>
+            <button class="preg-option" onclick="cycleSetupPickQ4(this,'ivf_stage','beta_wait')">🩸 Beta day</button>
+          </div>
+        </div>`;
+    } else if (mode === 'ttc_surrogate_intended' || mode === 'ttc_surrogate_carrier') {
+      titleEl.textContent = 'Want to link with your surrogate partner?';
+      subEl.textContent   = mode === 'ttc_surrogate_intended'
+        ? "Enter your surrogate's avatar UUID to connect your journeys."
+        : "Enter the intended parent's avatar UUID to connect your journeys.";
+      contentEl.innerHTML = `
+        <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Avatar UUID</label>
+        <input class="preg-input" type="text" id="cycle-linked-uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" maxlength="36" style="font-family:monospace;font-size:13px;" />
+        <div style="font-size:13px;color:var(--ink4);margin-top:6px;">Optional — you can do this later in settings.</div>`;
+    }
+  }
+
+  function cycleSetupPickQ4(btn, key, val) {
     btn.closest('.preg-options').querySelectorAll('.preg-option').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     cycleSetupData[key] = val;
@@ -1560,19 +1678,29 @@
 
   async function submitCycleSetup() {
     closeCycleSetup();
+
+    // Collect IVF dates if auto mode chosen
+    if (cycleSetupData.tracking_mode === 'ttc_ivf' && cycleSetupData.ivf_auto_progress) {
+      cycleSetupData.ivf_stimulation_start = document.getElementById('ivf-stim-date')?.value || null;
+      cycleSetupData.ivf_retrieval_date    = document.getElementById('ivf-retrieval-date')?.value || null;
+      cycleSetupData.ivf_transfer_date     = document.getElementById('ivf-transfer-date')?.value || null;
+      cycleSetupData.ivf_beta_date         = document.getElementById('ivf-beta-date')?.value || null;
+    }
+    // Collect surrogate UUID
     const uuidEl = document.getElementById('cycle-linked-uuid');
     if (uuidEl) cycleSetupData.linked_player_uuid = uuidEl.value.trim() || null;
+
     try {
       const res = await fetch('/cycle/setup', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: TOKEN, ...cycleSetupData })
       });
-      if (res.ok) { toast('Cycle tracking set up'); setTimeout(() => location.reload(), 1400); }
+      if (res.ok) { toast('All set ✓'); setTimeout(() => location.reload(), 1400); }
       else { const d = await res.json(); toast(d.detail || 'Something went wrong'); }
     } catch(e) { toast('Connection error'); }
   }
 
-  // ── Override sheet ────────────────────────────────────────────────────────
+  // ── Override sheet ────────────────────────────────────────────────────────  // ── Override sheet ────────────────────────────────────────────────────────
 
   function openOverrideSheet() {
     document.getElementById('override-date').value = todayStr();
