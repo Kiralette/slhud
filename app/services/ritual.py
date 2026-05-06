@@ -938,3 +938,119 @@ async def run_ttc_conception_checks(db=None):
 
     if not is_postgres():
         await db.commit()
+
+
+# ── IVF Stage Auto-Progression ────────────────────────────────────────────────
+
+async def run_ivf_stage_progression(db=None):
+    """
+    Daily: for all IVF players with auto_progress enabled, recalculate the
+    correct stage from their stored dates and update sub_stage if it changed.
+    Fires a notification when the stage advances.
+    """
+    if db is None:
+        return
+
+    today = date.today()
+
+    if is_postgres():
+        occs = await db.fetch(
+            """SELECT id, player_id, sub_stage, metadata FROM player_occurrences
+               WHERE occurrence_key = 'ttc_ivf' AND is_resolved = 0""")
+    else:
+        async with db.execute(
+            """SELECT id, player_id, sub_stage, metadata FROM player_occurrences
+               WHERE occurrence_key = 'ttc_ivf' AND is_resolved = 0"""
+        ) as cur:
+            occs = await cur.fetchall()
+
+    for occ in occs:
+        import json as _j
+        try:
+            meta = _j.loads(occ["metadata"] or "{}")
+        except Exception:
+            continue
+
+        if not meta.get("ivf_auto_progress"):
+            continue
+
+        # Calculate correct stage from dates
+        def parse(key):
+            val = meta.get(key)
+            if not val:
+                return None
+            try:
+                return date.fromisoformat(val[:10])
+            except Exception:
+                return None
+
+        stim      = parse("stimulation_start")
+        retrieval = parse("retrieval_date")
+        transfer  = parse("transfer_date")
+        beta      = parse("beta_date")
+
+        if beta and today >= beta:
+            new_stage = "beta_wait" if today == beta else "successful"
+        elif transfer:
+            if today == transfer:
+                new_stage = "transfer"
+            elif today > transfer:
+                new_stage = "transfer_wait"
+            elif retrieval and today == retrieval:
+                new_stage = "retrieval"
+            elif retrieval and today > retrieval:
+                new_stage = "fertilization_wait"
+            elif stim and today >= stim:
+                new_stage = "stimulation"
+            else:
+                new_stage = "preparing"
+        elif retrieval:
+            if today == retrieval:
+                new_stage = "retrieval"
+            elif today > retrieval:
+                new_stage = "fertilization_wait"
+            elif stim and today >= stim:
+                new_stage = "stimulation"
+            else:
+                new_stage = "preparing"
+        elif stim and today >= stim:
+            new_stage = "stimulation"
+        else:
+            new_stage = "preparing"
+
+        current_stage = occ["sub_stage"] or "preparing"
+        if new_stage == current_stage:
+            continue
+
+        # Stage has advanced — update it
+        if is_postgres():
+            await db.execute(
+                """UPDATE player_occurrences SET sub_stage = $1 WHERE id = $2""",
+                new_stage, occ["id"])
+        else:
+            await db.execute(
+                """UPDATE player_occurrences SET sub_stage = ? WHERE id = ?""",
+                (new_stage, occ["id"]))
+
+        # Notify the player
+        stage_labels = {
+            "stimulation":       "Stimulation phase has started 💉",
+            "retrieval":         "It's retrieval day 🌱",
+            "fertilization_wait": "Waiting on your fertilization news ⏳",
+            "transfer":          "It's transfer day ✨",
+            "transfer_wait":     "The two week wait has started 🕯️",
+            "beta_wait":         "It's beta day 🩸",
+            "successful":        "Your IVF journey has reached the next chapter 🌸",
+        }
+        title = stage_labels.get(new_stage, f"IVF stage updated: {new_stage}")
+
+        await push_notification(
+            player_id=occ["player_id"],
+            app_source="ritual",
+            title=title,
+            body="Open Ritual to see your updated stage card.",
+            priority="normal",
+            db=db)
+
+    if not is_postgres():
+        await db.commit()

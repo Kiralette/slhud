@@ -541,8 +541,8 @@
   </div>
 
   {% else %}
-  <!-- ── Today card ── -->
-  {% if cycle_phase and cycle_phase.phase %}
+  <!-- ── Today card — cycle phase ── -->
+  {% if cycle_phase and cycle_phase.phase and cycle_mode != 'ttc_ivf' %}
   <div class="info-card" style="margin:14px 18px 0;background:var(--bg2);">
     <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Today · Day {{ cycle_phase.cycle_day }} of {{ cycle_phase.cycle_length }}</div>
     <div style="font-family:var(--font-head);font-size:18px;color:var(--ink);margin-bottom:2px;">{{ cycle_phase.headline }}</div>
@@ -554,6 +554,26 @@
     {% if cycle_phase.haul %}
     <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
     <div style="font-size:12px;color:var(--ink2);">{{ cycle_phase.haul | join(' · ') }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── Today card — IVF stage ── -->
+  {% if cycle_mode == 'ttc_ivf' and ivf_stage_data and ivf_stage_data.stage %}
+  <div class="info-card" style="margin:14px 18px 0;background:var(--bg2);border-color:rgba(100,140,220,0.25);">
+    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">💙 IVF · {{ ivf_stage_data.label }}</div>
+    <div style="font-family:var(--font-head);font-size:18px;color:var(--ink);margin-bottom:2px;">{{ ivf_stage_data.headline }}</div>
+    <div style="font-size:12px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ ivf_stage_data.body }}</div>
+    {% if ivf_stage_data.tip %}
+    <div style="font-size:11px;color:var(--ink4);background:var(--bg3);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;line-height:1.5;">💡 {{ ivf_stage_data.tip }}</div>
+    {% endif %}
+    {% if ivf_stage_data.eats %}
+    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
+    <div style="font-size:12px;color:var(--ink2);">{{ ivf_stage_data.eats | join(' · ') }}</div>
+    {% endif %}
+    {% if ivf_stage_data.haul %}
+    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
+    <div style="font-size:12px;color:var(--ink2);">{{ ivf_stage_data.haul | join(' · ') }}</div>
     {% endif %}
   </div>
   {% endif %}
@@ -688,6 +708,9 @@
       </strong>
     </div>
     <button class="cycle-log-btn secondary" onclick="openCycleSetup()" style="margin:0;">Change tracking mode</button>
+    {% if cycle_mode == 'ttc_ivf' %}
+    <button class="cycle-log-btn secondary" onclick="openIVFStageSheet()" style="margin:8px 0 0;">💙 Update IVF stage</button>
+    {% endif %}
   </div>
 
   <div class="info-card" style="margin:0 18px 8px;border-color:rgba(180,60,60,0.15);">
@@ -829,6 +852,44 @@
 </div>`;
     while (el.firstChild) document.body.appendChild(el.firstChild);
   })();
+
+  // Inject IVF stage update sheet outside app-scale
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="preg-sheet-overlay" id="ivf-overlay" onclick="closeIVFStageSheet()"></div>
+<div class="preg-sheet" id="ivf-sheet">
+  <div class="preg-sheet-handle"></div>
+  <div class="preg-sheet-topbar">
+    <div class="preg-sheet-title">💙 IVF tracking</div>
+  </div>
+  <div style="padding:4px 18px 24px;overflow-y:auto;max-height:70vh;">
+    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:6px;">Update dates</div>
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:10px;">Add or update your key dates — stage will advance automatically on the right day.</div>
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Stimulation start</label>
+    <input class="preg-input" type="date" id="ivf-edit-stim" style="margin-bottom:10px;" />
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Retrieval date</label>
+    <input class="preg-input" type="date" id="ivf-edit-retrieval" style="margin-bottom:10px;" />
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Transfer date</label>
+    <input class="preg-input" type="date" id="ivf-edit-transfer" style="margin-bottom:10px;" />
+    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Beta (blood test) date</label>
+    <input class="preg-input" type="date" id="ivf-edit-beta" style="margin-bottom:14px;" />
+    <button class="cycle-log-btn" onclick="saveIVFDates()" style="margin:0 0 18px;width:100%;">Save dates</button>
+    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:6px;">Or update stage manually</div>
+    <div class="preg-options">
+      <button class="preg-option" onclick="submitIVFStage('preparing')">📋 Preparing</button>
+      <button class="preg-option" onclick="submitIVFStage('stimulation')">💉 Stimulation</button>
+      <button class="preg-option" onclick="submitIVFStage('retrieval')">🌱 Retrieval</button>
+      <button class="preg-option" onclick="submitIVFStage('fertilization_wait')">⏳ Fertilization wait</button>
+      <button class="preg-option" onclick="submitIVFStage('transfer')">✨ Transfer</button>
+      <button class="preg-option" onclick="submitIVFStage('transfer_wait')">🕯️ Two week wait</button>
+      <button class="preg-option" onclick="submitIVFStage('beta_wait')">🩸 Beta day</button>
+      <button class="preg-option" onclick="submitIVFStage('successful')">🌸 Confirmed pregnancy</button>
+    </div>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
   (function() {
     const el = document.createElement('div');
     el.innerHTML = `<div class="preg-sheet-overlay" id="preg-overlay" onclick="closePregSheet()"></div>
@@ -1112,17 +1173,18 @@
 
   const CYCLE_SETUP_TOTAL = 4;
   let cycleSetupStep = 0;
-  let cycleSetupData = {
+  const _cycleSetupDefaults = {
     tracking_mode: 'period_only', last_period_start: null, last_period_end: null,
     period_ongoing: false, cycle_length: 28, period_duration: 5,
     ivf_stage: null, ttc_duration_months: 0, linked_player_uuid: null,
+    ivf_auto_progress: false, ivf_stimulation_start: null,
+    ivf_retrieval_date: null, ivf_transfer_date: null, ivf_beta_date: null,
   };
+  let cycleSetupData = { ..._cycleSetupDefaults };
 
   function openCycleSetup() {
     cycleSetupStep = 0;
-    cycleSetupData = { tracking_mode: 'period_only', last_period_start: null,
-      last_period_end: null, period_ongoing: false, cycle_length: 28,
-      period_duration: 5, ivf_stage: null, ttc_duration_months: 0, linked_player_uuid: null };
+    cycleSetupData = { ..._cycleSetupDefaults };
     showCycleSetupScreen(0);
     document.getElementById('cycle-overlay').classList.add('open');
     setTimeout(() => document.getElementById('cycle-sheet').classList.add('open'), 10);
@@ -1206,14 +1268,36 @@
           <button class="preg-option" onclick="cycleSetupPickQ3(this,'ttc_duration_months',7)">6+ months</button>
         </div>`;
     } else if (mode === 'ttc_ivf') {
-      document.getElementById('cycle-q3-title').textContent = 'Where are you in the process?';
-      document.getElementById('cycle-q3-sub').textContent   = 'Each stage has its own vibe profile.';
+      document.getElementById('cycle-q3-title').textContent = 'How would you like to track stages?';
+      document.getElementById('cycle-q3-sub').textContent   = "You can enter your key dates and we'll advance your stage automatically, or update it yourself as you go.";
       document.getElementById('cycle-q3-content').innerHTML = `
-        <div class="preg-options">
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','preparing')">Preparing - consultations and tests</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','stimulation')">Stimulation phase</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','transfer_wait')">Transfer / two week wait</button>
-          <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','successful')">Successful transfer</button>
+        <div class="preg-options" style="margin-bottom:14px;">
+          <button class="preg-option" id="ivf-auto-btn" onclick="selectIVFMode(this,'auto')">📅 Enter my dates — advance automatically</button>
+          <button class="preg-option" id="ivf-manual-btn" onclick="selectIVFMode(this,'manual')">✏️ I'll update my stage manually</button>
+        </div>
+        <div id="ivf-date-inputs" style="display:none;">
+          <div style="font-size:11px;color:var(--ink4);margin-bottom:10px;">Enter the dates you know — leave others blank and add them later.</div>
+          <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Stimulation start</label>
+          <input class="preg-input" type="date" id="ivf-stim-date" style="margin-bottom:10px;" />
+          <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Retrieval date</label>
+          <input class="preg-input" type="date" id="ivf-retrieval-date" style="margin-bottom:10px;" />
+          <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Transfer date</label>
+          <input class="preg-input" type="date" id="ivf-transfer-date" style="margin-bottom:10px;" />
+          <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:4px;">Beta (blood test) date</label>
+          <input class="preg-input" type="date" id="ivf-beta-date" style="margin-bottom:4px;" />
+        </div>
+        <div id="ivf-manual-stage" style="display:none;">
+          <div style="font-size:11px;color:var(--ink4);margin-bottom:10px;">Where are you right now?</div>
+          <div class="preg-options">
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','preparing')">📋 Preparing</button>
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','stimulation')">💉 Stimulation</button>
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','retrieval')">🌱 Retrieval</button>
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','fertilization_wait')">⏳ Fertilization wait</button>
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','transfer')">✨ Transfer</button>
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','transfer_wait')">🕯️ Two week wait</button>
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','beta_wait')">🩸 Beta day</button>
+            <button class="preg-option" onclick="cycleSetupPickQ3(this,'ivf_stage','successful')">🌸 Confirmed pregnancy</button>
+          </div>
         </div>`;
     } else if (mode === 'ttc_surrogate_intended' || mode === 'ttc_surrogate_carrier') {
       document.getElementById('cycle-q3-title').textContent = 'Link with your surrogate partner?';
@@ -1225,6 +1309,14 @@
     }
   }
 
+  function selectIVFMode(btn, mode) {
+    document.querySelectorAll('#ivf-auto-btn, #ivf-manual-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    cycleSetupData.ivf_auto_progress = (mode === 'auto');
+    document.getElementById('ivf-date-inputs').style.display  = mode === 'auto'   ? 'block' : 'none';
+    document.getElementById('ivf-manual-stage').style.display = mode === 'manual' ? 'block' : 'none';
+  }
+
   function cycleSetupPickQ3(btn, key, val) {
     btn.closest('.preg-options').querySelectorAll('.preg-option').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
@@ -1233,6 +1325,13 @@
 
   async function submitCycleSetup() {
     closeCycleSetup();
+    // Collect IVF dates if in auto mode
+    if (cycleSetupData.tracking_mode === 'ttc_ivf' && cycleSetupData.ivf_auto_progress) {
+      cycleSetupData.ivf_stimulation_start = document.getElementById('ivf-stim-date')?.value || null;
+      cycleSetupData.ivf_retrieval_date    = document.getElementById('ivf-retrieval-date')?.value || null;
+      cycleSetupData.ivf_transfer_date     = document.getElementById('ivf-transfer-date')?.value || null;
+      cycleSetupData.ivf_beta_date         = document.getElementById('ivf-beta-date')?.value || null;
+    }
     const uuidEl = document.getElementById('cycle-linked-uuid');
     if (uuidEl) cycleSetupData.linked_player_uuid = uuidEl.value.trim() || null;
     try {
@@ -1322,6 +1421,71 @@
       } else {
         const d = await res.json();
         toast(d.detail || 'Could not delete');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── IVF stage update ──────────────────────────────────────────────────────
+
+  // Store IVF stage data from server for pre-populating date fields
+  let _ivfStageData = {{ ivf_stage_data | tojson }};
+
+  function openIVFStageSheet() {
+    // Pre-populate date fields if we have them
+    const d = _ivfStageData || {};
+    if (d.stimulation_start) document.getElementById('ivf-edit-stim').value     = d.stimulation_start;
+    if (d.retrieval_date)    document.getElementById('ivf-edit-retrieval').value = d.retrieval_date;
+    if (d.transfer_date)     document.getElementById('ivf-edit-transfer').value  = d.transfer_date;
+    if (d.beta_date)         document.getElementById('ivf-edit-beta').value      = d.beta_date;
+    document.getElementById('ivf-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('ivf-sheet').classList.add('open'), 10);
+  }
+
+  function closeIVFStageSheet() {
+    document.getElementById('ivf-sheet').classList.remove('open');
+    document.getElementById('ivf-overlay').classList.remove('open');
+  }
+
+  async function saveIVFDates() {
+    const payload = {
+      token:                TOKEN,
+      ivf_auto_progress:    true,
+      ivf_stimulation_start: document.getElementById('ivf-edit-stim').value     || null,
+      ivf_retrieval_date:    document.getElementById('ivf-edit-retrieval').value || null,
+      ivf_transfer_date:     document.getElementById('ivf-edit-transfer').value  || null,
+      ivf_beta_date:         document.getElementById('ivf-edit-beta').value      || null,
+    };
+    closeIVFStageSheet();
+    try {
+      const res = await fetch('/cycle/ivf-stage', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const d = await res.json();
+        toast(`Dates saved · ${d.label}`);
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        const d = await res.json();
+        toast(d.detail || 'Could not save dates');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function submitIVFStage(stage) {
+    closeIVFStageSheet();
+    try {
+      const res = await fetch('/cycle/ivf-stage', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, ivf_stage: stage, ivf_auto_progress: false })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        toast(`Stage updated: ${d.label}`);
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        const d = await res.json();
+        toast(d.detail || 'Could not update stage');
       }
     } catch(e) { toast('Connection error'); }
   }

@@ -903,6 +903,7 @@ async def ritual(
     cycle_phase_data = {}
     fertile_window   = {}
     ttc_occurrence   = None
+    ivf_stage_data   = {}
 
     if show_cycle_tab:
         cycle_len  = int(cycle_profile.get("default_cycle_length") or 28)
@@ -1092,6 +1093,17 @@ async def ritual(
                     ttc_row = await cur.fetchone()
             ttc_occurrence = dict(ttc_row) if ttc_row else None
 
+        # IVF stage data
+        ivf_stage_data = {}
+        if cycle_mode == "ttc_ivf" and ttc_occurrence:
+            try:
+                from app.routers.cycle import IVF_STAGE_ADVICE
+                stage  = ttc_occurrence.get("sub_stage") or "preparing"
+                advice = IVF_STAGE_ADVICE.get(stage, IVF_STAGE_ADVICE["preparing"])
+                ivf_stage_data = {"stage": stage, **advice}
+            except Exception:
+                ivf_stage_data = {}
+
     # Holidays for this month as {MM-DD: emoji}
     all_holidays = cfg.get("holidays", {})
     holidays_this_month = {k: v["emoji"] for k, v in all_holidays.items()
@@ -1173,6 +1185,7 @@ async def ritual(
         "cycle_phase":          cycle_phase_data,
         "fertile_window":       fertile_window,
         "ttc_occurrence":       ttc_occurrence,
+        "ivf_stage_data":       ivf_stage_data,
         "holidays_this_month":  holidays_this_month,
         "occurrences":          occurrences,
     })

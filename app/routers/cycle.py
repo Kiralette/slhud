@@ -54,6 +54,12 @@ class CycleSetup(BaseModel):
     ivf_stage: str | None         = None
     linked_player_uuid: str | None = None
     infertility_reason: str | None = None
+    # IVF auto-progression fields
+    ivf_auto_progress: bool       = False
+    ivf_stimulation_start: str | None = None  # YYYY-MM-DD
+    ivf_retrieval_date: str | None    = None
+    ivf_transfer_date: str | None     = None
+    ivf_beta_date: str | None         = None
 
 
 class LogStart(BaseModel):
@@ -130,6 +136,84 @@ PHASE_ADVICE = {
 }
 
 
+# ── IVF stage advice data ─────────────────────────────────────────────────────
+
+IVF_STAGE_ADVICE = {
+    "preparing": {
+        "label":    "Preparing",
+        "emoji":    "📋",
+        "headline": "Laying the groundwork 📋",
+        "body":     "Consultations, bloodwork, and baseline scans. There's a lot of information coming at you right now — it's okay to take notes, ask everything, and go at your own pace. Your body is getting ready.",
+        "eats":     ["Folate-rich leafy greens", "Whole grains", "Berries", "Walnuts", "Avocado"],
+        "haul":     ["A good planner or notebook", "Comfortable appointment outfit", "Calming tea"],
+        "tip":      "Start a medication and appointment tracker now — it gets detailed fast.",
+    },
+    "stimulation": {
+        "label":    "Stimulation",
+        "emoji":    "💉",
+        "headline": "In the thick of it 💉",
+        "body":     "Daily injections, frequent monitoring appointments, and a body that feels like it's working overtime — because it is. Bloating, mood swings, and fatigue are all normal and valid. You're doing something extraordinary.",
+        "eats":     ["Anti-inflammatory foods", "Leafy greens", "Lean protein", "Electrolyte water", "Light soups"],
+        "haul":     ["Loose comfortable clothing", "Heating pad", "Ice packs for injection sites", "Good lip balm"],
+        "tip":      "Rotate injection sites and ice beforehand to reduce bruising. Let people help you right now.",
+    },
+    "retrieval": {
+        "label":    "Retrieval",
+        "emoji":    "🌱",
+        "headline": "The big day 🌱",
+        "body":     "Retrieval day — or just after. The procedure is behind you and now you're waiting on the fertilization report. Rest as much as you can. The next few days of news will come in stages and each one matters.",
+        "eats":     ["Protein-rich foods to support recovery", "Warming soups", "Coconut water", "Gentle iron-rich foods"],
+        "haul":     ["Heating pad", "Loose pyjamas", "Easy entertainment", "Cozy socks"],
+        "tip":      "Bloating and cramping post-retrieval is normal. Call your clinic if pain is severe.",
+    },
+    "fertilization_wait": {
+        "label":    "Fertilization wait",
+        "emoji":    "⏳",
+        "headline": "Waiting on news ⏳",
+        "body":     "Waiting to hear how many eggs fertilized and made it to blast. This is one of the hardest parts — completely out of your hands. Whatever the numbers are, they are yours to work with.",
+        "eats":     ["Comfort foods that feel safe", "Warm herbal tea", "Dark chocolate", "Whatever actually sounds good"],
+        "haul":     ["Something to keep your hands busy", "A good show to binge", "Comfort snacks"],
+        "tip":      "It's okay to not answer your phone until the clinic calls. Protect your energy.",
+    },
+    "transfer": {
+        "label":    "Transfer day",
+        "emoji":    "✨",
+        "headline": "Transfer day ✨",
+        "body":     "The embryo transfer — physically minor, emotionally enormous. Take it slow today. Whatever you believe in, today is a day for quiet hope. You've done so much to get here.",
+        "eats":     ["Warm foods — avoid cold", "Pineapple core (bromelain tradition)", "Protein", "Staying well hydrated"],
+        "haul":     ["Cozy socks for the procedure", "Something meaningful to hold", "Comfort at home waiting"],
+        "tip":      "Most clinics say light activity is fine — there's no evidence bed rest helps, but rest if it feels right.",
+    },
+    "transfer_wait": {
+        "label":    "Two week wait",
+        "emoji":    "🕯️",
+        "headline": "The two week wait 🕯️",
+        "body":     "The infamous TWW. Symptom-spotting is almost impossible to avoid — progesterone causes the same symptoms as early pregnancy. Try to live normally. Distraction is not denial, it's self-preservation.",
+        "eats":     ["Continue progesterone-supporting foods", "Leafy greens", "Comfort foods when needed", "Stay hydrated"],
+        "haul":     ["Things that absorb your attention", "Comfort items", "Something to look forward to each day"],
+        "tip":      "Testing early with home tests is your choice — just know progesterone support can affect results.",
+    },
+    "beta_wait": {
+        "label":    "Beta day",
+        "emoji":    "🩸",
+        "headline": "Beta day 🩸",
+        "body":     "The blood test result. Whatever today brings — a positive, a negative, or a number that needs watching — you are allowed to feel everything. None of this outcome is a reflection of what you did or didn't do.",
+        "eats":     ["Whatever sounds comforting", "Something you love", "Stay gentle with yourself"],
+        "haul":     ["Have someone with you if you can", "Something comforting ready for either outcome"],
+        "tip":      "A single beta number isn't the whole story. Your clinic will guide you on what comes next.",
+    },
+    "successful": {
+        "label":    "Confirmed pregnancy",
+        "emoji":    "🌸",
+        "headline": "It worked 🌸",
+        "body":     "A confirmed positive. You made it to this moment. IVF pregnancy is still a pregnancy — monitored closely at first, with all the same feelings plus the weight of everything you went through to get here. Be gentle with yourself.",
+        "eats":     ["Folate-rich foods", "Iron-rich foods", "Small frequent meals if nauseous", "Stay hydrated"],
+        "haul":     ["Pregnancy journal", "Comfortable maternity-friendly clothing", "Prenatal vitamins if not already"],
+        "tip":      "IVF pregnancies are often monitored with early scans. Ask your clinic what to expect in the coming weeks.",
+    },
+}
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 async def _get_player(token: str, db):
@@ -176,6 +260,58 @@ async def _upsert_profile(player_id: int, fields: dict, db):
                 f"UPDATE player_profiles SET {sets} WHERE player_id = ?",
                 (*fields.values(), player_id))
         await db.commit()
+
+
+def _calc_ivf_stage_from_dates(meta: dict, today: date) -> str:
+    """
+    Given IVF metadata dict with optional date keys, return the correct
+    stage for today. Stages advance forward — once a date is passed,
+    that stage (or the next) is active. Falls back to 'preparing'.
+
+    Date keys: stimulation_start, retrieval_date, transfer_date, beta_date
+    Stage ladder:
+      before stimulation_start         → preparing
+      stimulation_start → day before retrieval → stimulation
+      retrieval_date                   → retrieval
+      retrieval_date+1 → day before transfer   → fertilization_wait
+      transfer_date                    → transfer
+      transfer_date+1 → beta_date-1   → transfer_wait
+      beta_date                        → beta_wait
+      beta_date+1 onward               → successful (if no next stage set)
+    """
+    def parse(key: str):
+        val = meta.get(key)
+        if not val:
+            return None
+        try:
+            return date.fromisoformat(val[:10])
+        except Exception:
+            return None
+
+    stim     = parse("stimulation_start")
+    retrieval = parse("retrieval_date")
+    transfer  = parse("transfer_date")
+    beta      = parse("beta_date")
+
+    # Walk the ladder from latest to earliest
+    if beta and today >= beta:
+        if today == beta:
+            return "beta_wait"
+        return "successful"
+    if transfer:
+        if today == transfer:
+            return "transfer"
+        if today > transfer:
+            return "transfer_wait"
+    if retrieval:
+        if today == retrieval:
+            return "retrieval"
+        if today > retrieval:
+            return "fertilization_wait"
+    if stim and today >= stim:
+        return "stimulation"
+
+    return "preparing"
 
 
 def _calc_cycle_phase(cycle_start: date, today: date,
@@ -334,10 +470,23 @@ async def cycle_setup(body: CycleSetup, db=Depends(get_db)):
             "ttc_surrogate_carrier":  "ttc_surrogate_carrier",
         }
         occ_key  = occ_map[mode]
-        meta     = json.dumps({"ttc_duration_months": body.ttc_duration_months,
-                               "track_intimacy": body.track_intimacy,
-                               "ivf_stage": body.ivf_stage})
-        sub_stage = body.ivf_stage or "active"
+        meta     = json.dumps({
+            "ttc_duration_months":  body.ttc_duration_months,
+            "track_intimacy":       body.track_intimacy,
+            "ivf_stage":            body.ivf_stage,
+            "ivf_auto_progress":    body.ivf_auto_progress,
+            "stimulation_start":    body.ivf_stimulation_start,
+            "retrieval_date":       body.ivf_retrieval_date,
+            "transfer_date":        body.ivf_transfer_date,
+            "beta_date":            body.ivf_beta_date,
+        })
+        # If auto-progress, calculate the starting stage from dates
+        if mode == "ttc_ivf" and body.ivf_auto_progress:
+            import json as _j
+            _meta = _j.loads(meta)
+            sub_stage = _calc_ivf_stage_from_dates(_meta, date.today())
+        else:
+            sub_stage = body.ivf_stage or "preparing"
 
         if is_postgres():
             await db.execute(
@@ -1021,6 +1170,160 @@ async def conception_check(token: str, db=Depends(get_db)):
             priority="normal", db=db)
 
     return {"status": "checked", "result": result}
+
+
+# ── GET /cycle/ivf-stage ─────────────────────────────────────────────────────
+
+@router.get("/ivf-stage")
+async def get_ivf_stage(token: str, db=Depends(get_db)):
+    """Returns current IVF stage and full advice card. Auto-calculates from dates if enabled."""
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+
+    if is_postgres():
+        occ = await db.fetchrow(
+            """SELECT sub_stage, started_at, metadata FROM player_occurrences
+               WHERE player_id = $1 AND occurrence_key = 'ttc_ivf' AND is_resolved = 0
+               ORDER BY started_at DESC LIMIT 1""", player_id)
+    else:
+        async with db.execute(
+            """SELECT sub_stage, started_at, metadata FROM player_occurrences
+               WHERE player_id = ? AND occurrence_key = 'ttc_ivf' AND is_resolved = 0
+               ORDER BY started_at DESC LIMIT 1""", (player_id,)
+        ) as cur:
+            occ = await cur.fetchone()
+
+    if not occ:
+        return {"has_data": False}
+
+    import json as _j
+    meta = _j.loads(occ["metadata"] or "{}")
+    today = date.today()
+
+    # Auto-calculate stage from dates if enabled
+    if meta.get("ivf_auto_progress"):
+        stage = _calc_ivf_stage_from_dates(meta, today)
+        # Keep sub_stage in sync
+        if stage != occ["sub_stage"]:
+            if is_postgres():
+                await db.execute(
+                    """UPDATE player_occurrences SET sub_stage = $1
+                       WHERE player_id = $2 AND occurrence_key = 'ttc_ivf' AND is_resolved = 0""",
+                    stage, player_id)
+            else:
+                await db.execute(
+                    """UPDATE player_occurrences SET sub_stage = ?
+                       WHERE player_id = ? AND occurrence_key = 'ttc_ivf' AND is_resolved = 0""",
+                    (stage, player_id))
+                await db.commit()
+    else:
+        stage = occ["sub_stage"] or "preparing"
+
+    advice = IVF_STAGE_ADVICE.get(stage, IVF_STAGE_ADVICE["preparing"])
+
+    return {
+        "has_data":         True,
+        "stage":            stage,
+        "started_at":       occ["started_at"],
+        "auto_progress":    bool(meta.get("ivf_auto_progress")),
+        "stimulation_start": meta.get("stimulation_start"),
+        "retrieval_date":   meta.get("retrieval_date"),
+        "transfer_date":    meta.get("transfer_date"),
+        "beta_date":        meta.get("beta_date"),
+        **advice,
+    }
+
+
+class UpdateIVFStage(BaseModel):
+    token: str
+    ivf_stage: str | None         = None   # manual override; None = recalculate from dates
+    ivf_auto_progress: bool | None = None  # if provided, updates the flag
+    ivf_stimulation_start: str | None = None
+    ivf_retrieval_date: str | None    = None
+    ivf_transfer_date: str | None     = None
+    ivf_beta_date: str | None         = None
+
+
+@router.post("/ivf-stage")
+async def update_ivf_stage(body: UpdateIVFStage, db=Depends(get_db)):
+    """
+    Update IVF stage, dates, and/or auto-progress flag.
+    If ivf_auto_progress is True and dates are provided, stage is calculated
+    automatically. If ivf_stage is provided and auto is False, it's a manual override.
+    """
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+
+    # Fetch existing metadata
+    if is_postgres():
+        occ = await db.fetchrow(
+            """SELECT id, metadata FROM player_occurrences
+               WHERE player_id = $1 AND occurrence_key = 'ttc_ivf' AND is_resolved = 0
+               ORDER BY started_at DESC LIMIT 1""", player_id)
+    else:
+        async with db.execute(
+            """SELECT id, metadata FROM player_occurrences
+               WHERE player_id = ? AND occurrence_key = 'ttc_ivf' AND is_resolved = 0
+               ORDER BY started_at DESC LIMIT 1""", (player_id,)
+        ) as cur:
+            occ = await cur.fetchone()
+
+    if not occ:
+        raise HTTPException(status_code=404, detail="No active IVF occurrence found.")
+
+    import json as _j
+    meta = _j.loads(occ["metadata"] or "{}")
+
+    # Apply updates to metadata
+    if body.ivf_auto_progress is not None:
+        meta["ivf_auto_progress"] = body.ivf_auto_progress
+    if body.ivf_stimulation_start is not None:
+        meta["stimulation_start"] = body.ivf_stimulation_start
+    if body.ivf_retrieval_date is not None:
+        meta["retrieval_date"] = body.ivf_retrieval_date
+    if body.ivf_transfer_date is not None:
+        meta["transfer_date"] = body.ivf_transfer_date
+    if body.ivf_beta_date is not None:
+        meta["beta_date"] = body.ivf_beta_date
+
+    # Determine the stage to set
+    today = date.today()
+    if meta.get("ivf_auto_progress"):
+        stage = _calc_ivf_stage_from_dates(meta, today)
+    elif body.ivf_stage:
+        stage = body.ivf_stage.lower().strip()
+        if stage not in IVF_STAGE_ADVICE:
+            raise HTTPException(status_code=400, detail=f"Unknown IVF stage: {stage}")
+    else:
+        stage = occ.get("sub_stage") or "preparing"
+
+    new_meta = _j.dumps(meta)
+
+    if is_postgres():
+        await db.execute(
+            """UPDATE player_occurrences SET sub_stage = $1, metadata = $2
+               WHERE id = $3""",
+            stage, new_meta, occ["id"])
+    else:
+        await db.execute(
+            """UPDATE player_occurrences SET sub_stage = ?, metadata = ?
+               WHERE id = ?""",
+            (stage, new_meta, occ["id"]))
+        await db.commit()
+
+    advice = IVF_STAGE_ADVICE.get(stage, IVF_STAGE_ADVICE["preparing"])
+    return {
+        "status":       "updated",
+        "stage":        stage,
+        "label":        advice["label"],
+        "auto_progress": bool(meta.get("ivf_auto_progress")),
+    }
 
 
 # ── POST /cycle/mode ──────────────────────────────────────────────────────────
