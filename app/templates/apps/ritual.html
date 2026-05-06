@@ -6,6 +6,7 @@
   /* ── Month navigation ── */
   .month-nav {
     display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: nowrap; width: 100%; box-sizing: border-box;
     padding: 14px 18px 10px;
   }
   .month-nav-btn {
@@ -390,8 +391,8 @@
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="topbar-left">
-    <div class="topbar-eyebrow">SL HUD</div>
-    <div class="topbar-title">Ritual 🗓</div>
+    <div class="topbar-eyebrow">Ritual</div>
+    <div class="topbar-title">Calendar & Events</div>
   </div>
   <div class="topbar-lumen">
     {{ today }}
