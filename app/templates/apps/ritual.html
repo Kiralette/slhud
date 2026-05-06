@@ -350,6 +350,39 @@
     color: var(--ink2); cursor: pointer; text-align: center; transition: all .15s;
   }
   .cycle-dur-btn.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  /* ── Day detail popup ── */
+  .day-detail-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(28,24,20,0.45); z-index: 400;
+    backdrop-filter: blur(2px);
+  }
+  .day-detail-overlay.open { display: block; }
+  .day-detail-sheet {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 500px;
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    border-top: 0.5px solid var(--border);
+    padding: 0 0 48px; z-index: 401;
+    max-height: 70vh; overflow-y: auto;
+    transition: transform .3s cubic-bezier(.32,1,.6,1);
+  }
+  .day-detail-sheet.open { transform: translateX(-50%) translateY(0); }
+  .day-detail-handle { width: 36px; height: 4px; background: var(--bg4); border-radius: 2px; margin: 12px auto 0; }
+  .day-detail-header { padding: 14px 18px 12px; border-bottom: 0.5px solid var(--border); }
+  .day-detail-date { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); }
+  .day-detail-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .day-detail-body { padding: 14px 18px; }
+  .day-detail-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .day-detail-row:last-child { border-bottom: none; }
+  .day-detail-icon { font-size: 18px; flex-shrink: 0; width: 28px; text-align: center; }
+  .day-detail-text { flex: 1; }
+  .day-detail-title { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .day-detail-label { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .day-detail-empty { font-size: 12px; color: var(--ink4); text-align: center; padding: 24px 0; }
 </style>
 {% endblock %}
 
@@ -1078,6 +1111,7 @@
         el.appendChild(dot);
       }
 
+      el.onclick = () => openDayDetail(dateStr, mmdd, c.other);
       grid.appendChild(el);
     });
   }
@@ -1090,6 +1124,89 @@
   }
 
   renderCalendar();
+
+  // ── Day detail ───────────────────────────────────────────────
+
+  const PERIOD_LABELS = {
+    confirmed_period: { icon: '🩸', label: 'Period day' },
+    predicted_start:  { icon: '🌙', label: 'Predicted period start' },
+    predicted_window: { icon: '🔮', label: 'Predicted period window' },
+    post_glow:        { icon: '✨', label: 'Post-period glow day' },
+  };
+
+  const MONTH_NAMES = ['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+  const COLOR_EMOJI = { purple:'💜', rose:'🌸', amber:'🟡', green:'💚', gold:'⭐', blue:'💙', pink:'🩷', grey:'⬜' };
+
+  function openDayDetail(dateStr, mmdd, isOther) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const label = `${MONTH_NAMES[m-1]} ${d}, ${y}`;
+    document.getElementById('day-detail-date').textContent = label;
+
+    const rows = [];
+
+    // Period info
+    const periodType = PERIOD_DAYS[dateStr];
+    if (periodType && PERIOD_LABELS[periodType]) {
+      const p = PERIOD_LABELS[periodType];
+      rows.push(`<div class="day-detail-row">
+        <div class="day-detail-icon">${p.icon}</div>
+        <div class="day-detail-text">
+          <div class="day-detail-title">${p.label}</div>
+          <div class="day-detail-label">Cycle tracking</div>
+        </div></div>`);
+    }
+
+    // Holiday
+    if (HOLIDAYS[mmdd]) {
+      rows.push(`<div class="day-detail-row">
+        <div class="day-detail-icon">${HOLIDAYS[mmdd]}</div>
+        <div class="day-detail-text">
+          <div class="day-detail-title">Holiday</div>
+          <div class="day-detail-label">${mmdd}</div>
+        </div></div>`);
+    }
+
+    // Events
+    const events = EVENTS_BY_DATE[dateStr] || [];
+    events.forEach(e => {
+      const emoji = COLOR_EMOJI[e.color] || '📅';
+      rows.push(`<div class="day-detail-row">
+        <div class="day-detail-icon">${emoji}</div>
+        <div class="day-detail-text">
+          <div class="day-detail-title">${e.title}</div>
+          <div class="day-detail-label">Personal event</div>
+        </div></div>`);
+    });
+
+    const body = document.getElementById('day-detail-body');
+    body.innerHTML = rows.length
+      ? rows.join('')
+      : '<div class="day-detail-empty">Nothing logged for this day.</div>';
+
+    document.getElementById('day-detail-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('day-detail-sheet').classList.add('open'), 10);
+  }
+
+  function closeDayDetail() {
+    document.getElementById('day-detail-sheet').classList.remove('open');
+    document.getElementById('day-detail-overlay').classList.remove('open');
+  }
+
+  // Inject day detail sheet outside app-scale
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="day-detail-overlay" id="day-detail-overlay" onclick="closeDayDetail()"></div>
+<div class="day-detail-sheet" id="day-detail-sheet">
+  <div class="day-detail-handle"></div>
+  <div class="day-detail-header">
+    <div class="day-detail-date" id="day-detail-date"></div>
+    <div class="day-detail-sub">Tap outside to close</div>
+  </div>
+  <div class="day-detail-body" id="day-detail-body"></div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
 
   // ── Add event ───────────────────────────────────────────────
 
