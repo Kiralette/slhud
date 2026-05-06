@@ -636,33 +636,27 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
     secret = request.query_params.get("secret", "")
 
     if is_postgres():
-        # Use a single transaction with TRUNCATE cascade approach —
-        # delete via raw SQL in one shot so FK order doesn't matter
-        await db.execute("""
-            DO $$
-            DECLARE r RECORD;
-            BEGIN
-              FOR r IN
-                SELECT tc.table_name
-                FROM information_schema.table_constraints tc
-                JOIN information_schema.key_column_usage kcu
-                  ON tc.constraint_name = kcu.constraint_name
-                JOIN information_schema.referential_constraints rc
-                  ON tc.constraint_name = rc.constraint_name
-                JOIN information_schema.key_column_usage ccu
-                  ON rc.unique_constraint_name = ccu.constraint_name
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-                  AND ccu.table_name = 'players'
-                  AND kcu.column_name = 'player_id'
-              LOOP
-                EXECUTE 'DELETE FROM ' || r.table_name || ' WHERE player_id = ' || ;
-              END LOOP;
-            END $$;
-        """, player_id)
-        # Also handle tables with non-standard FK column names
-        await db.execute("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", player_id)
-        await db.execute("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", player_id)
-        await db.execute("DELETE FROM players WHERE id = $1", player_id)
+        pid = player_id
+        # Delete in FK-safe order: deepest dependents first
+        for tbl in [
+            "post_engagements", "messages",
+            "odd_job_log", "career_history", "streaming_sessions",
+            "vibe_log", "occurrence_vibe_log", "vibes",
+            "player_traits", "player_achievements",
+            "cycle_phase_log", "cycle_log", "intimacy_log", "ttc_conception_checks",
+            "calendar_events", "player_occurrences",
+            "flare_stats", "workout_plans", "subscriptions",
+            "proximity_log", "notifications", "event_log",
+            "transactions", "wallets",
+            "needs", "skills", "employment",
+            "player_profiles", "player_stats", "player_settings",
+            "posts",
+        ]:
+            await db.execute(f"DELETE FROM {tbl} WHERE player_id = $1", pid)
+        # Non-standard FK columns
+        await db.execute("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid)
+        await db.execute("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid)
+        await db.execute("DELETE FROM players WHERE id = $1", pid)
     else:
         # SQLite: PRAGMA foreign_keys is off by default so order matters less,
         # but be explicit anyway
