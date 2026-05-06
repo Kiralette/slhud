@@ -354,12 +354,14 @@ async def _recalculate_prediction(player_id: int, db):
         rows = await db.fetch(
             """SELECT cycle_start_slt, cycle_length_days FROM cycle_log
                WHERE player_id = $1 AND cycle_length_days IS NOT NULL
+               AND cycle_length_days > 18
                AND is_manual_override = 0 ORDER BY cycle_start_slt DESC LIMIT 12""",
             player_id)
     else:
         async with db.execute(
             """SELECT cycle_start_slt, cycle_length_days FROM cycle_log
                WHERE player_id = ? AND cycle_length_days IS NOT NULL
+               AND cycle_length_days > 18
                AND is_manual_override = 0 ORDER BY cycle_start_slt DESC LIMIT 12""",
             (player_id,)
         ) as cur:
@@ -628,24 +630,27 @@ async def log_cycle_end(body: LogEnd, db=Depends(get_db)):
     if not cycle:
         raise HTTPException(status_code=404, detail="No open cycle to end.")
 
-    cycle_length = (end_date - date.fromisoformat(cycle["cycle_start_slt"][:10])).days
-    is_ov        = 1 if body.is_override else 0
+    is_ov = 1 if body.is_override else 0
 
+    # Store the period end date — do NOT set cycle_length_days here.
+    # cycle_length_days = full cycle length (start of this period to start of next),
+    # which can only be known once the next period starts. _recalculate_prediction
+    # sets it then. Setting it to (period_end - period_start) was wrong.
     if is_postgres():
         await db.execute(
-            """UPDATE cycle_log SET cycle_end_slt=$1, cycle_length_days=$2,
-               is_override=CASE WHEN $3=1 THEN 1 ELSE is_override END WHERE id=$4""",
-            body.cycle_end_slt[:10], cycle_length, is_ov, cycle["id"])
+            """UPDATE cycle_log SET cycle_end_slt=$1,
+               is_override=CASE WHEN $2=1 THEN 1 ELSE is_override END WHERE id=$3""",
+            body.cycle_end_slt[:10], is_ov, cycle["id"])
     else:
         await db.execute(
-            """UPDATE cycle_log SET cycle_end_slt=?, cycle_length_days=?,
+            """UPDATE cycle_log SET cycle_end_slt=?,
                is_override=CASE WHEN ?=1 THEN 1 ELSE is_override END WHERE id=?""",
-            (body.cycle_end_slt[:10], cycle_length, is_ov, cycle["id"]))
+            (body.cycle_end_slt[:10], is_ov, cycle["id"]))
         await db.commit()
 
     prediction = await _recalculate_prediction(player_id, db)
     return {"status": "logged", "cycle_end": body.cycle_end_slt[:10],
-            "cycle_length_days": cycle_length, "prediction": prediction}
+            "prediction": prediction}
 
 
 # ── POST /cycle/override ──────────────────────────────────────────────────────

@@ -953,7 +953,7 @@ async def ritual(
             # Phase calendar for current cycle
             try:
                 s        = date.fromisoformat(latest_cycle["cycle_start_slt"][:10])
-                used_len = latest_cycle["cycle_length_days"] or cycle_len
+                used_len = (latest_cycle["cycle_length_days"] if (latest_cycle["cycle_length_days"] or 0) > 18 else None) or cycle_len
                 used_dur = latest_cycle["period_duration_days"] or period_dur
                 ov_day   = used_len - 14
                 fs, fe   = ov_day - 4, ov_day + 1
@@ -1008,7 +1008,7 @@ async def ritual(
             # Current phase (inlined — no import from cycle router needed)
             try:
                 cs        = date.fromisoformat(latest_cycle["cycle_start_slt"][:10])
-                used_len2 = latest_cycle["cycle_length_days"] or cycle_len
+                used_len2 = (latest_cycle["cycle_length_days"] if (latest_cycle["cycle_length_days"] or 0) > 18 else None) or cycle_len
                 used_dur2 = latest_cycle["period_duration_days"] or period_dur
                 days_in2  = (today - cs).days
                 ov_day2   = used_len2 - 14
@@ -1046,7 +1046,7 @@ async def ritual(
             if cycle_mode in ("ttc_traditional",):
                 try:
                     cs2       = date.fromisoformat(latest_cycle["cycle_start_slt"][:10])
-                    ul2       = latest_cycle["cycle_length_days"] or cycle_len
+                    ul2       = (latest_cycle["cycle_length_days"] if (latest_cycle["cycle_length_days"] or 0) > 18 else None) or cycle_len
                     ov_dt     = cs2 + timedelta(days=ul2 - 14)
                     fw_start  = ov_dt - timedelta(days=4)
                     fw_end    = ov_dt + timedelta(days=1)
