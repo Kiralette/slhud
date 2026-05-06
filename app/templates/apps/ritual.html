@@ -220,19 +220,19 @@
     padding: 14px 18px 12px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: center; gap: 12px;
   }
-  .preg-sheet-back { background: none; border: none; font-family: var(--font); font-size: 14px; color: var(--ink3); cursor: pointer; padding: 0; }
-  .preg-sheet-title { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); }
-  .preg-sheet-step { margin-left: auto; font-size: 12px; color: var(--ink4); font-weight: 500; }
+  .preg-sheet-back { background: none; border: none; font-family: var(--font); font-size: 16px; color: var(--ink3); cursor: pointer; padding: 0; }
+  .preg-sheet-title { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); }
+  .preg-sheet-step { margin-left: auto; font-size: 14px; color: var(--ink4); font-weight: 500; }
   .preg-screen { display: none; padding: 20px 18px; }
   .preg-screen.active { display: block; }
   .preg-progress { height: 3px; background: var(--bg3); border-radius: 2px; margin-bottom: 22px; }
   .preg-progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width .3s ease; }
-  .preg-question { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
-  .preg-subtitle { font-size: 13px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
+  .preg-question { font-family: var(--font-head); font-size: 24px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
+  .preg-subtitle { font-size: 15px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
   .preg-options { display: flex; flex-direction: column; gap: 10px; }
   .preg-option {
     padding: 14px 16px; background: var(--bg2); border: 0.5px solid var(--border);
-    border-radius: var(--radius); font-family: var(--font); font-size: 15px; color: var(--ink2);
+    border-radius: var(--radius); font-family: var(--font); font-size: 17px; color: var(--ink2);
     cursor: pointer; text-align: left; transition: all .15s; width: 100%;
     -webkit-tap-highlight-color: transparent;
   }
@@ -241,16 +241,16 @@
   .preg-input {
     width: 100%; padding: 14px 16px; border: 0.5px solid var(--border2);
     border-radius: var(--radius); background: var(--bg); color: var(--ink);
-    font-family: var(--font); font-size: 16px; outline: none; box-sizing: border-box;
+    font-family: var(--font); font-size: 18px; outline: none; box-sizing: border-box;
   }
   .preg-input:focus { border-color: var(--gold); }
   .preg-next-btn {
     width: 100%; margin-top: 14px; padding: 14px; background: var(--ink); color: var(--bg);
     border: none; border-radius: var(--radius); font-family: var(--font);
-    font-size: 16px; font-weight: 500; cursor: pointer;
+    font-size: 18px; font-weight: 500; cursor: pointer;
   }
   .preg-next-btn:disabled { opacity: .4; cursor: not-allowed; }
-  .preg-skip { display: block; text-align: center; margin-top: 10px; font-size: 13px; color: var(--ink4); cursor: pointer; background: none; border: none; font-family: var(--font); width: 100%; padding: 6px 0; }
+  .preg-skip { display: block; text-align: center; margin-top: 10px; font-size: 15px; color: var(--ink4); cursor: pointer; background: none; border: none; font-family: var(--font); width: 100%; padding: 6px 0; }
   .preg-slider-wrap { margin-bottom: 6px; }
   .preg-slider {
     width: 100%; -webkit-appearance: none; appearance: none;
@@ -262,16 +262,16 @@
     background: var(--ink); cursor: pointer;
     box-shadow: 0 1px 4px rgba(28,24,20,.18);
   }
-  .preg-slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink4); margin-top: 8px; }
-  .preg-slider-val { text-align: center; font-family: var(--font-head); font-size: 30px; color: var(--ink); margin: 10px 0 4px; }
-  .preg-slider-sub { text-align: center; font-size: 13px; color: var(--ink3); margin-bottom: 14px; }
+  .preg-slider-label { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink4); margin-top: 8px; }
+  .preg-slider-val { text-align: center; font-family: var(--font-head); font-size: 32px; color: var(--ink); margin: 10px 0 4px; }
+  .preg-slider-sub { text-align: center; font-size: 15px; color: var(--ink3); margin-bottom: 14px; }
   .preg-toggle-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 13px 0; border-bottom: 0.5px solid var(--border);
   }
   .preg-toggle-row:last-child { border-bottom: none; }
-  .preg-toggle-label { font-size: 15px; color: var(--ink2); }
-  .preg-toggle-sub { font-size: 13px; color: var(--ink4); margin-top: 2px; }
+  .preg-toggle-label { font-size: 17px; color: var(--ink2); }
+  .preg-toggle-sub { font-size: 15px; color: var(--ink4); margin-top: 2px; }
   .preg-toggle {
     width: 44px; height: 26px; border-radius: 13px; background: var(--bg4);
     border: none; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0;
@@ -295,7 +295,7 @@
   .pregnancy-banner.trimester_2 { background: #fdf6e8; border-color: rgba(154,124,78,0.2); }
   .pregnancy-banner.trimester_3 { background: var(--rose-light); border-color: rgba(156,80,80,0.2); }
   .pregnancy-trimester { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink3); margin-bottom: 4px; }
-  .pregnancy-title { font-family: var(--font-head); font-size: 24px; font-weight: 400; color: var(--ink); margin-bottom: 2px; }
+  .pregnancy-title { font-family: var(--font-head); font-size: 26px; font-weight: 400; color: var(--ink); margin-bottom: 2px; }
   .pregnancy-sub { font-size: 13px; color: var(--ink3); margin-bottom: 12px; }
   .pregnancy-progress { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
   .pregnancy-progress-fill { height: 100%; border-radius: 2px; background: var(--rose); }
