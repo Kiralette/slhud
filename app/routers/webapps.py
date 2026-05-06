@@ -21,6 +21,17 @@ router = APIRouter(prefix="/app", tags=["webapps"])
 _here = Path(__file__).parent.parent
 templates = Jinja2Templates(directory=str(_here / "templates"))
 
+def _fmt_date(value: str) -> str:
+    """Convert YYYY-MM-DD to MM/DD/YYYY for display."""
+    if not value or len(value) < 10:
+        return value or ""
+    try:
+        return f"{value[5:7]}/{value[8:10]}/{value[:4]}"
+    except Exception:
+        return value
+
+templates.env.filters["fmt_date"] = _fmt_date
+
 
 # ── Auth helper ──────────────────────────────────────────────
 async def get_player_by_token(token: str, db) -> dict | None:

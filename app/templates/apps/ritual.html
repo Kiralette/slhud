@@ -445,7 +445,7 @@
         <div class="event-dot-color color-{{ e.color_key }}"></div>
         <div class="event-info">
           <div class="event-title">{{ e.title }}</div>
-          <div class="event-meta">{{ e.event_date_slt }} · {{ e.event_type|title }}</div>
+          <div class="event-meta">{{ e.event_date_slt | fmt_date }} · {{ e.event_type|title }}</div>
         </div>
         <button class="event-del" onclick="deleteEvent({{ e.id }}, this)" title="Remove">✕</button>
       </div>
@@ -511,7 +511,7 @@
       <div class="item-info">
         <div class="item-name">{{ ev.title }}</div>
         <div class="item-desc" style="font-size:13px;color:var(--ink3);">
-          {{ ev.event_date_slt }} · {{ ev.author_name or 'Someone you follow' }}
+          {{ ev.event_date_slt | fmt_date }} · {{ ev.author_name or 'Someone you follow' }}
         </div>
         {% if ev.notes %}<div class="item-desc">{{ ev.notes }}</div>{% endif %}
         <div class="item-tags">
@@ -547,7 +547,7 @@
             <div class="community-event-title">{{ ev.title }}</div>
             <div class="community-creator">by {{ ev.creator_name }}</div>
           </div>
-          <div class="community-event-date">{{ ev.event_date_slt }}</div>
+          <div class="community-event-date">{{ ev.event_date_slt | fmt_date }}</div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:12px;color:var(--ink4);">{{ ev.rsvp_count }} going</span>
@@ -709,7 +709,7 @@
     <div class="cycle-history-row">
       <div class="cycle-dot" style="{% if c.is_override %}background:var(--amber){% endif %}"></div>
       <div class="cycle-dates">
-        {{ c.cycle_start_slt }}{% if c.cycle_end_slt %} → {{ c.cycle_end_slt }}{% endif %}
+        {{ c.cycle_start_slt | fmt_date }}{% if c.cycle_end_slt %} → {{ c.cycle_end_slt | fmt_date }}{% endif %}
         {% if c.is_override %}<span style="font-size:12px;color:var(--amber);margin-left:4px;">override</span>{% endif %}
       </div>
       {% if c.cycle_length_days %}
