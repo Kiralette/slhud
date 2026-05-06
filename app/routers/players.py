@@ -152,3 +152,37 @@ async def avatar_image(avatar_uuid: str, db=Depends(get_db)):
     except Exception:
         pass
     raise HTTPException(status_code=404, detail="Avatar image not found.")
+
+
+# ── VALIDATE TOKEN ────────────────────────────────────────────────────────────
+
+@router.get("/me")
+async def get_me(authorization: str = None, db=Depends(get_db)):
+    """
+    Lightweight token validation endpoint.
+    Called by the LSL HUD on reattach to confirm a cached token still exists.
+    Returns 200 + player id if valid, 401 if not.
+    """
+    from fastapi import Header
+    from typing import Optional
+
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header.")
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid Authorization format.")
+
+    token = authorization.split(" ", 1)[1].strip()
+
+    if is_postgres():
+        row = await db.fetchrow(
+            "SELECT id, display_name FROM players WHERE token = $1 AND is_banned = 0", token)
+    else:
+        async with db.execute(
+            "SELECT id, display_name FROM players WHERE token = ? AND is_banned = 0", (token,)
+        ) as cur:
+            row = await cur.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=401, detail="Token invalid or player not found.")
+
+    return {"player_id": row["id"], "display_name": row["display_name"]}
