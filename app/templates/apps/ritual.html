@@ -690,13 +690,11 @@
     <button class="cycle-log-btn secondary" onclick="openCycleSetup()" style="margin:0;">Change tracking mode</button>
   </div>
 
+  {% endif %}{# end if not cycle_setup_done #}
   <div class="scroll-pad"></div>
 </div>
 
-</div>
-{% endif %}
-{% endblock %}
-
+{% endif %}{# end if show_cycle_tab #}
 <!-- ── CYCLE SETUP SHEET ── -->
 <div class="preg-sheet-overlay" id="cycle-overlay" onclick="closeCycleSetup()"></div>
 <div class="preg-sheet" id="cycle-sheet">
@@ -790,6 +788,9 @@
     <input class="preg-input" type="text" id="override-note" placeholder="e.g. stress, travel, illness" maxlength="100" />
   </div>
 </div>
+
+
+{% endblock %}
 
 {% block extra_script %}
 <script>
