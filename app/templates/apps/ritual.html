@@ -13,14 +13,14 @@
   }
   .month-nav-btn {
     background: none; border: none; cursor: pointer;
-    font-size: 16px; color: var(--ink3); padding: 4px;
+    font-size: 18px; color: var(--ink3); padding: 4px;
     border-radius: var(--radius-sm); transition: color .15s;
     display: block; text-align: center;
   }
   .month-nav-btn:active { color: var(--ink); }
   .month-title {
     font-family: var(--font-head);
-    font-size: 17px; font-weight: 400; color: var(--ink);
+    font-size: 19px; font-weight: 400; color: var(--ink);
     white-space: nowrap; text-align: center;
   }
 
@@ -30,7 +30,7 @@
     gap: 2px; padding: 0 12px 12px;
   }
   .cal-dow {
-    text-align: center; font-size: 9px; font-weight: 600;
+    text-align: center; font-size: 11px; font-weight: 600;
     letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--ink4); padding: 4px 0;
   }
@@ -39,7 +39,7 @@
     display: flex; align-items: center; justify-content: center;
     aspect-ratio: 1;
     border-radius: var(--radius-sm);
-    font-size: 12px; font-weight: 400; color: var(--ink2);
+    font-size: 14px; font-weight: 400; color: var(--ink2);
     cursor: pointer; transition: background .1s;
   }
   .cal-day:active { background: var(--bg3); }
@@ -66,7 +66,7 @@
   /* ── Holiday dot ── */
   .cal-day .holiday-dot {
     position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
-    font-size: 7px; line-height: 1;
+    font-size: 9px; line-height: 1;
   }
 
   /* ── Event list ── */
@@ -86,11 +86,11 @@
   .color-pink   { background: #d47a9a; }
   .color-grey   { background: var(--ink4); }
   .event-info { flex: 1; min-width: 0; }
-  .event-title { font-size: 13px; font-weight: 500; color: var(--ink); }
-  .event-meta  { font-size: 10px; color: var(--ink4); margin-top: 1px; }
+  .event-title { font-size: 15px; font-weight: 500; color: var(--ink); }
+  .event-meta  { font-size: 12px; color: var(--ink4); margin-top: 1px; }
   .event-del {
     background: none; border: none; cursor: pointer;
-    font-size: 16px; color: var(--ink4); padding: 4px;
+    font-size: 18px; color: var(--ink4); padding: 4px;
     transition: color .15s;
   }
   .event-del:active { color: var(--rose); }
@@ -102,7 +102,7 @@
     border-bottom: 0.5px solid var(--border);
   }
   .form-label {
-    font-size: 9px; font-weight: 500;
+    font-size: 11px; font-weight: 500;
     letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--ink4); margin-bottom: 5px; display: block;
   }
@@ -111,7 +111,7 @@
     border: 0.5px solid var(--border2);
     border-radius: var(--radius-sm);
     padding: 9px 12px; font-family: var(--font);
-    font-size: 12px; color: var(--ink); outline: none;
+    font-size: 14px; color: var(--ink); outline: none;
     margin-bottom: 8px;
   }
   .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -120,12 +120,12 @@
     border: 0.5px solid var(--border2);
     border-radius: var(--radius-sm);
     padding: 9px 10px; font-family: var(--font);
-    font-size: 12px; color: var(--ink); outline: none; appearance: none;
+    font-size: 14px; color: var(--ink); outline: none; appearance: none;
   }
   .form-submit {
     width: 100%; background: var(--ink); color: var(--bg);
     border: none; border-radius: 99px; padding: 10px 0;
-    font-size: 11px; font-weight: 600;
+    font-size: 13px; font-weight: 600;
     letter-spacing: 0.08em; text-transform: uppercase;
     cursor: pointer; font-family: var(--font);
     transition: background .15s;
@@ -139,7 +139,7 @@
     background: var(--ink); color: var(--bg);
     border: none; border-radius: var(--radius);
     padding: 14px; text-align: center;
-    font-size: 12px; font-weight: 600;
+    font-size: 14px; font-weight: 600;
     letter-spacing: 0.04em; cursor: pointer;
     font-family: var(--font); transition: background .15s;
   }
@@ -159,10 +159,10 @@
   .cycle-stat:last-child { border-right: none; }
   .cycle-stat-val {
     font-family: var(--font-head);
-    font-size: 20px; color: var(--ink); line-height: 1;
+    font-size: 22px; color: var(--ink); line-height: 1;
   }
   .cycle-stat-label {
-    font-size: 9px; font-weight: 500;
+    font-size: 11px; font-weight: 500;
     letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--ink4); margin-top: 3px;
   }
@@ -174,8 +174,8 @@
     width: 8px; height: 8px; border-radius: 50%;
     background: #d47a9a; flex-shrink: 0;
   }
-  .cycle-dates { font-size: 12px; color: var(--ink2); }
-  .cycle-length { font-size: 10px; color: var(--ink4); margin-left: auto; }
+  .cycle-dates { font-size: 14px; color: var(--ink2); }
+  .cycle-length { font-size: 12px; color: var(--ink4); margin-left: auto; }
 
   /* ── Community tab ── */
   .community-card {
@@ -186,13 +186,13 @@
     padding: 14px; box-shadow: var(--shadow);
   }
   .community-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
-  .community-event-title { font-size: 13px; font-weight: 600; color: var(--ink); }
-  .community-event-date  { font-size: 10px; color: var(--gold); font-weight: 500; }
-  .community-creator     { font-size: 10px; color: var(--ink4); margin-bottom: 8px; }
+  .community-event-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .community-event-date  { font-size: 12px; color: var(--gold); font-weight: 500; }
+  .community-creator     { font-size: 12px; color: var(--ink4); margin-bottom: 8px; }
   .community-rsvp-btn {
     background: var(--gold-light); color: var(--gold);
     border: 0.5px solid var(--gold2); border-radius: 99px;
-    padding: 5px 14px; font-size: 10px; font-weight: 600;
+    padding: 5px 14px; font-size: 12px; font-weight: 600;
     letter-spacing: 0.06em; cursor: pointer; font-family: var(--font);
     transition: background .15s;
   }
@@ -220,19 +220,19 @@
     padding: 14px 18px 12px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: center; gap: 12px;
   }
-  .preg-sheet-back { background: none; border: none; font-family: var(--font); font-size: 12px; color: var(--ink3); cursor: pointer; padding: 0; }
-  .preg-sheet-title { font-family: var(--font-head); font-size: 18px; font-weight: 400; color: var(--ink); }
-  .preg-sheet-step { margin-left: auto; font-size: 10px; color: var(--ink4); font-weight: 500; }
+  .preg-sheet-back { background: none; border: none; font-family: var(--font); font-size: 14px; color: var(--ink3); cursor: pointer; padding: 0; }
+  .preg-sheet-title { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); }
+  .preg-sheet-step { margin-left: auto; font-size: 12px; color: var(--ink4); font-weight: 500; }
   .preg-screen { display: none; padding: 20px 18px; }
   .preg-screen.active { display: block; }
   .preg-progress { height: 3px; background: var(--bg3); border-radius: 2px; margin-bottom: 22px; }
   .preg-progress-fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width .3s ease; }
-  .preg-question { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
-  .preg-subtitle { font-size: 11px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
+  .preg-question { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
+  .preg-subtitle { font-size: 13px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
   .preg-options { display: flex; flex-direction: column; gap: 10px; }
   .preg-option {
     padding: 14px 16px; background: var(--bg2); border: 0.5px solid var(--border);
-    border-radius: var(--radius); font-family: var(--font); font-size: 13px; color: var(--ink2);
+    border-radius: var(--radius); font-family: var(--font); font-size: 15px; color: var(--ink2);
     cursor: pointer; text-align: left; transition: all .15s; width: 100%;
     -webkit-tap-highlight-color: transparent;
   }
@@ -241,16 +241,16 @@
   .preg-input {
     width: 100%; padding: 14px 16px; border: 0.5px solid var(--border2);
     border-radius: var(--radius); background: var(--bg); color: var(--ink);
-    font-family: var(--font); font-size: 14px; outline: none; box-sizing: border-box;
+    font-family: var(--font); font-size: 16px; outline: none; box-sizing: border-box;
   }
   .preg-input:focus { border-color: var(--gold); }
   .preg-next-btn {
     width: 100%; margin-top: 14px; padding: 14px; background: var(--ink); color: var(--bg);
     border: none; border-radius: var(--radius); font-family: var(--font);
-    font-size: 14px; font-weight: 500; cursor: pointer;
+    font-size: 16px; font-weight: 500; cursor: pointer;
   }
   .preg-next-btn:disabled { opacity: .4; cursor: not-allowed; }
-  .preg-skip { display: block; text-align: center; margin-top: 10px; font-size: 11px; color: var(--ink4); cursor: pointer; background: none; border: none; font-family: var(--font); width: 100%; padding: 6px 0; }
+  .preg-skip { display: block; text-align: center; margin-top: 10px; font-size: 13px; color: var(--ink4); cursor: pointer; background: none; border: none; font-family: var(--font); width: 100%; padding: 6px 0; }
   .preg-slider-wrap { margin-bottom: 6px; }
   .preg-slider {
     width: 100%; -webkit-appearance: none; appearance: none;
@@ -262,16 +262,16 @@
     background: var(--ink); cursor: pointer;
     box-shadow: 0 1px 4px rgba(28,24,20,.18);
   }
-  .preg-slider-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink4); margin-top: 8px; }
-  .preg-slider-val { text-align: center; font-family: var(--font-head); font-size: 28px; color: var(--ink); margin: 10px 0 4px; }
-  .preg-slider-sub { text-align: center; font-size: 11px; color: var(--ink3); margin-bottom: 14px; }
+  .preg-slider-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink4); margin-top: 8px; }
+  .preg-slider-val { text-align: center; font-family: var(--font-head); font-size: 30px; color: var(--ink); margin: 10px 0 4px; }
+  .preg-slider-sub { text-align: center; font-size: 13px; color: var(--ink3); margin-bottom: 14px; }
   .preg-toggle-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 13px 0; border-bottom: 0.5px solid var(--border);
   }
   .preg-toggle-row:last-child { border-bottom: none; }
-  .preg-toggle-label { font-size: 13px; color: var(--ink2); }
-  .preg-toggle-sub { font-size: 11px; color: var(--ink4); margin-top: 2px; }
+  .preg-toggle-label { font-size: 15px; color: var(--ink2); }
+  .preg-toggle-sub { font-size: 13px; color: var(--ink4); margin-top: 2px; }
   .preg-toggle {
     width: 44px; height: 26px; border-radius: 13px; background: var(--bg4);
     border: none; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0;
@@ -294,9 +294,9 @@
   .pregnancy-banner.trimester_1 { background: var(--bg2); }
   .pregnancy-banner.trimester_2 { background: #fdf6e8; border-color: rgba(154,124,78,0.2); }
   .pregnancy-banner.trimester_3 { background: var(--rose-light); border-color: rgba(156,80,80,0.2); }
-  .pregnancy-trimester { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink3); margin-bottom: 4px; }
-  .pregnancy-title { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); margin-bottom: 2px; }
-  .pregnancy-sub { font-size: 11px; color: var(--ink3); margin-bottom: 12px; }
+  .pregnancy-trimester { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink3); margin-bottom: 4px; }
+  .pregnancy-title { font-family: var(--font-head); font-size: 24px; font-weight: 400; color: var(--ink); margin-bottom: 2px; }
+  .pregnancy-sub { font-size: 13px; color: var(--ink3); margin-bottom: 12px; }
   .pregnancy-progress { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
   .pregnancy-progress-fill { height: 100%; border-radius: 2px; background: var(--rose); }
 
@@ -322,15 +322,15 @@
     padding: 14px 18px 12px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: center; gap: 12px;
   }
-  .cycle-sheet-title { font-family: var(--font-head); font-size: 18px; font-weight: 400; color: var(--ink); }
+  .cycle-sheet-title { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); }
   .cycle-screen { display: none; padding: 20px 18px; }
   .cycle-screen.active { display: block; }
-  .cycle-question { font-family: var(--font-head); font-size: 20px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
-  .cycle-subtitle { font-size: 11px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
+  .cycle-question { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); line-height: 1.4; margin-bottom: 4px; }
+  .cycle-subtitle { font-size: 13px; color: var(--ink3); margin-bottom: 18px; line-height: 1.6; }
   .cycle-options { display: flex; flex-direction: column; gap: 10px; }
   .cycle-option {
     padding: 14px 16px; background: var(--bg2); border: 0.5px solid var(--border);
-    border-radius: var(--radius); font-family: var(--font); font-size: 13px; color: var(--ink2);
+    border-radius: var(--radius); font-family: var(--font); font-size: 15px; color: var(--ink2);
     cursor: pointer; text-align: left; transition: all .15s; width: 100%;
     -webkit-tap-highlight-color: transparent;
   }
@@ -338,20 +338,20 @@
   .cycle-next-btn {
     width: 100%; margin-top: 14px; padding: 14px; background: var(--ink); color: var(--bg);
     border: none; border-radius: var(--radius); font-family: var(--font);
-    font-size: 14px; font-weight: 500; cursor: pointer;
+    font-size: 16px; font-weight: 500; cursor: pointer;
   }
   .cycle-next-btn:disabled { opacity: .4; cursor: not-allowed; }
   .cycle-input {
     width: 100%; padding: 14px 16px; border: 0.5px solid var(--border2);
     border-radius: var(--radius); background: var(--bg); color: var(--ink);
-    font-family: var(--font); font-size: 14px; outline: none; box-sizing: border-box;
+    font-family: var(--font); font-size: 16px; outline: none; box-sizing: border-box;
     margin-bottom: 10px;
   }
   .cycle-input:focus { border-color: var(--gold); }
   .cycle-dur-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
   .cycle-dur-btn {
     padding: 12px 6px; background: var(--bg2); border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px;
+    border-radius: var(--radius-sm); font-family: var(--font); font-size: 15px;
     color: var(--ink2); cursor: pointer; text-align: center; transition: all .15s;
   }
   .cycle-dur-btn.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
@@ -375,19 +375,19 @@
   .day-detail-sheet.open { transform: translateX(-50%) translateY(0); }
   .day-detail-handle { width: 36px; height: 4px; background: var(--bg4); border-radius: 2px; margin: 12px auto 0; }
   .day-detail-header { padding: 14px 18px 12px; border-bottom: 0.5px solid var(--border); }
-  .day-detail-date { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); }
-  .day-detail-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .day-detail-date { font-family: var(--font-head); font-size: 24px; font-weight: 400; color: var(--ink); }
+  .day-detail-sub { font-size: 13px; color: var(--ink3); margin-top: 2px; }
   .day-detail-body { padding: 14px 18px; }
   .day-detail-row {
     display: flex; align-items: flex-start; gap: 12px;
     padding: 10px 0; border-bottom: 0.5px solid var(--border);
   }
   .day-detail-row:last-child { border-bottom: none; }
-  .day-detail-icon { font-size: 18px; flex-shrink: 0; width: 28px; text-align: center; }
+  .day-detail-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
   .day-detail-text { flex: 1; }
-  .day-detail-title { font-size: 13px; font-weight: 500; color: var(--ink); }
-  .day-detail-label { font-size: 11px; color: var(--ink3); margin-top: 2px; }
-  .day-detail-empty { font-size: 12px; color: var(--ink4); text-align: center; padding: 24px 0; }
+  .day-detail-title { font-size: 15px; font-weight: 500; color: var(--ink); }
+  .day-detail-label { font-size: 13px; color: var(--ink3); margin-top: 2px; }
+  .day-detail-empty { font-size: 14px; color: var(--ink4); text-align: center; padding: 24px 0; }
 </style>
 {% endblock %}
 
@@ -418,11 +418,11 @@
 <div id="tab-calendar" class="tab-panel active">
 
   <!-- Month nav -->
-  <table style="width:100%;table-layout:fixed;border-collapse:collapse;padding:10px 0;">
+  <table style="width:100%;table-layout:fixed;border-collapse:collapse;padding:10px 0;margin-top: 10px;margin-bottom: 10px;">
     <tr>
-      <td style="width:40px;text-align:center;cursor:pointer;font-size:18px;color:var(--ink3);" onclick="changeMonth(-1)">‹</td>
-      <td style="text-align:center;font-family:var(--font-head);font-size:17px;color:var(--ink);" id="month-label">{{ current_month_label }}</td>
-      <td style="width:40px;text-align:center;cursor:pointer;font-size:18px;color:var(--ink3);" onclick="changeMonth(1)">›</td>
+      <td style="width:40px;text-align:center;cursor:pointer;font-size:20px;color:var(--ink3);" onclick="changeMonth(-1)">‹</td>
+      <td style="text-align:center;font-family:var(--font-head);font-size:19px;color:var(--ink);" id="month-label">{{ current_month_label }}</td>
+      <td style="width:40px;text-align:center;cursor:pointer;font-size:20px;color:var(--ink3);" onclick="changeMonth(1)">›</td>
     </tr>
   </table>
 
@@ -451,7 +451,7 @@
       </div>
       {% endfor %}
     {% else %}
-      <div style="padding:18px 18px 8px;font-size:12px;color:var(--ink4);">Nothing this week.</div>
+      <div style="padding:18px 18px 8px;font-size:14px;color:var(--ink4);">Nothing this week.</div>
     {% endif %}
   </div>
 
@@ -483,7 +483,7 @@
         <option value="blue">Blue</option>
         <option value="pink">Pink</option>
       </select>
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3);flex:1;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink3);flex:1;">
         <select class="form-select" id="ev-visibility" style="flex:1;margin:0;">
           <option value="private">🔒 Private</option>
           <option value="friends">👥 Friends only</option>
@@ -511,7 +511,7 @@
       </div>
       <div class="item-info">
         <div class="item-name">{{ ev.title }}</div>
-        <div class="item-desc" style="font-size:11px;color:var(--ink3);">
+        <div class="item-desc" style="font-size:13px;color:var(--ink3);">
           {{ ev.event_date_slt }} · {{ ev.author_name or 'Someone you follow' }}
         </div>
         {% if ev.notes %}<div class="item-desc">{{ ev.notes }}</div>{% endif %}
@@ -551,7 +551,7 @@
           <div class="community-event-date">{{ ev.event_date_slt }}</div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:10px;color:var(--ink4);">{{ ev.rsvp_count }} going</span>
+          <span style="font-size:12px;color:var(--ink4);">{{ ev.rsvp_count }} going</span>
           <button class="community-rsvp-btn" onclick="rsvpEvent({{ ev.id }}, this)">RSVP</button>
         </div>
       </div>
@@ -574,9 +574,9 @@
   {% if not cycle_setup_done %}
   <!-- ── Setup prompt ── -->
   <div style="padding:40px 18px;text-align:center;">
-    <div style="font-size:32px;margin-bottom:14px;">🌸</div>
-    <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);margin-bottom:8px;">Cycle Tracking</div>
-    <div style="font-size:13px;color:var(--ink3);line-height:1.7;margin-bottom:24px;">Track your period, fertility, and reproductive health — all in one place. Private, always.</div>
+    <div style="font-size:34px;margin-bottom:14px;">🌸</div>
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);margin-bottom:8px;">Cycle Tracking</div>
+    <div style="font-size:15px;color:var(--ink3);line-height:1.7;margin-bottom:24px;">Track your period, fertility, and reproductive health — all in one place. Private, always.</div>
     <button class="cycle-log-btn" onclick="openCycleSetup()" style="margin:0 auto;max-width:280px;">Get started →</button>
   </div>
 
@@ -584,16 +584,16 @@
   <!-- ── Today card — cycle phase ── -->
   {% if cycle_phase and cycle_phase.phase and cycle_mode != 'ttc_ivf' %}
   <div class="info-card" style="margin:14px 18px 0;background:var(--bg2);">
-    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Today · Day {{ cycle_phase.cycle_day }} of {{ cycle_phase.cycle_length }}</div>
-    <div style="font-family:var(--font-head);font-size:18px;color:var(--ink);margin-bottom:2px;">{{ cycle_phase.headline }}</div>
-    <div style="font-size:12px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ cycle_phase.body }}</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Today · Day {{ cycle_phase.cycle_day }} of {{ cycle_phase.cycle_length }}</div>
+    <div style="font-family:var(--font-head);font-size:20px;color:var(--ink);margin-bottom:2px;">{{ cycle_phase.headline }}</div>
+    <div style="font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ cycle_phase.body }}</div>
     {% if cycle_phase.eats %}
-    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
-    <div style="font-size:12px;color:var(--ink2);">{{ cycle_phase.eats | join(' · ') }}</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
+    <div style="font-size:14px;color:var(--ink2);">{{ cycle_phase.eats | join(' · ') }}</div>
     {% endif %}
     {% if cycle_phase.haul %}
-    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
-    <div style="font-size:12px;color:var(--ink2);">{{ cycle_phase.haul | join(' · ') }}</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
+    <div style="font-size:14px;color:var(--ink2);">{{ cycle_phase.haul | join(' · ') }}</div>
     {% endif %}
   </div>
   {% endif %}
@@ -601,19 +601,19 @@
   <!-- ── Today card — IVF stage ── -->
   {% if cycle_mode == 'ttc_ivf' and ivf_stage_data and ivf_stage_data.stage %}
   <div class="info-card" style="margin:14px 18px 0;background:var(--bg2);border-color:rgba(100,140,220,0.25);">
-    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">💙 IVF · {{ ivf_stage_data.label }}</div>
-    <div style="font-family:var(--font-head);font-size:18px;color:var(--ink);margin-bottom:2px;">{{ ivf_stage_data.headline }}</div>
-    <div style="font-size:12px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ ivf_stage_data.body }}</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">💙 IVF · {{ ivf_stage_data.label }}</div>
+    <div style="font-family:var(--font-head);font-size:20px;color:var(--ink);margin-bottom:2px;">{{ ivf_stage_data.headline }}</div>
+    <div style="font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ ivf_stage_data.body }}</div>
     {% if ivf_stage_data.tip %}
-    <div style="font-size:11px;color:var(--ink4);background:var(--bg3);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;line-height:1.5;">💡 {{ ivf_stage_data.tip }}</div>
+    <div style="font-size:13px;color:var(--ink4);background:var(--bg3);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;line-height:1.5;">💡 {{ ivf_stage_data.tip }}</div>
     {% endif %}
     {% if ivf_stage_data.eats %}
-    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
-    <div style="font-size:12px;color:var(--ink2);">{{ ivf_stage_data.eats | join(' · ') }}</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
+    <div style="font-size:14px;color:var(--ink2);">{{ ivf_stage_data.eats | join(' · ') }}</div>
     {% endif %}
     {% if ivf_stage_data.haul %}
-    <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
-    <div style="font-size:12px;color:var(--ink2);">{{ ivf_stage_data.haul | join(' · ') }}</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
+    <div style="font-size:14px;color:var(--ink2);">{{ ivf_stage_data.haul | join(' · ') }}</div>
     {% endif %}
   </div>
   {% endif %}
@@ -621,15 +621,15 @@
   <!-- ── Fertile window (TTC only) ── -->
   {% if fertile_window and fertile_window.has_data %}
   <div class="info-card" style="margin:10px 18px 0;background:{% if fertile_window.is_fertile_today %}var(--green-light){% else %}var(--bg2){% endif %};border-color:{% if fertile_window.is_fertile_today %}var(--green){% else %}var(--border){% endif %};">
-    <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:{% if fertile_window.is_fertile_today %}var(--green){% else %}var(--ink4){% endif %};margin-bottom:4px;">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:{% if fertile_window.is_fertile_today %}var(--green){% else %}var(--ink4){% endif %};margin-bottom:4px;">
       {% if fertile_window.is_fertile_today %}🌿 Fertile Window — Active Today{% elif fertile_window.days_to_window == 0 %}🌿 Fertile Window{% else %}🌿 Fertile Window in {{ fertile_window.days_to_window }} days{% endif %}
     </div>
     {% if fertile_window.is_ovulation_today %}
-    <div style="font-size:13px;color:var(--green);font-weight:500;">Peak day — highest probability</div>
+    <div style="font-size:15px;color:var(--green);font-weight:500;">Peak day — highest probability</div>
     {% endif %}
-    <div style="font-size:12px;color:var(--ink3);margin-top:2px;">{{ fertile_window.fertile_start }} → {{ fertile_window.fertile_end }} · Ovulation {{ fertile_window.ovulation_date }}</div>
+    <div style="font-size:14px;color:var(--ink3);margin-top:2px;">{{ fertile_window.fertile_start }} → {{ fertile_window.fertile_end }} · Ovulation {{ fertile_window.ovulation_date }}</div>
     {% if fertile_window.intimacy_count > 0 %}
-    <div style="font-size:11px;color:var(--ink4);margin-top:6px;">{{ fertile_window.intimacy_count }} intimacy log{{ 's' if fertile_window.intimacy_count != 1 }} this window</div>
+    <div style="font-size:13px;color:var(--ink4);margin-top:6px;">{{ fertile_window.intimacy_count }} intimacy log{{ 's' if fertile_window.intimacy_count != 1 }} this window</div>
     {% endif %}
     <button class="cycle-log-btn secondary" onclick="logIntimacy()" style="margin-top:10px;">💕 Log intimacy</button>
   </div>
@@ -711,7 +711,7 @@
       <div class="cycle-dot" style="{% if c.is_override %}background:var(--amber){% endif %}"></div>
       <div class="cycle-dates">
         {{ c.cycle_start_slt }}{% if c.cycle_end_slt %} → {{ c.cycle_end_slt }}{% endif %}
-        {% if c.is_override %}<span style="font-size:10px;color:var(--amber);margin-left:4px;">override</span>{% endif %}
+        {% if c.is_override %}<span style="font-size:12px;color:var(--amber);margin-left:4px;">override</span>{% endif %}
       </div>
       {% if c.cycle_length_days %}
       <div class="cycle-length">{{ c.cycle_length_days }}d</div>
@@ -735,7 +735,7 @@
     <div class="section-head-title">Settings</div>
   </div>
   <div class="info-card" style="margin:0 18px 8px;">
-    <div style="font-size:12px;color:var(--ink3);margin-bottom:8px;">
+    <div style="font-size:14px;color:var(--ink3);margin-bottom:8px;">
       Currently tracking: <strong style="color:var(--ink);">
         {% if cycle_mode == 'period_only' %}Period only
         {% elif cycle_mode == 'ttc_traditional' %}Trying to conceive
@@ -754,12 +754,12 @@
   </div>
 
   <div class="info-card" style="margin:0 18px 8px;border-color:rgba(180,60,60,0.15);">
-    <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">Delete data</div>
-    <div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">Permanently remove cycle data. This cannot be undone.</div>
+    <div style="font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">Delete data</div>
+    <div style="font-size:14px;color:var(--ink3);margin-bottom:12px;">Permanently remove cycle data. This cannot be undone.</div>
     <div style="display:flex;flex-direction:column;gap:7px;">
-      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('period')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:12px;">Delete period history</button>
-      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('pregnancy')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:12px;">Delete pregnancy data</button>
-      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('all')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:12px;font-weight:600;">Delete all cycle data</button>
+      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('period')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:14px;">Delete period history</button>
+      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('pregnancy')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:14px;">Delete pregnancy data</button>
+      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('all')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:14px;font-weight:600;">Delete all cycle data</button>
     </div>
   </div>
 
@@ -809,9 +809,9 @@
       <button class="preg-option" id="period-currently-btn" onclick="toggleCurrentlyOn()">🩸 I'm on my period right now</button>
     </div>
     <div id="period-date-inputs">
-      <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Start date</label>
+      <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Start date</label>
       <input class="preg-input" type="date" id="cycle-period-start" style="margin-bottom:12px;" />
-      <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">End date (if finished)</label>
+      <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">End date (if finished)</label>
       <input class="preg-input" type="date" id="cycle-period-end" />
     </div>
     <button class="preg-next-btn" onclick="cycleSetupNext()" style="margin-top:14px;">Continue →</button>
@@ -827,7 +827,7 @@
       <input class="preg-slider" type="range" min="21" max="45" value="28" id="cycle-len-slider" oninput="document.getElementById('cycle-len-display').textContent=this.value+' days'" />
       <div class="preg-slider-label"><span>21d</span><span>28d</span><span>35d</span><span>45d</span></div>
     </div>
-    <div style="font-size:11px;color:var(--ink4);margin-bottom:14px;">Not sure? We'll use 28 days and update as you log more.</div>
+    <div style="font-size:13px;color:var(--ink4);margin-bottom:14px;">Not sure? We'll use 28 days and update as you log more.</div>
     <button class="preg-next-btn" onclick="cycleSetupNext()">Continue →</button>
   </div>
 
@@ -853,7 +853,7 @@
     <div class="preg-sheet-title">🌙 Period started</div>
   </div>
   <div style="padding:8px 18px 28px;">
-    <div class="preg-question" style="font-size:17px;margin-bottom:4px;">How long does it usually last?</div>
+    <div class="preg-question" style="font-size:19px;margin-bottom:4px;">How long does it usually last?</div>
     <div class="preg-subtitle" style="margin-bottom:18px;">We'll use this to mark your period window on the calendar.</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;" id="period-dur-grid">
       <button class="cycle-dur-btn" onclick="selectPeriodDur(this,3)">3 days</button>
@@ -866,9 +866,9 @@
       <button class="cycle-dur-btn" onclick="selectPeriodDur(this,10)">10 days</button>
     </div>
     <div style="margin-bottom:14px;">
-      <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Start date</label>
+      <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Start date</label>
       <input class="preg-input" type="date" id="period-start-date" />
-      <div style="font-size:11px;color:var(--ink4);margin-top:5px;">Defaults to today — change if logging retroactively.</div>
+      <div style="font-size:13px;color:var(--ink4);margin-top:5px;">Defaults to today — change if logging retroactively.</div>
     </div>
     <button class="preg-next-btn" onclick="submitPeriodStart()">Log period 🌙</button>
   </div>
@@ -887,7 +887,7 @@
     <div class="preg-sheet-title">Override Prediction</div>
   </div>
   <div style="padding:20px 18px;">
-    <div class="preg-question" style="font-size:17px;margin-bottom:6px;">What do you want to adjust?</div>
+    <div class="preg-question" style="font-size:19px;margin-bottom:6px;">What do you want to adjust?</div>
     <div class="preg-subtitle">Use this if your period came early, late, ended sooner, or didn't come at all.</div>
     <div class="preg-options">
       <button class="preg-option" onclick="submitOverride('late_start')">📅 My period started later than predicted</button>
@@ -895,9 +895,9 @@
       <button class="preg-option" onclick="submitOverride('skip')">↷ I skipped this cycle</button>
       <button class="preg-option" onclick="submitOverride('spotting')">🩸 Spotting — not a full period</button>
     </div>
-    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-top:14px;margin-bottom:6px;">Date</label>
+    <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-top:14px;margin-bottom:6px;">Date</label>
     <input class="preg-input" type="date" id="override-date" />
-    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-top:10px;margin-bottom:6px;">Note (optional)</label>
+    <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-top:10px;margin-bottom:6px;">Note (optional)</label>
     <input class="preg-input" type="text" id="override-note" placeholder="e.g. stress, travel, illness" maxlength="100" />
   </div>
 </div>`;
@@ -915,7 +915,7 @@
     <div class="preg-sheet-title" style="color:var(--rose);">Delete data</div>
   </div>
   <div style="padding:0 18px 24px;">
-    <div class="preg-question" id="delete-confirm-title" style="font-size:17px;margin-bottom:8px;"></div>
+    <div class="preg-question" id="delete-confirm-title" style="font-size:19px;margin-bottom:8px;"></div>
     <div class="preg-subtitle" id="delete-confirm-body" style="margin-bottom:20px;"></div>
     <div style="display:flex;gap:10px;">
       <button class="cycle-log-btn secondary" onclick="cancelDeleteCycle()" style="flex:1;margin:0;">Cancel</button>
@@ -995,9 +995,9 @@
     <div class="preg-progress"><div class="preg-progress-fill" style="width:50%"></div></div>
     <div class="preg-question">Do you have a due date?</div>
     <div class="preg-subtitle">Optional. If you know your due date or last period date, add it and the system will calculate trimester transitions automatically. Skip if you're just tracking narratively.</div>
-    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Due Date</label>
+    <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Due Date</label>
     <input class="preg-input" type="date" id="preg-due-date" style="margin-bottom:14px;" />
-    <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Last Period (LMP)</label>
+    <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Last Period (LMP)</label>
     <input class="preg-input" type="date" id="preg-lmp-date" />
     <button class="preg-next-btn" onclick="pregNext()">Continue →</button>
     <button class="preg-skip" onclick="pregSkip()">Skip — I'll track manually</button>
@@ -1451,9 +1451,9 @@
       document.getElementById('cycle-q3-title').textContent = 'Link with your surrogate partner?';
       document.getElementById('cycle-q3-sub').textContent   = 'Enter their avatar UUID to connect your occurrences.';
       document.getElementById('cycle-q3-content').innerHTML = `
-        <label style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Avatar UUID</label>
-        <input class="preg-input" type="text" id="cycle-linked-uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" maxlength="36" style="font-family:monospace;font-size:12px;" />
-        <div style="font-size:11px;color:var(--ink4);margin-top:6px;">Optional - you can add this later.</div>`;
+        <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Avatar UUID</label>
+        <input class="preg-input" type="text" id="cycle-linked-uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" maxlength="36" style="font-family:monospace;font-size:14px;" />
+        <div style="font-size:13px;color:var(--ink4);margin-top:6px;">Optional - you can add this later.</div>`;
     }
   }
 
