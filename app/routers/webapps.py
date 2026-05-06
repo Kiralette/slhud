@@ -1144,22 +1144,6 @@ async def ritual(
             except Exception:
                 surrogate_stage_data = {}
 
-        # Add pregnancy dates to calendar
-        for occ in occurrences:
-            if occ.get("occurrence_key") == "pregnancy" and occ.get("pregnancy_info"):
-                pinfo = occ["pregnancy_info"]
-                try:
-                    if pinfo.get("due_date"):
-                        calendar_days[pinfo["due_date"]] = "due_date"
-                    # Conception = due_date minus pregnancy_length days
-                    import json as _pjson
-                    pmeta = _pjson.loads(occ.get("metadata") or "{}")
-                    lmp = pmeta.get("lmp_date")
-                    if lmp:
-                        calendar_days[date.fromisoformat(lmp[:10]).isoformat()] = "conception"
-                except Exception:
-                    pass
-
     # Holidays for this month as {MM-DD: emoji}
     all_holidays = cfg.get("holidays", {})
     holidays_this_month = {k: v["emoji"] for k, v in all_holidays.items()
@@ -1219,6 +1203,22 @@ async def ritual(
             except Exception:
                 d["pregnancy_info"] = None
         occurrences.append(d)
+
+    # Add pregnancy dates to cycle calendar after occurrences are fully enriched
+    if show_cycle_tab:
+        for occ in occurrences:
+            if occ.get("occurrence_key") == "pregnancy" and occ.get("pregnancy_info"):
+                pinfo = occ["pregnancy_info"]
+                try:
+                    if pinfo.get("due_date"):
+                        calendar_days[pinfo["due_date"]] = "due_date"
+                    import json as _pjson
+                    pmeta = _pjson.loads(occ.get("metadata") or "{}")
+                    lmp = pmeta.get("lmp_date")
+                    if lmp:
+                        calendar_days[date.fromisoformat(lmp[:10]).isoformat()] = "conception"
+                except Exception:
+                    pass
 
     return templates.TemplateResponse(request, "apps/ritual.html", {
         "token":                token,
