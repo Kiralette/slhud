@@ -635,11 +635,31 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
     check_admin(request)
     secret = request.query_params.get("secret", "")
 
-    child_tables = ["needs", "skills", "vibes", "player_traits", "employment",
-                    "wallets", "transactions", "event_log", "notifications",
-                    "player_profiles", "player_stats", "player_settings",
-                    "player_achievements", "player_traits", "flare_stats",
-                    "posts", "follows", "message_threads", "career_history"]
+    child_tables = [
+        # engagement/message children first
+        "post_engagements", "messages", "message_threads",
+        # social
+        "follows", "proximity_log",
+        # career
+        "odd_job_log", "career_history", "employment", "streaming_sessions",
+        # economy
+        "transactions", "wallets", "weekly_specials",
+        # needs / vibes / traits
+        "needs", "skills", "vibes", "vibe_log", "occurrence_vibe_log",
+        "player_traits", "player_achievements",
+        # flare / social stats
+        "posts", "flare_stats",
+        # calendar / cycle
+        "calendar_events", "cycle_log", "cycle_phase_log",
+        "intimacy_log", "ttc_conception_checks",
+        # occurrences
+        "player_occurrences",
+        # notifications / logs
+        "notifications", "event_log",
+        # profile / settings
+        "player_profiles", "player_stats", "player_settings",
+        "workout_plans", "subscriptions",
+    ]
 
     if is_postgres():
         for table in child_tables:
