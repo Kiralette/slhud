@@ -1400,9 +1400,15 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
         # Clear cycle log
         if is_postgres():
             await db.execute("DELETE FROM cycle_log WHERE player_id = $1", player_id)
-            await db.execute("DELETE FROM intimacy_log WHERE player_id = $1", player_id)
-            await db.execute("DELETE FROM cycle_phase_log WHERE player_id = $1", player_id)
-            await db.execute("DELETE FROM ttc_conception_checks WHERE player_id = $1", player_id)
+            for tbl_sql in [
+                "DELETE FROM intimacy_log WHERE player_id = $1",
+                "DELETE FROM cycle_phase_log WHERE player_id = $1",
+                "DELETE FROM ttc_conception_checks WHERE player_id = $1",
+            ]:
+                try:
+                    await db.execute(tbl_sql, player_id)
+                except Exception:
+                    pass  # table may not exist yet
             # Resolve period + fertile_window + TTC occurrences
             await db.execute(
                 """UPDATE player_occurrences SET is_resolved = 1, ends_at = now()::date::text
@@ -1412,21 +1418,30 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
                        'ttc_surrogate_intended','ttc_surrogate_carrier')
                    AND is_resolved = 0""",
                 player_id)
-            # Reset profile cycle fields
-            await db.execute(
-                """UPDATE player_profiles
-                   SET cycle_setup_completed = 0,
-                       cycle_tracking_mode   = NULL,
-                       avg_period_duration   = 5,
-                       default_cycle_length  = 28,
-                       infertility_flag      = 0
-                   WHERE player_id = $1""",
-                player_id)
+            # Reset profile cycle fields (columns may not exist pre-migration)
+            try:
+                await db.execute(
+                    """UPDATE player_profiles
+                       SET cycle_setup_completed = 0,
+                           cycle_tracking_mode   = NULL,
+                           avg_period_duration   = 5,
+                           default_cycle_length  = 28,
+                           infertility_flag      = 0
+                       WHERE player_id = $1""",
+                    player_id)
+            except Exception:
+                pass
         else:
             await db.execute("DELETE FROM cycle_log WHERE player_id = ?", (player_id,))
-            await db.execute("DELETE FROM intimacy_log WHERE player_id = ?", (player_id,))
-            await db.execute("DELETE FROM cycle_phase_log WHERE player_id = ?", (player_id,))
-            await db.execute("DELETE FROM ttc_conception_checks WHERE player_id = ?", (player_id,))
+            for tbl_sql in [
+                "DELETE FROM intimacy_log WHERE player_id = ?",
+                "DELETE FROM cycle_phase_log WHERE player_id = ?",
+                "DELETE FROM ttc_conception_checks WHERE player_id = ?",
+            ]:
+                try:
+                    await db.execute(tbl_sql, (player_id,))
+                except Exception:
+                    pass  # table may not exist yet
             await db.execute(
                 """UPDATE player_occurrences SET is_resolved = 1, ends_at = date('now')
                    WHERE player_id = ?
@@ -1435,15 +1450,18 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
                        'ttc_surrogate_intended','ttc_surrogate_carrier')
                    AND is_resolved = 0""",
                 (player_id,))
-            await db.execute(
-                """UPDATE player_profiles
-                   SET cycle_setup_completed = 0,
-                       cycle_tracking_mode   = NULL,
-                       avg_period_duration   = 5,
-                       default_cycle_length  = 28,
-                       infertility_flag      = 0
-                   WHERE player_id = ?""",
-                (player_id,))
+            try:
+                await db.execute(
+                    """UPDATE player_profiles
+                       SET cycle_setup_completed = 0,
+                           cycle_tracking_mode   = NULL,
+                           avg_period_duration   = 5,
+                           default_cycle_length  = 28,
+                           infertility_flag      = 0
+                       WHERE player_id = ?""",
+                    (player_id,))
+            except Exception:
+                pass
             await db.commit()
         deleted.append("period_data")
 

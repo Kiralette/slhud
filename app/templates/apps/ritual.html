@@ -1421,7 +1421,6 @@
     if (!_deleteScope) return;
     const scope = _deleteScope;
     _deleteScope = null;
-    // Close sheet first, safely
     document.getElementById('delete-sheet')?.classList.remove('open');
     document.getElementById('delete-overlay')?.classList.remove('open');
     try {
@@ -1436,7 +1435,7 @@
         const d = await res.json();
         toast(d.detail || 'Could not delete');
       }
-    } catch(e) { toast('Connection error'); }
+    } catch(e) { toast('Error: ' + e.message); }
   }
 
   // ── IVF stage update ──────────────────────────────────────────────────────
