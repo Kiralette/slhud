@@ -1178,7 +1178,7 @@ async def ritual(
     return templates.TemplateResponse(request, "apps/ritual.html", {
         "token":                token,
         "player":               player,
-        "today":                today.isoformat(),
+        "today":                today.strftime("%m/%d/%Y"),
         "current_year":         current_year,
         "current_month":        current_month,
         "current_month_label":  current_month_label,
