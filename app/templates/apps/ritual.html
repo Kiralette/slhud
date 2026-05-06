@@ -418,11 +418,13 @@
 <div id="tab-calendar" class="tab-panel active">
 
   <!-- Month nav -->
-  <div class="month-nav">
-    <span class="month-nav-btn" onclick="changeMonth(-1)">‹</span>
-    <div class="month-title" id="month-label">{{ current_month_label }}</div>
-    <span class="month-nav-btn" onclick="changeMonth(1)">›</span>
-  </div>
+  <table style="width:100%;table-layout:fixed;border-collapse:collapse;padding:10px 0;">
+    <tr>
+      <td style="width:40px;text-align:center;cursor:pointer;font-size:18px;color:var(--ink3);" onclick="changeMonth(-1)">‹</td>
+      <td style="text-align:center;font-family:var(--font-head);font-size:17px;color:var(--ink);" id="month-label">{{ current_month_label }}</td>
+      <td style="width:40px;text-align:center;cursor:pointer;font-size:18px;color:var(--ink3);" onclick="changeMonth(1)">›</td>
+    </tr>
+  </table>
 
   <!-- Day-of-week headers -->
   <div class="cal-grid" id="cal-grid">
