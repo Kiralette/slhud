@@ -784,7 +784,7 @@
         {% elif cycle_mode == 'ttc_ivf' %}IVF journey
         {% elif cycle_mode == 'ttc_surrogate_intended' %}Surrogacy (intended parent)
         {% elif cycle_mode == 'ttc_surrogate_carrier' %}Surrogacy (carrier)
-        {% elif cycle_mode == 'infertile' %}Not trying to conceive
+        {% elif cycle_mode == 'infertile' %}Period tracking only
         {% elif cycle_mode == 'not_applicable' %}Not tracking
         {% else %}{{ cycle_mode }}{% endif %}
       </strong>
@@ -842,7 +842,7 @@
       <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_surrogate_intended')">💛 Using a surrogate · anticipation tracking</button>
       <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','ttc_surrogate_carrier')">💜 I am a surrogate · physical + purpose tracking</button>
       <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','pregnant')">🤰 I'm currently pregnant · skip to pregnancy setup</button>
-      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','infertile')">⚪ Not trying to conceive — period tracking only</button>
+      <button class="preg-option" onclick="cycleSetupPick(this,'tracking_mode','infertile')">⚪ Tracking my period only — no pregnancy tracking</button>
     </div>
   </div>
 

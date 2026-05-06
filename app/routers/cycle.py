@@ -541,8 +541,8 @@ async def cycle_setup(body: CycleSetup, db=Depends(get_db)):
     }, db)
 
     # Log last period if provided
-    if body.last_period_start and mode not in ("not_applicable", "infertile",
-                                                "ttc_surrogate_intended"):
+    # infertile mode still tracks periods — the flag only blocks pregnancy mechanics
+    if body.last_period_start and mode not in ("not_applicable", "ttc_surrogate_intended"):
         start_str = body.last_period_start[:10]
         try:
             start_date = date.fromisoformat(start_str)
