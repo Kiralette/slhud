@@ -214,6 +214,123 @@ IVF_STAGE_ADVICE = {
 }
 
 
+# ── Surrogate carrier stage advice ────────────────────────────────────────────
+
+SURROGATE_CARRIER_ADVICE = {
+    "matching": {
+        "label":    "Matching",
+        "emoji":    "🤝",
+        "headline": "Finding the right fit 🤝",
+        "body":     "You're in the matching phase — getting to know the intended parents and making sure everything feels right. This is a relationship built on trust. Take your time.",
+        "eats":     ["Folate-rich foods", "Iron-rich leafy greens", "Hydrating fruits", "Balanced meals"],
+        "haul":     ["A journal for this journey", "Comfortable loungewear", "Something meaningful to you"],
+        "tip":      "Ask anything. A good match means both parties feel completely comfortable.",
+    },
+    "preparing": {
+        "label":    "Medical prep",
+        "emoji":    "📋",
+        "headline": "Getting ready 📋",
+        "body":     "Medical screenings, contracts, and syncing your cycle. There's a lot of paperwork and appointments right now. It's the least glamorous part but it matters.",
+        "eats":     ["Folate and iron", "Anti-inflammatory foods", "Light proteins", "Leafy greens"],
+        "haul":     ["Good planner for appointments", "Comfortable clothes for clinic days", "Calming tea"],
+        "tip":      "Start prenatal vitamins now if you haven't — your clinic will advise on timing.",
+    },
+    "stimulation": {
+        "label":    "Stimulation / sync",
+        "emoji":    "💉",
+        "headline": "Syncing up 💉",
+        "body":     "Hormones, injections, and frequent monitoring. Your body is being prepared to receive the embryo. Bloating and mood shifts are completely normal right now.",
+        "eats":     ["Anti-inflammatory foods", "Light soups", "Electrolyte water", "Protein-rich foods"],
+        "haul":     ["Loose comfortable clothing", "Heating pad", "Ice packs for injection sites"],
+        "tip":      "Rotate injection sites and go easy on yourself. Your body is doing a lot.",
+    },
+    "transfer": {
+        "label":    "Transfer",
+        "emoji":    "✨",
+        "headline": "Transfer day ✨",
+        "body":     "The embryo transfer — a small, quiet moment that carries enormous meaning. Rest today. Whatever you believe in, hold it close.",
+        "eats":     ["Warm foods", "Pineapple core (bromelain tradition)", "Protein", "Stay hydrated"],
+        "haul":     ["Cozy socks", "Something comforting", "Easy entertainment at home"],
+        "tip":      "Light rest is fine — your clinic will tell you what to expect.",
+    },
+    "transfer_wait": {
+        "label":    "Two week wait",
+        "emoji":    "🕯️",
+        "headline": "The wait 🕯️",
+        "body":     "The two week wait is hard for everyone involved. You may feel symptoms from the progesterone support that are impossible to read. Try to stay gentle with yourself.",
+        "eats":     ["Continue nutritious meals", "Comfort foods when needed", "Stay hydrated"],
+        "haul":     ["Things that absorb your attention", "Comfort items"],
+        "tip":      "The intended parents are waiting too. A small update can mean the world to them.",
+    },
+    "pregnant": {
+        "label":    "Carrying",
+        "emoji":    "🤰",
+        "headline": "Carrying 🤰",
+        "body":     "It worked. You're carrying someone else's dream and that is extraordinary. All the usual pregnancy phases apply — and you get to experience them knowing what you're doing it for.",
+        "eats":     ["Iron-rich foods", "Folate", "Small frequent meals if nauseous", "Stay hydrated"],
+        "haul":     ["Maternity comfort items", "Pregnancy pillow", "Prenatal vitamins"],
+        "tip":      "Keep communication open with the intended parents — they'll want to hear everything.",
+    },
+    "postpartum": {
+        "label":    "After birth",
+        "emoji":    "🌱",
+        "headline": "After the birth 🌱",
+        "body":     "You did something remarkable. Recovery takes time and your emotions may be complicated — that's all completely valid. Let people care for you now.",
+        "eats":     ["Iron-rich foods", "Warming soups", "Protein for recovery", "Stay hydrated"],
+        "haul":     ["Comfortable recovery wear", "Healing essentials", "Something just for you"],
+        "tip":      "Postpartum emotions after surrogacy can be intense in both directions. Seek support if you need it.",
+    },
+}
+
+SURROGATE_INTENDED_ADVICE = {
+    "matching": {
+        "label":    "Matching",
+        "emoji":    "🤝",
+        "headline": "Finding your person 🤝",
+        "body":     "You're in the matching phase — building a relationship with someone who will carry your child. This is one of the most important connections you'll make. Be open, be honest.",
+        "eats":     ["Whatever brings you comfort", "Nourishing foods for your own wellbeing"],
+        "haul":     ["A journal for this journey", "Something hopeful"],
+        "tip":      "Ask your coordinator anything. There are no wrong questions.",
+    },
+    "preparing": {
+        "label":    "Legal and medical prep",
+        "emoji":    "📋",
+        "headline": "Getting everything in order 📋",
+        "body":     "Contracts, medical coordination, legal arrangements. A lot of paperwork stands between here and holding your baby. It's worth every page.",
+        "eats":     ["Whatever supports your energy", "Foods you love"],
+        "haul":     ["Good planner", "Something to look forward to"],
+        "tip":      "Keep a shared notes doc with dates and milestones — it helps to have a record.",
+    },
+    "transfer_wait": {
+        "label":    "Two week wait",
+        "emoji":    "🕯️",
+        "headline": "The hardest wait 🕯️",
+        "body":     "Two weeks between transfer and the blood test. You have almost no control and that is incredibly hard. Find things that absorb you and let yourself feel whatever comes up.",
+        "eats":     ["Comfort foods", "Whatever sounds good"],
+        "haul":     ["Distractions", "Something comforting ready for either result"],
+        "tip":      "Check in with your surrogate — they're waiting too, and connection helps.",
+    },
+    "pregnant": {
+        "label":    "Your surrogate is pregnant",
+        "emoji":    "💛",
+        "headline": "It's happening 💛",
+        "body":     "Your surrogate is carrying your baby and every week is a milestone. Stay connected. Ask how they're feeling. This pregnancy belongs to both of you in different ways.",
+        "eats":     ["Whatever feels celebratory", "Nourish yourself for the journey ahead"],
+        "haul":     ["Start preparing your space", "Something for the nursery", "A gift for your surrogate"],
+        "tip":      "Milestone appointments are moments to share if your surrogate is comfortable with that.",
+    },
+    "postpartum": {
+        "label":    "Your baby is here",
+        "emoji":    "🌸",
+        "headline": "Your baby is here 🌸",
+        "body":     "The baby you dreamed about is real. Everything that comes next — the exhaustion, the love, the learning — is yours. Don't forget to also check in on your surrogate.",
+        "eats":     ["New parent survival foods", "Easy meals", "Stay hydrated"],
+        "haul":     ["Everything you prepared", "Support for your surrogate too"],
+        "tip":      "Postpartum is postpartum regardless of how your baby arrived. Ask for help.",
+    },
+}
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 async def _get_player(token: str, db):
@@ -1329,6 +1446,89 @@ async def update_ivf_stage(body: UpdateIVFStage, db=Depends(get_db)):
         "label":        advice["label"],
         "auto_progress": bool(meta.get("ivf_auto_progress")),
     }
+
+
+# ── GET /cycle/surrogate-stage ────────────────────────────────────────────────
+
+@router.get("/surrogate-stage")
+async def get_surrogate_stage(token: str, db=Depends(get_db)):
+    """Returns current surrogate stage and advice card for carrier or intended parent."""
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    profile   = await _get_profile(player_id, db)
+    mode      = profile.get("cycle_tracking_mode") or ""
+
+    if mode not in ("ttc_surrogate_carrier", "ttc_surrogate_intended"):
+        return {"has_data": False}
+
+    if is_postgres():
+        occ = await db.fetchrow(
+            """SELECT sub_stage, metadata FROM player_occurrences
+               WHERE player_id = $1
+               AND occurrence_key IN ('ttc_surrogate_carrier','ttc_surrogate_intended')
+               AND is_resolved = 0
+               ORDER BY started_at DESC LIMIT 1""", player_id)
+    else:
+        async with db.execute(
+            """SELECT sub_stage, metadata FROM player_occurrences
+               WHERE player_id = ?
+               AND occurrence_key IN ('ttc_surrogate_carrier','ttc_surrogate_intended')
+               AND is_resolved = 0
+               ORDER BY started_at DESC LIMIT 1""", (player_id,)
+        ) as cur:
+            occ = await cur.fetchone()
+
+    if not occ:
+        return {"has_data": False}
+
+    stage = occ["sub_stage"] or ("pregnant" if mode == "ttc_surrogate_carrier" else "preparing")
+    advice_map = SURROGATE_CARRIER_ADVICE if mode == "ttc_surrogate_carrier" else SURROGATE_INTENDED_ADVICE
+    advice = advice_map.get(stage, list(advice_map.values())[0])
+
+    return {"has_data": True, "stage": stage, "mode": mode, **advice}
+
+
+class UpdateSurrogateStage(BaseModel):
+    token: str
+    stage: str
+
+
+@router.post("/surrogate-stage")
+async def update_surrogate_stage(body: UpdateSurrogateStage, db=Depends(get_db)):
+    """Update the surrogate stage for carrier or intended parent."""
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    profile   = await _get_profile(player_id, db)
+    mode      = profile.get("cycle_tracking_mode") or ""
+
+    advice_map = SURROGATE_CARRIER_ADVICE if mode == "ttc_surrogate_carrier" else SURROGATE_INTENDED_ADVICE
+    if body.stage not in advice_map:
+        raise HTTPException(status_code=400, detail=f"Unknown stage: {body.stage}")
+
+    if is_postgres():
+        await db.execute(
+            """UPDATE player_occurrences SET sub_stage = $1
+               WHERE player_id = $2
+               AND occurrence_key IN ('ttc_surrogate_carrier','ttc_surrogate_intended')
+               AND is_resolved = 0""",
+            body.stage, player_id)
+    else:
+        await db.execute(
+            """UPDATE player_occurrences SET sub_stage = ?
+               WHERE player_id = ?
+               AND occurrence_key IN ('ttc_surrogate_carrier','ttc_surrogate_intended')
+               AND is_resolved = 0""",
+            (body.stage, player_id))
+        await db.commit()
+
+    advice = advice_map[body.stage]
+    return {"status": "updated", "stage": body.stage, "label": advice["label"]}
 
 
 # ── POST /cycle/mode ──────────────────────────────────────────────────────────

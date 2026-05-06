@@ -915,6 +915,7 @@ async def ritual(
     fertile_window   = {}
     ttc_occurrence   = None
     ivf_stage_data   = {}
+    surrogate_stage_data = {}
 
     if show_cycle_tab:
         cycle_len  = int(cycle_profile.get("default_cycle_length") or 28)
@@ -1112,8 +1113,52 @@ async def ritual(
                 stage  = ttc_occurrence.get("sub_stage") or "preparing"
                 advice = IVF_STAGE_ADVICE.get(stage, IVF_STAGE_ADVICE["preparing"])
                 ivf_stage_data = {"stage": stage, **advice}
+                # Add IVF key dates to calendar
+                import json as _ijson
+                imeta = _ijson.loads(ttc_occurrence.get("metadata") or "{}")
+                for cal_key, cal_label in [
+                    ("stimulation_start",  "ivf_stimulation"),
+                    ("retrieval_date",     "ivf_retrieval"),
+                    ("transfer_date",      "ivf_transfer"),
+                    ("beta_date",          "ivf_beta"),
+                ]:
+                    dval = imeta.get(cal_key)
+                    if dval:
+                        try:
+                            calendar_days[date.fromisoformat(dval[:10]).isoformat()] = cal_label
+                        except Exception:
+                            pass
             except Exception:
                 ivf_stage_data = {}
+
+        # Surrogate stage data
+        surrogate_stage_data = {}
+        if cycle_mode in ("ttc_surrogate_carrier", "ttc_surrogate_intended") and ttc_occurrence:
+            try:
+                from app.routers.cycle import SURROGATE_CARRIER_ADVICE, SURROGATE_INTENDED_ADVICE
+                stage     = ttc_occurrence.get("sub_stage") or "preparing"
+                advice_map = SURROGATE_CARRIER_ADVICE if cycle_mode == "ttc_surrogate_carrier" \
+                             else SURROGATE_INTENDED_ADVICE
+                advice = advice_map.get(stage, list(advice_map.values())[0])
+                surrogate_stage_data = {"stage": stage, "mode": cycle_mode, **advice}
+            except Exception:
+                surrogate_stage_data = {}
+
+        # Add pregnancy dates to calendar
+        for occ in occurrences:
+            if occ.get("occurrence_key") == "pregnancy" and occ.get("pregnancy_info"):
+                pinfo = occ["pregnancy_info"]
+                try:
+                    if pinfo.get("due_date"):
+                        calendar_days[pinfo["due_date"]] = "due_date"
+                    # Conception = due_date minus pregnancy_length days
+                    import json as _pjson
+                    pmeta = _pjson.loads(occ.get("metadata") or "{}")
+                    lmp = pmeta.get("lmp_date")
+                    if lmp:
+                        calendar_days[date.fromisoformat(lmp[:10]).isoformat()] = "conception"
+                except Exception:
+                    pass
 
     # Holidays for this month as {MM-DD: emoji}
     all_holidays = cfg.get("holidays", {})
@@ -1197,6 +1242,7 @@ async def ritual(
         "fertile_window":       fertile_window,
         "ttc_occurrence":       ttc_occurrence,
         "ivf_stage_data":       ivf_stage_data,
+        "surrogate_stage_data": surrogate_stage_data,
         "holidays_this_month":  holidays_this_month,
         "occurrences":          occurrences,
     })

@@ -62,6 +62,19 @@
   .cal-day.predicted_start   { background: #f9d0dc; color: var(--ink2); }
   .cal-day.predicted_window  { background: rgba(245,220,232,0.4); }
   .cal-day.post_glow::after  { background: var(--gold) !important; }
+  /* Cycle phase shading */
+  .cal-day.phase_follicular  { background: rgba(255,245,220,0.5); }
+  .cal-day.phase_luteal      { background: rgba(220,210,240,0.4); }
+  .cal-day.phase_pms         { background: rgba(240,210,220,0.4); }
+  .cal-day.fertile_window    { background: rgba(200,235,210,0.6); }
+  .cal-day.ovulatory         { background: #c8ecd4; font-weight: 700; }
+  /* Pregnancy & IVF key dates */
+  .cal-day.conception        { background: #fde8f0; border: 1px solid #e8a0bb; }
+  .cal-day.due_date          { background: #fde8c0; border: 1px solid #d4a020; font-weight:700; }
+  .cal-day.ivf_stimulation   { background: rgba(180,210,250,0.5); }
+  .cal-day.ivf_retrieval     { background: #b4d2fa; font-weight: 700; }
+  .cal-day.ivf_transfer      { background: #c8e8ff; font-weight: 700; border: 1px solid #6aade0; }
+  .cal-day.ivf_beta          { background: #d4b4fa; font-weight: 700; border: 1px solid #9060d0; }
 
   /* ── Holiday dot ── */
   .cal-day .holiday-dot {
@@ -581,11 +594,18 @@
 
   {% else %}
   <!-- ── Today card — cycle phase ── -->
-  {% if cycle_phase and cycle_phase.phase and cycle_mode != 'ttc_ivf' %}
+  {% if cycle_phase and cycle_phase.phase and cycle_mode not in ('ttc_ivf', 'ttc_surrogate_intended') %}
   <div class="info-card" style="margin:14px 18px 0;background:var(--bg2);">
-    <div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Today · Day {{ cycle_phase.cycle_day }} of {{ cycle_phase.cycle_length }}</div>
+    <div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Today · Day {{ cycle_phase.cycle_day }} of {{ cycle_phase.cycle_length }}{% if cycle_mode == 'ttc_traditional' %} · Trying to conceive{% endif %}</div>
     <div style="font-family:var(--font-head);font-size:20px;color:var(--ink);margin-bottom:2px;">{{ cycle_phase.headline }}</div>
     <div style="font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ cycle_phase.body }}</div>
+    {% if cycle_mode == 'ttc_traditional' and fertile_window and fertile_window.has_data %}
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:10px;">
+      {% if fertile_window.is_fertile_today %}🌿 You're in your fertile window{% if fertile_window.is_ovulation_today %} — peak day today{% endif %}
+      {% elif fertile_window.days_to_window == 0 %}🌿 Fertile window starts soon
+      {% else %}🌿 Fertile window in {{ fertile_window.days_to_window }} day{{ 's' if fertile_window.days_to_window != 1 }}{% endif %}
+    </div>
+    {% endif %}
     {% if cycle_phase.eats %}
     <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
     <div style="font-size:14px;color:var(--ink2);">{{ cycle_phase.eats | join(' · ') }}</div>
@@ -614,6 +634,29 @@
     <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
     <div style="font-size:14px;color:var(--ink2);">{{ ivf_stage_data.haul | join(' · ') }}</div>
     {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── Today card — surrogacy ── -->
+  {% if surrogate_stage_data and surrogate_stage_data.stage %}
+  {% set surr_color = 'rgba(180,140,220,0.2)' if cycle_mode == 'ttc_surrogate_carrier' else 'rgba(220,180,80,0.2)' %}
+  {% set surr_emoji = '💜' if cycle_mode == 'ttc_surrogate_carrier' else '💛' %}
+  <div class="info-card" style="margin:10px 18px 0;background:var(--bg2);border-color:{{ surr_color }};">
+    <div style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">{{ surr_emoji }} {% if cycle_mode == 'ttc_surrogate_carrier' %}Surrogate carrier{% else %}Surrogacy journey{% endif %} · {{ surrogate_stage_data.label }}</div>
+    <div style="font-family:var(--font-head);font-size:20px;color:var(--ink);margin-bottom:2px;">{{ surrogate_stage_data.headline }}</div>
+    <div style="font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:10px;">{{ surrogate_stage_data.body }}</div>
+    {% if surrogate_stage_data.tip %}
+    <div style="font-size:13px;color:var(--ink4);background:var(--bg3);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:10px;line-height:1.5;">💡 {{ surrogate_stage_data.tip }}</div>
+    {% endif %}
+    {% if surrogate_stage_data.eats %}
+    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">✦ Lumen Eats suggests</div>
+    <div style="font-size:14px;color:var(--ink2);">{{ surrogate_stage_data.eats | join(' · ') }}</div>
+    {% endif %}
+    {% if surrogate_stage_data.haul %}
+    <div style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:8px;margin-bottom:4px;">✦ Haul picks</div>
+    <div style="font-size:14px;color:var(--ink2);">{{ surrogate_stage_data.haul | join(' · ') }}</div>
+    {% endif %}
+    <button class="cycle-log-btn secondary" onclick="openSurrogateStageSheet()" style="margin-top:10px;">Update stage</button>
   </div>
   {% endif %}
 
@@ -646,7 +689,7 @@
         {% else %}Third Trimester{% endif %}
         · Week {{ info.weeks_in if info else '?' }} of {{ info.total_weeks if info else '40' }}
       </div>
-      <div class="pregnancy-title">🤰 Expecting{% if info and info.multiples == 'twins' %} Twins{% elif info and info.multiples == 'triplets' %} Triplets{% endif %}</div>
+      <div class="pregnancy-title">🤰 Expecting{% if info and info.multiples == 'twins' %} Twins{% elif info and info.multiples == 'triplets' %} Triplets{% endif %}{% if info and info.gender_reveal and info.gender_reveal != 'surprise' %} · {% if info.gender_reveal == 'girl' %}💗 Girl{% elif info.gender_reveal == 'boy' %}💙 Boy{% elif info.gender_reveal == 'nonbinary' %}💜 Nonbinary{% endif %}{% endif %}</div>
       <div class="pregnancy-sub">
         {% if info %}
           {% if stage == 'trimester_1' %}Weeks 1–{{ info.t1_end_week }}
@@ -748,7 +791,10 @@
     </div>
     <button class="cycle-log-btn secondary" onclick="openCycleSetup()">Change tracking mode</button>
     {% if cycle_mode == 'ttc_ivf' %}
-    <button class="cycle-log-btn secondary" onclick="openIVFStageSheet()" style="margin:8px 0 0;">💙 Update IVF stage</button>
+    <button class="cycle-log-btn secondary" onclick="openIVFStageSheet()">💙 Update IVF stage</button>
+    {% endif %}
+    {% if cycle_mode in ('ttc_surrogate_carrier', 'ttc_surrogate_intended') %}
+    <button class="cycle-log-btn secondary" onclick="openSurrogateStageSheet()" style="margin:8px 0 0;">{% if cycle_mode == 'ttc_surrogate_carrier' %}💜{% else %}💛{% endif %} Update surrogate stage</button>
     {% endif %}
   </div>
 
@@ -952,6 +998,38 @@
     while (el.firstChild) document.body.appendChild(el.firstChild);
   })();
 
+  // Inject surrogate stage update sheet outside app-scale
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="preg-sheet-overlay" id="surrogate-overlay" onclick="closeSurrogateStageSheet()"></div>
+<div class="preg-sheet" id="surrogate-sheet">
+  <div class="preg-sheet-handle"></div>
+  <div class="preg-sheet-topbar">
+    <div class="preg-sheet-title" id="surrogate-sheet-title">Update stage</div>
+  </div>
+  <div style="padding:4px 18px 24px;overflow-y:auto;max-height:70vh;">
+    <div class="preg-subtitle" style="margin-bottom:14px;" id="surrogate-sheet-sub">Where are you in your journey right now?</div>
+    <div id="surrogate-carrier-options" class="preg-options" style="display:none;">
+      <button class="preg-option" onclick="submitSurrogateStage('matching')">🤝 Matching — finding the right fit</button>
+      <button class="preg-option" onclick="submitSurrogateStage('preparing')">📋 Medical prep and contracts</button>
+      <button class="preg-option" onclick="submitSurrogateStage('stimulation')">💉 Stimulation / syncing cycles</button>
+      <button class="preg-option" onclick="submitSurrogateStage('transfer')">✨ Transfer day</button>
+      <button class="preg-option" onclick="submitSurrogateStage('transfer_wait')">🕯️ Two week wait</button>
+      <button class="preg-option" onclick="submitSurrogateStage('pregnant')">🤰 Carrying — confirmed pregnancy</button>
+      <button class="preg-option" onclick="submitSurrogateStage('postpartum')">🌱 After the birth</button>
+    </div>
+    <div id="surrogate-intended-options" class="preg-options" style="display:none;">
+      <button class="preg-option" onclick="submitSurrogateStage('matching')">🤝 Matching — finding your person</button>
+      <button class="preg-option" onclick="submitSurrogateStage('preparing')">📋 Legal and medical prep</button>
+      <button class="preg-option" onclick="submitSurrogateStage('transfer_wait')">🕯️ Two week wait</button>
+      <button class="preg-option" onclick="submitSurrogateStage('pregnant')">💛 Surrogate is pregnant</button>
+      <button class="preg-option" onclick="submitSurrogateStage('postpartum')">🌸 Baby is here</button>
+    </div>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
   (function() {
     const el = document.createElement('div');
     el.innerHTML = `<div class="preg-sheet-overlay" id="preg-overlay" onclick="closePregSheet()"></div>
@@ -1138,6 +1216,17 @@
     predicted_start:  { icon: '🌙', label: 'Predicted period start' },
     predicted_window: { icon: '🔮', label: 'Predicted period window' },
     post_glow:        { icon: '✨', label: 'Post-period glow day' },
+    phase_follicular: { icon: '✨', label: 'Follicular phase — energy rising' },
+    phase_luteal:     { icon: '🍂', label: 'Luteal phase — turning inward' },
+    phase_pms:        { icon: '💙', label: 'Late luteal / PMS' },
+    fertile_window:   { icon: '🌿', label: 'Fertile window' },
+    ovulatory:        { icon: '🌟', label: 'Ovulation day — peak fertility' },
+    conception:       { icon: '🌸', label: 'Conception / LMP date' },
+    due_date:         { icon: '🎀', label: 'Estimated due date' },
+    ivf_stimulation:  { icon: '💉', label: 'IVF stimulation start' },
+    ivf_retrieval:    { icon: '🌱', label: 'IVF retrieval day' },
+    ivf_transfer:     { icon: '✨', label: 'IVF transfer day' },
+    ivf_beta:         { icon: '🩸', label: 'IVF beta (blood test) day' },
   };
 
   const MONTH_NAMES = ['January','February','March','April','May','June',
@@ -1383,7 +1472,14 @@
     btn.classList.add('selected');
     cycleSetupData[key] = val;
     if (key === 'tracking_mode' && val === 'pregnant') {
-      closeCycleSetup(); setTimeout(() => openPregSheet(), 300); return;
+      closeCycleSetup();
+      // Mark setup as complete with pregnant mode before opening preg sheet
+      fetch('/cycle/setup', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, tracking_mode: 'pregnant', cycle_length: 28, period_duration: 5 })
+      }).catch(() => {});
+      setTimeout(() => openPregSheet(), 300);
+      return;
     }
     setTimeout(cycleSetupNext, 280);
   }
@@ -1589,6 +1685,43 @@
         toast(d.detail || 'Could not update stage');
       }
     } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Surrogate stage update ────────────────────────────────────────────────
+
+  const _surrogateMode = '{{ cycle_mode }}';
+
+  function openSurrogateStageSheet() {
+    const isCarrier = _surrogateMode === 'ttc_surrogate_carrier';
+    document.getElementById('surrogate-sheet-title').textContent =
+      isCarrier ? '💜 Surrogate carrier stage' : '💛 Surrogacy journey stage';
+    document.getElementById('surrogate-carrier-options').style.display  = isCarrier ? 'block' : 'none';
+    document.getElementById('surrogate-intended-options').style.display = isCarrier ? 'none'  : 'block';
+    document.getElementById('surrogate-overlay')?.classList.add('open');
+    setTimeout(() => document.getElementById('surrogate-sheet')?.classList.add('open'), 10);
+  }
+
+  function closeSurrogateStageSheet() {
+    document.getElementById('surrogate-sheet')?.classList.remove('open');
+    document.getElementById('surrogate-overlay')?.classList.remove('open');
+  }
+
+  async function submitSurrogateStage(stage) {
+    closeSurrogateStageSheet();
+    try {
+      const res = await fetch('/cycle/surrogate-stage', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, stage })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        toast(`Stage updated: ${d.label}`);
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        const d = await res.json();
+        toast(d.detail || 'Could not update stage');
+      }
+    } catch(e) { toast('Error: ' + e.message); }
   }
 
   // ── Pregnancy questionnaire sheet ─────────────────────────────────────────
