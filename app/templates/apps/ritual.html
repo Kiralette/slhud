@@ -1787,9 +1787,33 @@
 
   // ── IVF stage update ──────────────────────────────────────────────────────
 
+  let _ivfStageData = {{ ivf_stage_data | tojson }};
+
+  function selectIVFMode(btn, mode) {
+    // Used in both buildCycleQ4 (setup) and IVF sheet
+    const optionBtns = btn.closest('.preg-options')?.querySelectorAll('.preg-option');
+    if (optionBtns) optionBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    cycleSetupData.ivf_auto_progress = (mode === 'auto');
+    const dateInputs  = document.getElementById('ivf-date-inputs');
+    const manualStage = document.getElementById('ivf-manual-stage');
+    if (dateInputs)  dateInputs.style.display  = mode === 'auto'   ? 'block' : 'none';
+    if (manualStage) manualStage.style.display  = mode === 'manual' ? 'block' : 'none';
+  }
+
   function openIVFStageSheet() {
-    document.getElementById('ivf-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('ivf-sheet').classList.add('open'), 10);
+    // Pre-populate date fields from server data if available
+    const d = _ivfStageData || {};
+    const stimEl     = document.getElementById('ivf-edit-stim');
+    const retrievalEl = document.getElementById('ivf-edit-retrieval');
+    const transferEl = document.getElementById('ivf-edit-transfer');
+    const betaEl     = document.getElementById('ivf-edit-beta');
+    if (stimEl     && d.stimulation_start) stimEl.value     = d.stimulation_start;
+    if (retrievalEl && d.retrieval_date)   retrievalEl.value = d.retrieval_date;
+    if (transferEl && d.transfer_date)     transferEl.value  = d.transfer_date;
+    if (betaEl     && d.beta_date)         betaEl.value      = d.beta_date;
+    document.getElementById('ivf-overlay')?.classList.add('open');
+    setTimeout(() => document.getElementById('ivf-sheet')?.classList.add('open'), 10);
   }
 
   function closeIVFStageSheet() {
