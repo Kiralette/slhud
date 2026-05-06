@@ -637,23 +637,43 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
 
     if is_postgres():
         pid = player_id
-        # Delete in FK-safe order: deepest dependents first
+        # Delete in FK-safe order — deepest dependents first.
+        # Tables using standard player_id column:
         for tbl in [
-            "post_engagements", "messages",
-            "odd_job_log", "career_history", "streaming_sessions",
-            "vibe_log", "occurrence_vibe_log", "vibes",
-            "player_traits", "player_achievements",
-            "cycle_phase_log", "cycle_log", "intimacy_log", "ttc_conception_checks",
-            "calendar_events", "player_occurrences",
-            "flare_stats", "workout_plans", "subscriptions",
-            "proximity_log", "notifications", "event_log",
-            "transactions", "wallets",
-            "needs", "skills", "employment",
-            "player_profiles", "player_stats", "player_settings",
-            "posts",
+            "post_engagements",       # references posts(id) — must come before posts
+            "odd_job_log",
+            "career_history",
+            "streaming_sessions",
+            "vibe_log",
+            "occurrence_vibe_log",
+            "vibes",
+            "player_traits",
+            "player_achievements",
+            "ttc_conception_checks",  # references cycle_log(id)
+            "cycle_phase_log",
+            "intimacy_log",
+            "cycle_log",
+            "calendar_events",
+            "player_occurrences",
+            "flare_stats",
+            "workout_plans",
+            "subscriptions",
+            "proximity_log",
+            "notifications",
+            "event_log",
+            "transactions",
+            "wallets",
+            "needs",
+            "skills",
+            "employment",
+            "player_profiles",
+            "player_stats",
+            "player_settings",
+            "posts",                  # after post_engagements
         ]:
             await db.execute(f"DELETE FROM {tbl} WHERE player_id = $1", pid)
-        # Non-standard FK columns
+        # Tables with non-standard FK column names:
+        await db.execute("DELETE FROM messages WHERE sender_id = $1", pid)
         await db.execute("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid)
         await db.execute("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid)
         await db.execute("DELETE FROM players WHERE id = $1", pid)
