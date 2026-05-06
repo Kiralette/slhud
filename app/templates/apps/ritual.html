@@ -690,6 +690,16 @@
     <button class="cycle-log-btn secondary" onclick="openCycleSetup()" style="margin:0;">Change tracking mode</button>
   </div>
 
+  <div class="info-card" style="margin:0 18px 8px;border-color:rgba(180,60,60,0.15);">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--rose);margin-bottom:6px;">Delete data</div>
+    <div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">Permanently remove cycle data. This cannot be undone.</div>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('period')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:12px;">Delete period history</button>
+      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('pregnancy')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:12px;">Delete pregnancy data</button>
+      <button class="cycle-log-btn secondary" onclick="confirmDeleteCycle('all')" style="margin:0;color:var(--rose);border-color:rgba(180,60,60,0.25);font-size:12px;font-weight:600;">Delete all cycle data</button>
+    </div>
+  </div>
+
   {% endif %}{# end cycle_setup_done #}
   <div class="scroll-pad"></div>
 </div>
@@ -798,7 +808,27 @@
     document.getElementById('override-date').value = todayStr();
   })();
 
-  // Inject pregnancy sheet outside app-scale so position:fixed works
+  // Inject delete confirmation modal outside app-scale
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `<div class="preg-sheet-overlay" id="delete-overlay" onclick="cancelDeleteCycle()"></div>
+<div class="preg-sheet" id="delete-sheet" style="max-height:360px;">
+  <div class="preg-sheet-handle"></div>
+  <div class="preg-sheet-topbar">
+    <div class="preg-sheet-title" style="color:var(--rose);">Delete data</div>
+  </div>
+  <div style="padding:0 18px 24px;">
+    <div class="preg-question" id="delete-confirm-title" style="font-size:17px;margin-bottom:8px;"></div>
+    <div class="preg-subtitle" id="delete-confirm-body" style="margin-bottom:20px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="cycle-log-btn secondary" onclick="cancelDeleteCycle()" style="flex:1;margin:0;">Cancel</button>
+      <button class="cycle-log-btn" onclick="executeDeleteCycle()" id="delete-confirm-btn"
+        style="flex:1;margin:0;background:var(--rose);border-color:var(--rose);color:#fff;">Yes, delete</button>
+    </div>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
   (function() {
     const el = document.createElement('div');
     el.innerHTML = `<div class="preg-sheet-overlay" id="preg-overlay" onclick="closePregSheet()"></div>
@@ -1240,6 +1270,59 @@
       });
       if (res.ok) { toast('Override saved'); setTimeout(() => location.reload(), 1400); }
       else { const d = await res.json(); toast(d.detail || 'Could not save'); }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Delete cycle data ─────────────────────────────────────────────────────
+
+  let _deleteScope = null;
+
+  const _deleteLabels = {
+    period: {
+      title: 'Delete period history?',
+      body:  'This will permanently remove all logged cycles, intimacy logs, and reset your tracking setup. Your pregnancy data is not affected.',
+    },
+    pregnancy: {
+      title: 'Delete pregnancy data?',
+      body:  'This will resolve all active pregnancy, postpartum, and new parent occurrences. Your period history is not affected.',
+    },
+    all: {
+      title: 'Delete all cycle data?',
+      body:  'This will permanently remove your period history, intimacy logs, pregnancy data, and reset your entire cycle tracking setup. This cannot be undone.',
+    },
+  };
+
+  function confirmDeleteCycle(scope) {
+    _deleteScope = scope;
+    const labels = _deleteLabels[scope];
+    document.getElementById('delete-confirm-title').textContent = labels.title;
+    document.getElementById('delete-confirm-body').textContent  = labels.body;
+    document.getElementById('delete-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('delete-sheet').classList.add('open'), 10);
+  }
+
+  function cancelDeleteCycle() {
+    document.getElementById('delete-sheet').classList.remove('open');
+    document.getElementById('delete-overlay').classList.remove('open');
+    _deleteScope = null;
+  }
+
+  async function executeDeleteCycle() {
+    if (!_deleteScope) return;
+    const scope = _deleteScope;
+    cancelDeleteCycle();
+    try {
+      const res = await fetch('/cycle/delete', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, scope })
+      });
+      if (res.ok) {
+        toast('Data deleted');
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        const d = await res.json();
+        toast(d.detail || 'Could not delete');
+      }
     } catch(e) { toast('Connection error'); }
   }
 

@@ -1062,3 +1062,105 @@ async def change_mode(body: ChangeMode, db=Depends(get_db)):
             await db.commit()
 
     return {"status": "mode_updated", "tracking_mode": mode}
+
+
+# ── POST /cycle/delete ────────────────────────────────────────────────────────
+
+class DeleteCycleData(BaseModel):
+    token: str
+    scope: str   # period | pregnancy | all
+
+
+@router.post("/delete")
+async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
+    """
+    Delete cycle data by scope. Irreversible.
+      period    — clears cycle_log, intimacy_log, cycle_phase_log,
+                  ttc_conception_checks, and resolves period/fertile_window occurrences.
+                  Resets cycle_setup_completed and tracking fields on profile.
+      pregnancy — resolves all pregnancy occurrences and clears pregnancy metadata.
+      all       — everything above combined.
+    """
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    scope     = body.scope.lower().strip()
+
+    if scope not in ("period", "pregnancy", "all"):
+        raise HTTPException(status_code=400, detail="scope must be period, pregnancy, or all")
+
+    deleted = []
+
+    if scope in ("period", "all"):
+        # Clear cycle log
+        if is_postgres():
+            await db.execute("DELETE FROM cycle_log WHERE player_id = $1", player_id)
+            await db.execute("DELETE FROM intimacy_log WHERE player_id = $1", player_id)
+            await db.execute("DELETE FROM cycle_phase_log WHERE player_id = $1", player_id)
+            await db.execute("DELETE FROM ttc_conception_checks WHERE player_id = $1", player_id)
+            # Resolve period + fertile_window + TTC occurrences
+            await db.execute(
+                """UPDATE player_occurrences SET is_resolved = 1, ends_at = now()::date::text
+                   WHERE player_id = $1
+                   AND occurrence_key IN ('period','fertile_window_active',
+                       'ttc_traditional','ttc_ivf',
+                       'ttc_surrogate_intended','ttc_surrogate_carrier')
+                   AND is_resolved = 0""",
+                player_id)
+            # Reset profile cycle fields
+            await db.execute(
+                """UPDATE player_profiles
+                   SET cycle_setup_completed = 0,
+                       cycle_tracking_mode   = NULL,
+                       avg_period_duration   = 5,
+                       default_cycle_length  = 28,
+                       infertility_flag      = 0
+                   WHERE player_id = $1""",
+                player_id)
+        else:
+            await db.execute("DELETE FROM cycle_log WHERE player_id = ?", (player_id,))
+            await db.execute("DELETE FROM intimacy_log WHERE player_id = ?", (player_id,))
+            await db.execute("DELETE FROM cycle_phase_log WHERE player_id = ?", (player_id,))
+            await db.execute("DELETE FROM ttc_conception_checks WHERE player_id = ?", (player_id,))
+            await db.execute(
+                """UPDATE player_occurrences SET is_resolved = 1, ends_at = date('now')
+                   WHERE player_id = ?
+                   AND occurrence_key IN ('period','fertile_window_active',
+                       'ttc_traditional','ttc_ivf',
+                       'ttc_surrogate_intended','ttc_surrogate_carrier')
+                   AND is_resolved = 0""",
+                (player_id,))
+            await db.execute(
+                """UPDATE player_profiles
+                   SET cycle_setup_completed = 0,
+                       cycle_tracking_mode   = NULL,
+                       avg_period_duration   = 5,
+                       default_cycle_length  = 28,
+                       infertility_flag      = 0
+                   WHERE player_id = ?""",
+                (player_id,))
+            await db.commit()
+        deleted.append("period_data")
+
+    if scope in ("pregnancy", "all"):
+        # Resolve all pregnancy occurrences
+        if is_postgres():
+            await db.execute(
+                """UPDATE player_occurrences SET is_resolved = 1, ends_at = now()::date::text
+                   WHERE player_id = $1
+                   AND occurrence_key IN ('pregnancy','new_parent','postpartum')
+                   AND is_resolved = 0""",
+                player_id)
+        else:
+            await db.execute(
+                """UPDATE player_occurrences SET is_resolved = 1, ends_at = date('now')
+                   WHERE player_id = ?
+                   AND occurrence_key IN ('pregnancy','new_parent','postpartum')
+                   AND is_resolved = 0""",
+                (player_id,))
+            await db.commit()
+        deleted.append("pregnancy_data")
+
+    return {"status": "deleted", "scope": scope, "deleted": deleted}
