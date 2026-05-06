@@ -1378,11 +1378,8 @@ class DeleteCycleData(BaseModel):
 async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
     """
     Delete cycle data by scope. Irreversible.
-      period    — clears cycle_log and any new tables if they exist,
-                  resolves period/TTC occurrences, resets profile cycle fields.
-      pregnancy — resolves pregnancy occurrences.
-      all       — both of the above.
-    Uses IF EXISTS / conditional checks so it works even if migrations haven't run yet.
+    Pre-checks whether optional new tables/columns exist before touching them
+    so pre-migration databases don't crash.
     """
     player = await _get_player(body.token, db)
     if not player:
@@ -1400,43 +1397,47 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
         if is_postgres():
             # cycle_log always exists
             await db.execute("DELETE FROM cycle_log WHERE player_id = $1", player_id)
-            # New tables — use DO $$ blocks so a missing table is a no-op, not a tx abort
+
+            # Pre-check each optional table, then delete only if it exists
             for tbl in ("intimacy_log", "cycle_phase_log", "ttc_conception_checks"):
-                await db.execute(f"""
-                    DO $$ BEGIN
-                        IF EXISTS (SELECT FROM information_schema.tables
-                                   WHERE table_name = '{tbl}') THEN
-                            DELETE FROM {tbl} WHERE player_id = {player_id};
-                        END IF;
-                    END $$;
-                """)
-            # Resolve TTC/period occurrences — always safe
+                exists = await db.fetchval(
+                    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+                    tbl)
+                if exists:
+                    await db.execute(
+                        f"DELETE FROM {tbl} WHERE player_id = $1", player_id)
+
+            # Occurrences — always exists
             await db.execute(
-                """UPDATE player_occurrences SET is_resolved = 1, ends_at = now()::date::text
+                """UPDATE player_occurrences
+                   SET is_resolved = 1, ends_at = now()::date::text
                    WHERE player_id = $1
                    AND occurrence_key IN ('period','fertile_window_active',
                        'ttc_traditional','ttc_ivf',
                        'ttc_surrogate_intended','ttc_surrogate_carrier')
                    AND is_resolved = 0""",
                 player_id)
-            # Reset profile — only touch columns that exist
-            await db.execute("""
-                DO $$ BEGIN
-                    IF EXISTS (SELECT FROM information_schema.columns
-                               WHERE table_name='player_profiles'
-                               AND column_name='cycle_setup_completed') THEN
-                        UPDATE player_profiles
-                        SET cycle_setup_completed = 0,
-                            cycle_tracking_mode   = NULL,
-                            avg_period_duration   = 5,
-                            default_cycle_length  = 28,
-                            infertility_flag      = 0
-                        WHERE player_id = %s;
-                    END IF;
-                END $$;
-            """ % player_id)
+
+            # Profile reset — only if new columns exist
+            col_exists = await db.fetchval(
+                """SELECT EXISTS (
+                    SELECT FROM information_schema.columns
+                    WHERE table_name = 'player_profiles'
+                    AND column_name = 'cycle_setup_completed'
+                )""")
+            if col_exists:
+                await db.execute(
+                    """UPDATE player_profiles
+                       SET cycle_setup_completed = 0,
+                           cycle_tracking_mode   = NULL,
+                           avg_period_duration   = 5,
+                           default_cycle_length  = 28,
+                           infertility_flag      = 0
+                       WHERE player_id = $1""",
+                    player_id)
+
         else:
-            # SQLite — try each statement independently
+            # SQLite — try each statement independently (no tx abort cascade)
             await db.execute("DELETE FROM cycle_log WHERE player_id = ?", (player_id,))
             for sql in [
                 "DELETE FROM intimacy_log WHERE player_id = ?",
@@ -1448,7 +1449,8 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
                 except Exception:
                     pass
             await db.execute(
-                """UPDATE player_occurrences SET is_resolved = 1, ends_at = date('now')
+                """UPDATE player_occurrences
+                   SET is_resolved = 1, ends_at = date('now')
                    WHERE player_id = ?
                    AND occurrence_key IN ('period','fertile_window_active',
                        'ttc_traditional','ttc_ivf',
@@ -1468,19 +1470,22 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
             except Exception:
                 pass
             await db.commit()
+
         deleted.append("period_data")
 
     if scope in ("pregnancy", "all"):
         if is_postgres():
             await db.execute(
-                """UPDATE player_occurrences SET is_resolved = 1, ends_at = now()::date::text
+                """UPDATE player_occurrences
+                   SET is_resolved = 1, ends_at = now()::date::text
                    WHERE player_id = $1
                    AND occurrence_key IN ('pregnancy','new_parent','postpartum')
                    AND is_resolved = 0""",
                 player_id)
         else:
             await db.execute(
-                """UPDATE player_occurrences SET is_resolved = 1, ends_at = date('now')
+                """UPDATE player_occurrences
+                   SET is_resolved = 1, ends_at = date('now')
                    WHERE player_id = ?
                    AND occurrence_key IN ('pregnancy','new_parent','postpartum')
                    AND is_resolved = 0""",
