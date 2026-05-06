@@ -6,23 +6,22 @@
   /* ── Month navigation ── */
   .month-nav {
     display: grid !important;
-    grid-template-columns: 40px 1fr 40px !important;
+    grid-template-columns: 28px 1fr 28px !important;
     align-items: center !important;
     width: 100%; box-sizing: border-box;
-    padding: 14px 18px 10px;
+    padding: 10px 8px;
   }
   .month-nav-btn {
     background: none; border: none; cursor: pointer;
-    font-size: 18px; color: var(--ink3); padding: 4px 8px;
+    font-size: 16px; color: var(--ink3); padding: 4px;
     border-radius: var(--radius-sm); transition: color .15s;
-    flex-shrink: 0; min-width: 32px; display: inline-block;
+    display: block; text-align: center;
   }
   .month-nav-btn:active { color: var(--ink); }
   .month-title {
     font-family: var(--font-head);
-    font-size: 20px; font-weight: 400; color: var(--ink);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    flex: 1; text-align: center;
+    font-size: 17px; font-weight: 400; color: var(--ink);
+    white-space: nowrap; text-align: center;
   }
 
   /* ── Calendar grid ── */
