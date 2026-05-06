@@ -805,18 +805,21 @@ async def ritual(
     agab = (dict(profile_row)["biology_agab"] if profile_row else "") or ""
 
     # Cycle tab: show to anyone who's set it up, or who has female/intersex biology
-    if is_postgres():
-        cycle_profile_row = await db.fetchrow(
-            """SELECT cycle_setup_completed, cycle_tracking_mode, default_cycle_length,
-                      avg_period_duration, infertility_flag, birth_control_active
-               FROM player_profiles WHERE player_id = $1""", player_id)
-    else:
-        async with db.execute(
-            """SELECT cycle_setup_completed, cycle_tracking_mode, default_cycle_length,
-                      avg_period_duration, infertility_flag, birth_control_active
-               FROM player_profiles WHERE player_id = ?""", (player_id,)
-        ) as cur:
-            cycle_profile_row = await cur.fetchone()
+    try:
+        if is_postgres():
+            cycle_profile_row = await db.fetchrow(
+                """SELECT cycle_setup_completed, cycle_tracking_mode, default_cycle_length,
+                          avg_period_duration, infertility_flag, birth_control_active
+                   FROM player_profiles WHERE player_id = $1""", player_id)
+        else:
+            async with db.execute(
+                """SELECT cycle_setup_completed, cycle_tracking_mode, default_cycle_length,
+                          avg_period_duration, infertility_flag, birth_control_active
+                   FROM player_profiles WHERE player_id = ?""", (player_id,)
+            ) as cur:
+                cycle_profile_row = await cur.fetchone()
+    except Exception:
+        cycle_profile_row = None
 
     cycle_profile     = dict(cycle_profile_row) if cycle_profile_row else {}
     cycle_setup_done  = bool(cycle_profile.get("cycle_setup_completed"))
@@ -929,7 +932,6 @@ async def ritual(
         cycle_history = [dict(r) for r in ch_rows]
 
         if latest_cycle:
-            from app.routers.cycle import _calc_cycle_phase, PHASE_ADVICE
             calendar_days = {}
             for c in cycle_history:
                 if c.get("cycle_start_slt"):
@@ -1002,15 +1004,40 @@ async def ritual(
                 "calendar_days":        calendar_days,
             }
 
-            # Current phase
+            # Current phase (inlined — no import from cycle router needed)
             try:
                 cs        = date.fromisoformat(latest_cycle["cycle_start_slt"][:10])
                 used_len2 = latest_cycle["cycle_length_days"] or cycle_len
                 used_dur2 = latest_cycle["period_duration_days"] or period_dur
-                pinfo     = _calc_cycle_phase(cs, today, used_dur2, used_len2)
-                phase     = pinfo["phase"]
-                advice    = PHASE_ADVICE.get(phase, PHASE_ADVICE["luteal"])
-                cycle_phase_data = {**pinfo, **advice}
+                days_in2  = (today - cs).days
+                ov_day2   = used_len2 - 14
+                fs2b, fe2b = ov_day2 - 4, ov_day2 + 1
+                pms_s2    = used_len2 - 5
+                if days_in2 < 0:
+                    phase = "unknown"
+                elif days_in2 < used_dur2:
+                    phase = "menstrual"
+                elif days_in2 < fs2b:
+                    phase = "follicular"
+                elif days_in2 <= fe2b:
+                    phase = "ovulatory"
+                elif days_in2 >= pms_s2:
+                    phase = "pms"
+                else:
+                    phase = "luteal"
+                _phase_advice = {
+                    "menstrual":  {"headline": "Rest and restore 🌙",      "body": "Your body is working hard. Iron-rich foods help replenish energy.",       "eats": ["Dark chocolate","Leafy greens","Lentil soup","Herbal tea"],       "haul": ["Heating pad","Cozy blanket","Face mask","Comfy socks"]},
+                    "follicular": {"headline": "Energy is rising ✨",       "body": "Estrogen is climbing. You may feel more creative and optimistic.",        "eats": ["Fresh salads","Smoothie bowls","Light proteins","Citrus"],        "haul": ["New outfit","Going-out accessories","Skincare refresh"]},
+                    "ovulatory":  {"headline": "Peak power 🌟",             "body": "You're at your most energetic. Social activities feel easy.",             "eats": ["Grilled proteins","Raw veggies","Coconut water","Berries"],      "haul": ["Date night outfit","Confidence accessories","Perfume"]},
+                    "luteal":     {"headline": "Turning inward 🍂",         "body": "Progesterone is rising. Magnesium-rich foods can really help.",           "eats": ["Dark chocolate","Pumpkin seeds","Complex carbs","Warm soups"],   "haul": ["Self-care items","Journal","Comfort candle","Cozy items"]},
+                    "pms":        {"headline": "Be gentle with yourself 💙","body": "Hormones are shifting. Prioritise sleep and stabilising blood sugar.",    "eats": ["Magnesium-rich foods","Chamomile tea","Complex carbs"],           "haul": ["Heating pad","Comfort snacks","Bath salts","Cozy things"]},
+                }
+                advice = _phase_advice.get(phase, _phase_advice["luteal"])
+                cycle_phase_data = {
+                    "phase": phase, "cycle_day": days_in2 + 1,
+                    "cycle_length": used_len2, "days_remaining": max(0, used_len2 - days_in2),
+                    **advice,
+                }
             except Exception:
                 cycle_phase_data = {}
 
