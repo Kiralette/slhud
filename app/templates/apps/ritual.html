@@ -388,19 +388,19 @@
   .day-detail-sheet.open { transform: translateX(-50%) translateY(0); }
   .day-detail-handle { width: 36px; height: 4px; background: var(--bg4); border-radius: 2px; margin: 12px auto 0; }
   .day-detail-header { padding: 14px 18px 12px; border-bottom: 0.5px solid var(--border); }
-  .day-detail-date { font-family: var(--font-head); font-size: 24px; font-weight: 400; color: var(--ink); }
-  .day-detail-sub { font-size: 13px; color: var(--ink3); margin-top: 2px; }
+  .day-detail-date { font-family: var(--font-head); font-size: 28px; font-weight: 400; color: var(--ink); }
+  .day-detail-sub { font-size: 16px; color: var(--ink3); margin-top: 2px; }
   .day-detail-body { padding: 14px 18px; }
   .day-detail-row {
     display: flex; align-items: flex-start; gap: 12px;
     padding: 10px 0; border-bottom: 0.5px solid var(--border);
   }
   .day-detail-row:last-child { border-bottom: none; }
-  .day-detail-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; }
+  .day-detail-icon { font-size: 22px; flex-shrink: 0; width: 28px; text-align: center; }
   .day-detail-text { flex: 1; }
-  .day-detail-title { font-size: 15px; font-weight: 500; color: var(--ink); }
-  .day-detail-label { font-size: 13px; color: var(--ink3); margin-top: 2px; }
-  .day-detail-empty { font-size: 14px; color: var(--ink4); text-align: center; padding: 24px 0; }
+  .day-detail-title { font-size: 18px; font-weight: 500; color: var(--ink); }
+  .day-detail-label { font-size: 16px; color: var(--ink3); margin-top: 2px; }
+  .day-detail-empty { font-size: 17px; color: var(--ink4); text-align: center; padding: 24px 0; }
 </style>
 {% endblock %}
 
@@ -865,7 +865,7 @@
     <div class="preg-question">When did your last period start?</div>
     <div class="preg-subtitle">Helps us set up predictions right away. Skip if you're not sure.</div>
     <div class="preg-options" style="margin-bottom:12px;">
-      <button class="preg-option" id="period-currently-btn" onclick="toggleCurrentlyOn()">🩸 I'm on my period right now</button>
+      <button class="preg-option" id="period-currently-btn" onclick="toggleCurrentlyOn()">🩸 It started today</button>
     </div>
     <div id="period-date-inputs">
       <label style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Start date</label>
