@@ -1378,11 +1378,11 @@ class DeleteCycleData(BaseModel):
 async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
     """
     Delete cycle data by scope. Irreversible.
-      period    — clears cycle_log, intimacy_log, cycle_phase_log,
-                  ttc_conception_checks, and resolves period/fertile_window occurrences.
-                  Resets cycle_setup_completed and tracking fields on profile.
-      pregnancy — resolves all pregnancy occurrences and clears pregnancy metadata.
-      all       — everything above combined.
+      period    — clears cycle_log and any new tables if they exist,
+                  resolves period/TTC occurrences, resets profile cycle fields.
+      pregnancy — resolves pregnancy occurrences.
+      all       — both of the above.
+    Uses IF EXISTS / conditional checks so it works even if migrations haven't run yet.
     """
     player = await _get_player(body.token, db)
     if not player:
@@ -1397,19 +1397,20 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
     deleted = []
 
     if scope in ("period", "all"):
-        # Clear cycle log
         if is_postgres():
+            # cycle_log always exists
             await db.execute("DELETE FROM cycle_log WHERE player_id = $1", player_id)
-            for tbl_sql in [
-                "DELETE FROM intimacy_log WHERE player_id = $1",
-                "DELETE FROM cycle_phase_log WHERE player_id = $1",
-                "DELETE FROM ttc_conception_checks WHERE player_id = $1",
-            ]:
-                try:
-                    await db.execute(tbl_sql, player_id)
-                except Exception:
-                    pass  # table may not exist yet
-            # Resolve period + fertile_window + TTC occurrences
+            # New tables — use DO $$ blocks so a missing table is a no-op, not a tx abort
+            for tbl in ("intimacy_log", "cycle_phase_log", "ttc_conception_checks"):
+                await db.execute(f"""
+                    DO $$ BEGIN
+                        IF EXISTS (SELECT FROM information_schema.tables
+                                   WHERE table_name = '{tbl}') THEN
+                            DELETE FROM {tbl} WHERE player_id = {player_id};
+                        END IF;
+                    END $$;
+                """)
+            # Resolve TTC/period occurrences — always safe
             await db.execute(
                 """UPDATE player_occurrences SET is_resolved = 1, ends_at = now()::date::text
                    WHERE player_id = $1
@@ -1418,30 +1419,34 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
                        'ttc_surrogate_intended','ttc_surrogate_carrier')
                    AND is_resolved = 0""",
                 player_id)
-            # Reset profile cycle fields (columns may not exist pre-migration)
-            try:
-                await db.execute(
-                    """UPDATE player_profiles
-                       SET cycle_setup_completed = 0,
-                           cycle_tracking_mode   = NULL,
-                           avg_period_duration   = 5,
-                           default_cycle_length  = 28,
-                           infertility_flag      = 0
-                       WHERE player_id = $1""",
-                    player_id)
-            except Exception:
-                pass
+            # Reset profile — only touch columns that exist
+            await db.execute("""
+                DO $$ BEGIN
+                    IF EXISTS (SELECT FROM information_schema.columns
+                               WHERE table_name='player_profiles'
+                               AND column_name='cycle_setup_completed') THEN
+                        UPDATE player_profiles
+                        SET cycle_setup_completed = 0,
+                            cycle_tracking_mode   = NULL,
+                            avg_period_duration   = 5,
+                            default_cycle_length  = 28,
+                            infertility_flag      = 0
+                        WHERE player_id = %s;
+                    END IF;
+                END $$;
+            """ % player_id)
         else:
+            # SQLite — try each statement independently
             await db.execute("DELETE FROM cycle_log WHERE player_id = ?", (player_id,))
-            for tbl_sql in [
+            for sql in [
                 "DELETE FROM intimacy_log WHERE player_id = ?",
                 "DELETE FROM cycle_phase_log WHERE player_id = ?",
                 "DELETE FROM ttc_conception_checks WHERE player_id = ?",
             ]:
                 try:
-                    await db.execute(tbl_sql, (player_id,))
+                    await db.execute(sql, (player_id,))
                 except Exception:
-                    pass  # table may not exist yet
+                    pass
             await db.execute(
                 """UPDATE player_occurrences SET is_resolved = 1, ends_at = date('now')
                    WHERE player_id = ?
@@ -1466,7 +1471,6 @@ async def delete_cycle_data(body: DeleteCycleData, db=Depends(get_db)):
         deleted.append("period_data")
 
     if scope in ("pregnancy", "all"):
-        # Resolve all pregnancy occurrences
         if is_postgres():
             await db.execute(
                 """UPDATE player_occurrences SET is_resolved = 1, ends_at = now()::date::text
