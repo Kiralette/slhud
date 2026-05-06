@@ -353,6 +353,42 @@ async def cycle_setup(body: CycleSetup, db=Depends(get_db)):
                 (player_id, occ_key, sub_stage, meta, body.linked_player_uuid))
             await db.commit()
 
+        # ── Notify linked player if a surrogate UUID was provided ─────────────
+        if body.linked_player_uuid and mode in ("ttc_surrogate_intended", "ttc_surrogate_carrier"):
+            # Look up linked player's internal ID from their avatar UUID
+            if is_postgres():
+                linked_row = await db.fetchrow(
+                    "SELECT id, display_name FROM players WHERE avatar_uuid = $1",
+                    body.linked_player_uuid)
+            else:
+                async with db.execute(
+                    "SELECT id, display_name FROM players WHERE avatar_uuid = ?",
+                    (body.linked_player_uuid,)
+                ) as cur:
+                    linked_row = await cur.fetchone()
+
+            if linked_row:
+                linked_id   = linked_row["id"]
+                their_name  = player.get("display_name") or "Someone"
+
+                if mode == "ttc_surrogate_intended":
+                    # Player A is the intended parent — notify the carrier
+                    notif_title = f"{their_name} linked you as their surrogate 💜"
+                    notif_body  = "They've added you as their surrogate carrier in Ritual. Open the app to confirm or manage your connection."
+                else:
+                    # Player A is the carrier — notify the intended parent
+                    notif_title = f"{their_name} linked you as their intended parent 💛"
+                    notif_body  = "They've added you as their intended parent in Ritual. Open the app to confirm or manage your connection."
+
+                await push_notification(
+                    player_id=linked_id,
+                    app_source="ritual",
+                    title=notif_title,
+                    body=notif_body,
+                    priority="normal",
+                    db=db,
+                )
+
     return {"status": "setup_complete", "tracking_mode": mode,
             "cycle_length": cycle_length, "period_duration": period_dur}
 
