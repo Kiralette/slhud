@@ -25,17 +25,32 @@ def is_postgres():
     return url is not None and url.startswith("postgres")
 
 
-async def get_db():
-    if is_postgres():
+# ── Postgres connection pool (shared across all requests) ─────────────────────
+_pg_pool = None
+
+
+async def get_pg_pool():
+    """Return the shared asyncpg pool, creating it on first call."""
+    global _pg_pool
+    if _pg_pool is None:
         import asyncpg
         url = get_db_url()
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
-        conn = await asyncpg.connect(url)
-        try:
+        _pg_pool = await asyncpg.create_pool(
+            url,
+            min_size=2,
+            max_size=10,
+            command_timeout=30,
+        )
+    return _pg_pool
+
+
+async def get_db():
+    if is_postgres():
+        pool = await get_pg_pool()
+        async with pool.acquire() as conn:
             yield conn
-        finally:
-            await conn.close()
     else:
         db_path = get_db_path()
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)

@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
-from app.database import init_db
+from app.database import init_db, get_pg_pool, is_postgres
 from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire, profile as profile_router, healthcare
 from app.admin import panel
 from app.services.decay import run_decay_tick
@@ -41,6 +41,9 @@ async def lifespan(app: FastAPI):
     print(f"   Skills loaded: {', '.join(cfg['skills'].keys())}")
     print(f"   Decay interval: {cfg['server']['decay_interval_seconds']}s")
     await init_db()
+    if is_postgres():
+        await get_pg_pool()
+        print("   Postgres connection pool ready ✓")
     interval = cfg["server"]["decay_interval_seconds"]
     scheduler.add_job(run_decay_tick, "interval", seconds=interval, id="decay")
     scheduler.add_job(rotate_weekly_specials, "interval", seconds=60, id="specials_rotation")
