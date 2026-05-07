@@ -2436,10 +2436,22 @@ async def healthcare_app(
     # Primary doctor info
     primary_doctor = DOCTORS.get(health_profile.get("primary_doctor_id", ""), {})
 
+    # Wallet balance
+    if is_postgres():
+        wallet_row = await db.fetchrow(
+            "SELECT balance FROM wallets WHERE player_id = $1", player_id)
+    else:
+        async with db.execute(
+            "SELECT balance FROM wallets WHERE player_id = ?", (player_id,)
+        ) as cur:
+            wallet_row = await cur.fetchone()
+    balance = float(wallet_row["balance"]) if wallet_row else 500.0
+
     return templates.TemplateResponse(request, "apps/healthcare.html", {
         "token":                  token,
         "player":                 player,
         "today":                  today,
+        "balance":                balance,
         "health_profile":         health_profile,
         "insurance_plan":         insurance_plan,
         "insurance_plans":        INSURANCE_PLANS,
