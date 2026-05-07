@@ -9,7 +9,7 @@ Healthcare service — daily scheduled jobs.
 
 from datetime import date, timedelta
 
-from app.database import get_db_direct, is_postgres
+from app.database import is_postgres
 from app.services.notifications import push_notification
 
 
