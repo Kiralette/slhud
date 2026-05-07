@@ -189,16 +189,14 @@ def build_trait_multipliers(trait_keys: list[str], current_hour_slt: int = None)
             in_window    = _in_hour_window(current_hour_slt, active_start, active_end)
 
             if in_window:
-                for need_key, mult in tdef.get("decay_mults_in_window", {}).get("all", {}).items():
-                    pass  # handled below
-
                 window_decay = tdef.get("decay_mults_in_window", {})
                 for need_key, mult in window_decay.items():
                     if need_key == "all":
+                        # "all" maps to a single float multiplier for every need
                         for nk in ["hunger", "thirst", "energy", "fun", "social", "hygiene", "purpose"]:
-                            decay_mults[nk] = decay_mults.get(nk, 1.0) * mult
+                            decay_mults[nk] = decay_mults.get(nk, 1.0) * float(mult)
                     else:
-                        decay_mults[need_key] = decay_mults.get(need_key, 1.0) * mult
+                        decay_mults[need_key] = decay_mults.get(need_key, 1.0) * float(mult)
 
                 window_xp = tdef.get("xp_mult_in_window", {})
                 for skill_key, mult in window_xp.items():
