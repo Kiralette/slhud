@@ -3,28 +3,12 @@
 
 {% block extra_style %}
 <style>
-  /* ── Tabs ── */
-  .hc-tabs {
-    display: flex; gap: 0; border-bottom: 1px solid var(--bg4);
-    overflow-x: auto; scrollbar-width: none; padding: 0 18px;
-    background: var(--bg);
-  }
-  .hc-tabs::-webkit-scrollbar { display: none; }
-  .hc-tab {
-    font-size: 12px; font-weight: 600; letter-spacing: .05em;
-    text-transform: uppercase; color: var(--ink4);
-    padding: 12px 14px; border: none; background: none;
-    cursor: pointer; white-space: nowrap;
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
-    transition: color .15s, border-color .15s;
-  }
-  .hc-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
-
   /* ── Cards ── */
   .hc-card {
-    background: var(--bg2); border-radius: var(--radius);
-    border: 1px solid var(--bg4); padding: 14px 16px;
+    background: var(--bg); border-radius: var(--radius);
+    border: 0.5px solid var(--border2); padding: 14px 16px;
     margin: 0 18px 10px;
+    box-shadow: var(--shadow);
   }
   .hc-card-title {
     font-size: 11px; font-weight: 600; letter-spacing: .1em;
@@ -42,7 +26,7 @@
   }
   .hc-profile-cell {
     background: var(--bg2); border-radius: var(--radius-sm);
-    border: 1px solid var(--bg4); padding: 10px 12px;
+    border: 0.5px solid var(--border); padding: 10px 12px;
   }
   .hc-profile-cell-label {
     font-size: 10px; font-weight: 600; letter-spacing: .1em;
@@ -54,9 +38,10 @@
   .hc-insurance {
     margin: 14px 18px 0;
     border-radius: var(--radius);
-    border: 1px solid var(--bg4);
+    border: 0.5px solid var(--border2);
     padding: 14px 16px;
     display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow);
   }
   .hc-insurance-dot {
     width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
@@ -69,7 +54,8 @@
   /* ── Appointment rows ── */
   .hc-appt-row {
     display: flex; align-items: flex-start; gap: 12px;
-    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 12px 18px; border-bottom: 0.5px solid var(--border);
+    cursor: pointer;
   }
   .hc-appt-row:last-child { border-bottom: none; }
   .hc-appt-icon {
@@ -92,7 +78,7 @@
 
   /* ── Medication rows ── */
   .hc-med-row {
-    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 12px 18px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: flex-start; gap: 10px;
   }
   .hc-med-row:last-child { border-bottom: none; }
@@ -102,7 +88,7 @@
 
   /* ── Condition rows ── */
   .hc-cond-row {
-    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 11px 18px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: center; gap: 10px;
   }
   .hc-cond-row:last-child { border-bottom: none; }
@@ -117,7 +103,7 @@
 
   /* ── Lab result rows ── */
   .hc-lab-row {
-    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 11px 18px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: center; gap: 10px;
   }
   .hc-lab-row:last-child { border-bottom: none; }
@@ -134,7 +120,7 @@
 
   /* ── Vax rows ── */
   .hc-vax-row {
-    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 11px 18px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: center; gap: 10px;
   }
   .hc-vax-row:last-child { border-bottom: none; }
@@ -143,7 +129,7 @@
 
   /* ── Referral rows ── */
   .hc-ref-row {
-    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 12px 18px; border-bottom: 0.5px solid var(--border);
     display: flex; align-items: center; gap: 10px;
   }
   .hc-ref-row:last-child { border-bottom: none; }
@@ -153,17 +139,18 @@
     margin-left: auto; font-size: 10px; font-weight: 600;
     letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0;
   }
-  .hc-ref-urgency.urgent { color: var(--rose); }
-  .hc-ref-urgency.soon   { color: var(--gold); }
+  .hc-ref-urgency.urgent  { color: var(--rose); }
+  .hc-ref-urgency.soon    { color: var(--gold); }
   .hc-ref-urgency.routine { color: var(--ink4); }
 
   /* ── Section block ── */
   .hc-section {
     background: var(--bg); border-radius: var(--radius);
-    border: 1px solid var(--bg4); margin: 0 18px 12px; overflow: hidden;
+    border: 0.5px solid var(--border2); margin: 0 18px 12px; overflow: hidden;
+    box-shadow: var(--shadow);
   }
   .hc-section-head {
-    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 11px 18px; border-bottom: 0.5px solid var(--border);
     font-size: 11px; font-weight: 600; letter-spacing: .1em;
     text-transform: uppercase; color: var(--ink3);
     display: flex; align-items: center; justify-content: space-between;
@@ -181,11 +168,12 @@
     border-radius: var(--radius-sm); padding: 13px 18px;
     font-size: 13px; font-weight: 600; letter-spacing: .04em;
     cursor: pointer; text-align: center; transition: background .15s;
+    font-family: var(--font);
   }
   .hc-btn:active { background: var(--ink2); }
   .hc-btn.secondary {
     background: var(--bg2); color: var(--ink);
-    border: 1px solid var(--bg4);
+    border: 0.5px solid var(--border2);
   }
   .hc-btn.secondary:active { background: var(--bg3); }
 
@@ -198,10 +186,9 @@
   /* ── Doctor card in picker ── */
   .hc-doctor-card {
     display: flex; align-items: flex-start; gap: 10px;
-    padding: 12px 0; border-bottom: 1px solid var(--bg3); cursor: pointer;
+    padding: 12px 0; border-bottom: 0.5px solid var(--border); cursor: pointer;
   }
   .hc-doctor-card:last-child { border-bottom: none; }
-  .hc-doctor-card.selected { opacity: 1; }
   .hc-doctor-avatar {
     width: 42px; height: 42px; border-radius: 50%;
     background: var(--bg3); display: flex; align-items: center;
@@ -211,7 +198,7 @@
   .hc-doctor-pronouns { font-size: 11px; color: var(--ink4); }
   .hc-doctor-bio { font-size: 12px; color: var(--ink3); margin-top: 3px; line-height: 1.5; }
 
-  /* ── Schedule sheet ── */
+  /* ── Sheet ── */
   .hc-sheet-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,.35); z-index: 999;
@@ -234,7 +221,7 @@
   .hc-sheet-topbar {
     padding: 12px 18px 8px;
     display: flex; align-items: center; gap: 10px;
-    border-bottom: 1px solid var(--bg3);
+    border-bottom: 0.5px solid var(--border);
   }
   .hc-sheet-title {
     font-family: var(--font-head); font-size: 26px;
@@ -257,7 +244,7 @@
   .hc-options { display: flex; flex-direction: column; gap: 8px; }
   .hc-option {
     padding: 12px 14px; border-radius: var(--radius-sm);
-    border: 1px solid var(--bg4); background: var(--bg2);
+    border: 0.5px solid var(--border2); background: var(--bg);
     font-size: 13px; color: var(--ink); cursor: pointer;
     text-align: left; transition: all .15s; font-family: inherit;
   }
@@ -267,14 +254,14 @@
   .hc-option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .hc-input {
     width: 100%; padding: 12px 14px; border-radius: var(--radius-sm);
-    border: 1px solid var(--bg4); background: var(--bg2);
+    border: 0.5px solid var(--border2); background: var(--bg);
     font-size: 14px; color: var(--ink); font-family: inherit;
     margin-bottom: 12px; box-sizing: border-box;
   }
   .hc-input:focus { outline: none; border-color: var(--ink3); }
   .hc-textarea {
     width: 100%; padding: 12px 14px; border-radius: var(--radius-sm);
-    border: 1px solid var(--bg4); background: var(--bg2);
+    border: 0.5px solid var(--border2); background: var(--bg);
     font-size: 13px; color: var(--ink); font-family: inherit;
     resize: vertical; min-height: 80px; box-sizing: border-box;
   }
@@ -289,7 +276,7 @@
   /* ── Copay preview ── */
   .hc-copay-preview {
     background: var(--gold-light); border-radius: var(--radius-sm);
-    border: 1px solid rgba(154,124,78,.2); padding: 12px 14px;
+    border: 0.5px solid rgba(154,124,78,.2); padding: 12px 14px;
     margin-bottom: 14px;
   }
   .hc-copay-amount {
@@ -297,383 +284,402 @@
   }
   .hc-copay-plan { font-size: 12px; color: var(--ink3); margin-top: 2px; }
 
+  /* ── Tabs (scrollable override to match canvas) ── */
+  .tabs {
+    overflow-x: auto !important;
+    justify-content: flex-start !important;
+    scrollbar-width: none !important;
+    gap: 2px;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    min-width: unset !important;
+    width: auto !important;
+  }
+
   /* ── Scroll pad ── */
   .scroll-pad { height: 40px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="app-scale">
 
-  <!-- Header -->
-  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bg3);">
-    <div style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin-bottom:2px;">MyChart</div>
-    <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);line-height:1;">Healthcare</div>
+<!-- TOPBAR — matches canvas/ritual exactly -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">MyChart</div>
+    <div class="topbar-title">Healthcare</div>
+  </div>
+  <div class="topbar-lumen">
+    ✦{{ "%.0f"|format(balance) }}
+    <span>lumens</span>
+  </div>
+</div>
+
+<!-- TABS — base system, not custom hc-tabs -->
+<div class="tabs" style="overflow-x:auto;scrollbar-width:none;">
+  <button class="tab active" data-tab="tab-overview"      onclick="showHcTab('overview')">Overview</button>
+  <button class="tab"        data-tab="tab-appointments"  onclick="showHcTab('appointments')">Visits</button>
+  <button class="tab"        data-tab="tab-medications"   onclick="showHcTab('medications')">Meds</button>
+  <button class="tab"        data-tab="tab-records"       onclick="showHcTab('records')">Records</button>
+  <button class="tab"        data-tab="tab-profile"       onclick="showHcTab('profile')">Profile</button>
+</div>
+
+<!-- ── OVERVIEW TAB ── -->
+<div id="tab-overview" class="tab-panel active">
+
+  <!-- Insurance banner -->
+  <div class="hc-insurance">
+    <div class="hc-insurance-dot" style="background:{{ insurance_plan.color }};"></div>
+    <div>
+      <div class="hc-insurance-name">{{ insurance_plan.name }}</div>
+      <div class="hc-insurance-sub">Copay from ✦{{ insurance_plan.copay_primary }} · {% if insurance_plan.covers_dental %}Dental ✓{% else %}No dental{% endif %} · {% if insurance_plan.covers_vision %}Vision ✓{% else %}No vision{% endif %}</div>
+    </div>
+    <button class="hc-section-action" onclick="openInsuranceSheet()" style="margin-left:auto;">Change</button>
   </div>
 
-  <!-- Tabs -->
-  <div class="hc-tabs" id="hc-tabs">
-    <button class="hc-tab active" onclick="showTab('overview')">Overview</button>
-    <button class="hc-tab" onclick="showTab('appointments')">Visits</button>
-    <button class="hc-tab" onclick="showTab('medications')">Meds</button>
-    <button class="hc-tab" onclick="showTab('records')">Records</button>
-    <button class="hc-tab" onclick="showTab('profile')">Profile</button>
+  <!-- Schedule button -->
+  <div style="padding:14px 18px 0;">
+    <button class="hc-btn" onclick="openScheduleSheet()">+ Schedule appointment</button>
   </div>
 
-  <!-- ── OVERVIEW TAB ── -->
-  <div id="tab-overview" class="tab-content">
-
-    <!-- Insurance banner -->
-    <div class="hc-insurance" style="background:var(--bg2);">
-      <div class="hc-insurance-dot" style="background:{{ insurance_plan.color }};"></div>
-      <div>
-        <div class="hc-insurance-name">{{ insurance_plan.name }}</div>
-        <div class="hc-insurance-sub">Copay from ✦{{ insurance_plan.copay_primary }} · {% if insurance_plan.covers_dental %}Dental ✓{% else %}No dental{% endif %} · {% if insurance_plan.covers_vision %}Vision ✓{% else %}No vision{% endif %}</div>
+  <!-- Pending referrals -->
+  {% if referrals %}
+  <div style="padding:10px 18px 0;">
+    {% for ref in referrals %}
+    <div class="hc-card" style="border-color:rgba(154,124,78,.3);background:var(--gold-light);">
+      <div class="hc-card-title">📋 Referral pending</div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink);">
+        {{ ref.doctor_info.name if ref.doctor_info else ref.referral_to_specialty }}
       </div>
-      <button class="hc-section-action" onclick="openInsuranceSheet()" style="margin-left:auto;">Change</button>
+      <div style="font-size:12px;color:var(--ink3);margin-top:2px;">{{ ref.reason or 'Referred by your provider' }}</div>
+      <button class="hc-btn" onclick="openScheduleSheetWithReferral('{{ ref.referral_to_specialty }}','{{ ref.referral_to_doctor or '' }}')"
+        style="margin:10px 0 0;width:100%;">Schedule now</button>
     </div>
-
-    <!-- Schedule button -->
-    <div style="padding:14px 18px 0;">
-      <button class="hc-btn" onclick="openScheduleSheet()">+ Schedule appointment</button>
-    </div>
-
-    <!-- Pending referrals -->
-    {% if referrals %}
-    <div style="padding:10px 18px 0;">
-      {% for ref in referrals %}
-      <div class="hc-card" style="margin:0 0 8px;border-color:rgba(154,124,78,.3);background:var(--gold-light);">
-        <div class="hc-card-title">📋 Referral pending</div>
-        <div style="font-size:14px;font-weight:600;color:var(--ink);">
-          {{ ref.doctor_info.name if ref.doctor_info else ref.referral_to_specialty }}
-        </div>
-        <div style="font-size:12px;color:var(--ink3);margin-top:2px;">{{ ref.reason or 'Referred by your provider' }}</div>
-        <button class="hc-btn" onclick="openScheduleSheetWithReferral('{{ ref.referral_to_specialty }}','{{ ref.referral_to_doctor or '' }}')"
-          style="margin:10px 0 0;width:100%;">Schedule now</button>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Upcoming appointments -->
-    <div style="padding:10px 0 0;">
-      <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">
-        Upcoming appointments
-      </div>
-      {% if upcoming_appointments %}
-      <div class="hc-section" style="margin-top:0;">
-        {% for appt in upcoming_appointments[:3] %}
-        <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
-          <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
-          <div style="flex:1;min-width:0;">
-            <div class="hc-appt-name">{{ appt.specialty }}</div>
-            <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
-            <div class="hc-appt-date">{{ appt.scheduled_date }}{% if appt.scheduled_time %} · {{ appt.scheduled_time }}{% endif %}</div>
-          </div>
-          <span class="hc-appt-status scheduled">Scheduled</span>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="hc-empty">No upcoming appointments.<br>Schedule one above.</div>
-      {% endif %}
-    </div>
-
-    <!-- Active medications -->
-    {% if medications %}
-    <div style="padding:4px 0 0;">
-      <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active medications</div>
-      <div class="hc-section" style="margin-top:0;">
-        {% for med in medications[:4] %}
-        <div class="hc-med-row">
-          <div class="hc-med-icon">💊</div>
-          <div>
-            <div class="hc-med-name">{{ med.name }}</div>
-            <div class="hc-med-detail">{{ med.dosage }}{% if med.frequency %} · {{ med.frequency }}{% endif %}{% if med.end_date %} · until {{ med.end_date }}{% endif %}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Active conditions -->
-    {% set active_conds = conditions | selectattr('status', 'in', ['active', 'managed', 'monitoring']) | list %}
-    {% if active_conds %}
-    <div style="padding:4px 0 0;">
-      <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active conditions</div>
-      <div class="hc-section" style="margin-top:0;">
-        {% for cond in active_conds[:4] %}
-        <div class="hc-cond-row">
-          <div class="hc-cond-dot" style="background:{% if cond.severity == 'chronic' or cond.severity == 'significant' %}var(--rose){% elif cond.severity == 'moderate' %}var(--gold){% else %}#6aad7a{% endif %};"></div>
-          <div style="flex:1;">
-            <div class="hc-cond-name">{{ cond.condition_name }}</div>
-            <div class="hc-cond-sub">{{ cond.status | capitalize }}</div>
-          </div>
-          <div class="hc-cond-severity">{{ cond.severity }}</div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="scroll-pad"></div>
+    {% endfor %}
   </div>
+  {% endif %}
 
-  <!-- ── VISITS TAB ── -->
-  <div id="tab-appointments" class="tab-content" style="display:none;">
-    <div style="padding:14px 18px 0;">
-      <button class="hc-btn" onclick="openScheduleSheet()">+ Schedule appointment</button>
+  <!-- Upcoming appointments -->
+  <div style="padding:10px 0 0;">
+    <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">
+      Upcoming appointments
     </div>
-
     {% if upcoming_appointments %}
-    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Upcoming</div>
-    <div class="hc-section">
-      {% for appt in upcoming_appointments %}
+    <div class="hc-section" style="margin-top:0;">
+      {% for appt in upcoming_appointments[:3] %}
       <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
         <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
         <div style="flex:1;min-width:0;">
           <div class="hc-appt-name">{{ appt.specialty }}</div>
           <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
-          <div class="hc-appt-date">{{ appt.scheduled_date }}{% if appt.scheduled_time %} · {{ appt.scheduled_time }}{% endif %} · ✦{{ appt.copay_paid | int }}</div>
+          <div class="hc-appt-date">{{ appt.scheduled_date }}{% if appt.scheduled_time %} · {{ appt.scheduled_time }}{% endif %}</div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-          <span class="hc-appt-status scheduled">Scheduled</span>
-          <button class="hc-section-action" onclick="event.stopPropagation();completeAppt({{ appt.id }})">Mark done</button>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if past_appointments %}
-    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Past</div>
-    <div class="hc-section">
-      {% for appt in past_appointments[:20] %}
-      <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
-        <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="hc-appt-name">{{ appt.specialty }}</div>
-          <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
-          <div class="hc-appt-date">{{ appt.scheduled_date }}</div>
-          {% if appt.summary %}
-          <div style="font-size:11px;color:var(--ink4);margin-top:3px;">{{ appt.summary[:80] }}{% if appt.summary | length > 80 %}…{% endif %}</div>
-          {% endif %}
-        </div>
-        <span class="hc-appt-status {{ appt.status }}">{{ appt.status | capitalize }}</span>
+        <span class="hc-appt-status scheduled">Scheduled</span>
       </div>
       {% endfor %}
     </div>
     {% else %}
-    {% if not upcoming_appointments %}
-    <div class="hc-empty">No appointments yet.<br>Schedule your first visit above.</div>
+    <div class="hc-empty">No upcoming appointments.<br>Schedule one above.</div>
     {% endif %}
-    {% endif %}
-    <div class="scroll-pad"></div>
   </div>
 
-  <!-- ── MEDICATIONS TAB ── -->
-  <div id="tab-medications" class="tab-content" style="display:none;">
-    {% if medications %}
-    <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active</div>
-    <div class="hc-section">
-      {% for med in medications %}
-      {% if med.is_active %}
+  <!-- Active medications -->
+  {% if medications %}
+  <div style="padding:4px 0 0;">
+    <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active medications</div>
+    <div class="hc-section" style="margin-top:0;">
+      {% for med in medications[:4] %}
       <div class="hc-med-row">
-        <div class="hc-med-icon">💊</div>
-        <div style="flex:1;">
-          <div class="hc-med-name">{{ med.name }}</div>
-          <div class="hc-med-detail">
-            {{ med.dosage }}{% if med.frequency %} · {{ med.frequency }}{% endif %}
-          </div>
-          {% if med.prescribed_for %}
-          <div style="font-size:11px;color:var(--ink4);margin-top:2px;">For: {{ med.prescribed_for }}</div>
-          {% endif %}
-          {% if med.end_date %}
-          <div style="font-size:11px;color:var(--gold);margin-top:2px;">Until {{ med.end_date }}</div>
-          {% endif %}
-          {% if med.notes %}
-          <div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;">{{ med.notes }}</div>
-          {% endif %}
-        </div>
-        <button onclick="deactivateMed({{ med.id }})" style="background:none;border:none;color:var(--ink4);font-size:18px;cursor:pointer;padding:0;flex-shrink:0;">×</button>
-      </div>
-      {% endif %}
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    {% set inactive_meds = medications | selectattr('is_active', 'equalto', 0) | list %}
-    {% if inactive_meds %}
-    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Past</div>
-    <div class="hc-section">
-      {% for med in inactive_meds %}
-      <div class="hc-med-row" style="opacity:.5;">
         <div class="hc-med-icon">💊</div>
         <div>
           <div class="hc-med-name">{{ med.name }}</div>
-          <div class="hc-med-detail">{{ med.dosage }} · Ended {{ med.end_date or 'N/A' }}</div>
+          <div class="hc-med-detail">{{ med.dosage }}{% if med.frequency %} · {{ med.frequency }}{% endif %}{% if med.end_date %} · until {{ med.end_date }}{% endif %}</div>
         </div>
       </div>
       {% endfor %}
     </div>
-    {% endif %}
-
-    {% if not medications %}
-    <div class="hc-empty">No medications on file.<br>These are added automatically after appointments.</div>
-    {% endif %}
-    <div class="scroll-pad"></div>
   </div>
+  {% endif %}
 
-  <!-- ── RECORDS TAB ── -->
-  <div id="tab-records" class="tab-content" style="display:none;">
-
-    <!-- Conditions -->
-    <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Conditions</div>
-    {% if conditions %}
-    <div class="hc-section">
-      {% for cond in conditions %}
-      <div class="hc-cond-row" style="align-items:flex-start;padding-top:12px;padding-bottom:12px;">
-        <div class="hc-cond-dot" style="margin-top:5px;background:{% if cond.severity in ('chronic','significant') %}var(--rose){% elif cond.severity == 'moderate' %}var(--gold){% else %}#6aad7a{% endif %};"></div>
+  <!-- Active conditions -->
+  {% set active_conds = conditions | selectattr('status', 'in', ['active', 'managed', 'monitoring']) | list %}
+  {% if active_conds %}
+  <div style="padding:4px 0 0;">
+    <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active conditions</div>
+    <div class="hc-section" style="margin-top:0;">
+      {% for cond in active_conds[:4] %}
+      <div class="hc-cond-row">
+        <div class="hc-cond-dot" style="background:{% if cond.severity == 'chronic' or cond.severity == 'significant' %}var(--rose){% elif cond.severity == 'moderate' %}var(--gold){% else %}#6aad7a{% endif %};"></div>
         <div style="flex:1;">
           <div class="hc-cond-name">{{ cond.condition_name }}</div>
-          <div class="hc-cond-sub">{{ cond.status | capitalize }} · {{ cond.severity | capitalize }} · {{ cond.diagnosed_date }}</div>
-          {% if cond.treatment_plan %}
-          <div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;">{{ cond.treatment_plan }}</div>
-          {% endif %}
+          <div class="hc-cond-sub">{{ cond.status | capitalize }}</div>
         </div>
         <div class="hc-cond-severity">{{ cond.severity }}</div>
       </div>
       {% endfor %}
     </div>
-    {% else %}
-    <div class="hc-empty" style="padding-top:16px;">No conditions on file.</div>
-    {% endif %}
+  </div>
+  {% endif %}
 
-    <!-- Lab Results -->
-    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Lab results</div>
-    {% if lab_results %}
-    <div class="hc-section">
-      {% for lab in lab_results %}
-      <div class="hc-lab-row">
-        <div style="flex:1;">
-          <div class="hc-lab-name">{{ lab.test_name }}</div>
-          <div class="hc-lab-val">
-            {{ lab.result_value }}{% if lab.unit %} {{ lab.unit }}{% endif %}
-            · {{ lab.result_date }}
-          </div>
-          {% if lab.reference_range %}
-          <div style="font-size:11px;color:var(--ink4);margin-top:2px;">Ref: {{ lab.reference_range }}</div>
-          {% endif %}
-        </div>
-        <span class="hc-lab-badge {{ lab.status }}">{{ lab.status }}</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="hc-empty" style="padding-top:16px;">No lab results on file.</div>
-    {% endif %}
+  <div class="scroll-pad"></div>
+</div>
 
-    <!-- Vaccinations -->
-    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">
-      Vaccinations
-      <button class="hc-section-action" onclick="openVaxSheet()" style="float:right;">+ Add</button>
-    </div>
-    {% if vaccinations %}
-    <div class="hc-section">
-      {% for vax in vaccinations %}
-      <div class="hc-vax-row">
-        <div style="font-size:20px;">💉</div>
-        <div style="flex:1;">
-          <div class="hc-vax-name">{{ vax.vaccine_name }}</div>
-          <div class="hc-vax-sub">
-            {{ vax.date_administered }}
-            {% if vax.administered_by %} · {{ vax.administered_by }}{% endif %}
-            {% if vax.next_due_date %} · Due {{ vax.next_due_date }}{% endif %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="hc-empty" style="padding-top:16px;">No vaccination records yet.</div>
-    {% endif %}
-
-    <div class="scroll-pad"></div>
+<!-- ── VISITS TAB ── -->
+<div id="tab-appointments" class="tab-panel">
+  <div style="padding:14px 18px 0;">
+    <button class="hc-btn" onclick="openScheduleSheet()">+ Schedule appointment</button>
   </div>
 
-  <!-- ── PROFILE TAB ── -->
-  <div id="tab-profile" class="tab-content" style="display:none;">
-    <div style="padding:14px 18px 12px;">
-      <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);margin-bottom:4px;">Care Profile</div>
-      <div style="font-size:13px;color:var(--ink3);">Private — only you can see this.</div>
-    </div>
-
-    <div class="hc-profile-grid">
-      <div class="hc-profile-cell">
-        <div class="hc-profile-cell-label">Blood type</div>
-        <div class="hc-profile-cell-val">{{ health_profile.blood_type or '—' }}</div>
+  {% if upcoming_appointments %}
+  <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Upcoming</div>
+  <div class="hc-section">
+    {% for appt in upcoming_appointments %}
+    <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
+      <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="hc-appt-name">{{ appt.specialty }}</div>
+        <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
+        <div class="hc-appt-date">{{ appt.scheduled_date }}{% if appt.scheduled_time %} · {{ appt.scheduled_time }}{% endif %} · ✦{{ appt.copay_paid | int }}</div>
       </div>
-      <div class="hc-profile-cell">
-        <div class="hc-profile-cell-label">Allergies</div>
-        <div class="hc-profile-cell-val" style="font-size:12px;">{{ health_profile.allergies or 'None listed' }}</div>
-      </div>
-      <div class="hc-profile-cell" style="grid-column:1/-1;">
-        <div class="hc-profile-cell-label">Emergency contact</div>
-        <div class="hc-profile-cell-val">{{ health_profile.emergency_contact_name or '—' }}</div>
-      </div>
-      <div class="hc-profile-cell" style="grid-column:1/-1;">
-        <div class="hc-profile-cell-label">Primary doctor</div>
-        <div class="hc-profile-cell-val">
-          {% if primary_doctor %}{{ primary_doctor.name }}
-          {% else %}Not assigned{% endif %}
-        </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <span class="hc-appt-status scheduled">Scheduled</span>
+        <button class="hc-section-action" onclick="event.stopPropagation();completeAppt({{ appt.id }})">Mark done</button>
       </div>
     </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
-    <div style="padding:8px 18px 0;">
-      <button class="hc-btn secondary" onclick="openProfileEditSheet()">Edit care profile</button>
-    </div>
-
-    <!-- Insurance details -->
-    <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Insurance</div>
-    <div class="hc-section">
-      {% for plan_id, plan in insurance_plans.items() %}
-      <div style="padding:12px 18px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:10px;{% if plan_id == health_profile.insurance_plan %}background:var(--bg2);{% endif %}">
-        <div style="width:8px;height:8px;border-radius:50%;background:{{ plan.color }};flex-shrink:0;"></div>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:600;color:var(--ink);">{{ plan.name }}</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:1px;">
-            {% if plan.monthly_premium > 0 %}✦{{ plan.monthly_premium }}/mo · {% endif %}
-            Copay from ✦{{ plan.copay_primary }}
-          </div>
-        </div>
-        {% if plan_id == health_profile.insurance_plan %}
-        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#3a7a52;text-transform:uppercase;">Active</div>
-        {% else %}
-        <button class="hc-section-action" onclick="switchInsurance('{{ plan_id }}')">Switch</button>
+  {% if past_appointments %}
+  <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Past</div>
+  <div class="hc-section">
+    {% for appt in past_appointments[:20] %}
+    <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
+      <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="hc-appt-name">{{ appt.specialty }}</div>
+        <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
+        <div class="hc-appt-date">{{ appt.scheduled_date }}</div>
+        {% if appt.summary %}
+        <div style="font-size:11px;color:var(--ink4);margin-top:3px;">{{ appt.summary[:80] }}{% if appt.summary | length > 80 %}…{% endif %}</div>
         {% endif %}
       </div>
-      {% endfor %}
+      <span class="hc-appt-status {{ appt.status }}">{{ appt.status | capitalize }}</span>
     </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {% if not upcoming_appointments %}
+  <div class="hc-empty">No appointments yet.<br>Schedule your first visit above.</div>
+  {% endif %}
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
 
-    <div class="scroll-pad"></div>
+<!-- ── MEDICATIONS TAB ── -->
+<div id="tab-medications" class="tab-panel">
+  {% if medications %}
+  <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active</div>
+  <div class="hc-section">
+    {% for med in medications %}
+    {% if med.is_active %}
+    <div class="hc-med-row">
+      <div class="hc-med-icon">💊</div>
+      <div style="flex:1;">
+        <div class="hc-med-name">{{ med.name }}</div>
+        <div class="hc-med-detail">
+          {{ med.dosage }}{% if med.frequency %} · {{ med.frequency }}{% endif %}
+        </div>
+        {% if med.prescribed_for %}
+        <div style="font-size:11px;color:var(--ink4);margin-top:2px;">For: {{ med.prescribed_for }}</div>
+        {% endif %}
+        {% if med.end_date %}
+        <div style="font-size:11px;color:var(--gold);margin-top:2px;">Until {{ med.end_date }}</div>
+        {% endif %}
+        {% if med.notes %}
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;">{{ med.notes }}</div>
+        {% endif %}
+      </div>
+      <button onclick="deactivateMed({{ med.id }})" style="background:none;border:none;color:var(--ink4);font-size:18px;cursor:pointer;padding:0;flex-shrink:0;">×</button>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% set inactive_meds = medications | selectattr('is_active', 'equalto', 0) | list %}
+  {% if inactive_meds %}
+  <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Past</div>
+  <div class="hc-section">
+    {% for med in inactive_meds %}
+    <div class="hc-med-row" style="opacity:.5;">
+      <div class="hc-med-icon">💊</div>
+      <div>
+        <div class="hc-med-name">{{ med.name }}</div>
+        <div class="hc-med-detail">{{ med.dosage }} · Ended {{ med.end_date or 'N/A' }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not medications %}
+  <div class="hc-empty">No medications on file.<br>These are added automatically after appointments.</div>
+  {% endif %}
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── RECORDS TAB ── -->
+<div id="tab-records" class="tab-panel">
+
+  <!-- Conditions -->
+  <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Conditions</div>
+  {% if conditions %}
+  <div class="hc-section">
+    {% for cond in conditions %}
+    <div class="hc-cond-row" style="align-items:flex-start;padding-top:12px;padding-bottom:12px;">
+      <div class="hc-cond-dot" style="margin-top:5px;background:{% if cond.severity in ('chronic','significant') %}var(--rose){% elif cond.severity == 'moderate' %}var(--gold){% else %}#6aad7a{% endif %};"></div>
+      <div style="flex:1;">
+        <div class="hc-cond-name">{{ cond.condition_name }}</div>
+        <div class="hc-cond-sub">{{ cond.status | capitalize }} · {{ cond.severity | capitalize }} · {{ cond.diagnosed_date }}</div>
+        {% if cond.treatment_plan %}
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;">{{ cond.treatment_plan }}</div>
+        {% endif %}
+      </div>
+      <div class="hc-cond-severity">{{ cond.severity }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="hc-empty" style="padding-top:16px;">No conditions on file.</div>
+  {% endif %}
+
+  <!-- Lab Results -->
+  <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Lab results</div>
+  {% if lab_results %}
+  <div class="hc-section">
+    {% for lab in lab_results %}
+    <div class="hc-lab-row">
+      <div style="flex:1;">
+        <div class="hc-lab-name">{{ lab.test_name }}</div>
+        <div class="hc-lab-val">
+          {{ lab.result_value }}{% if lab.unit %} {{ lab.unit }}{% endif %}
+          · {{ lab.result_date }}
+        </div>
+        {% if lab.reference_range %}
+        <div style="font-size:11px;color:var(--ink4);margin-top:2px;">Ref: {{ lab.reference_range }}</div>
+        {% endif %}
+      </div>
+      <span class="hc-lab-badge {{ lab.status }}">{{ lab.status }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="hc-empty" style="padding-top:16px;">No lab results on file.</div>
+  {% endif %}
+
+  <!-- Vaccinations -->
+  <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">
+    Vaccinations
+    <button class="hc-section-action" onclick="openVaxSheet()" style="float:right;">+ Add</button>
+  </div>
+  {% if vaccinations %}
+  <div class="hc-section">
+    {% for vax in vaccinations %}
+    <div class="hc-vax-row">
+      <div style="font-size:20px;">💉</div>
+      <div style="flex:1;">
+        <div class="hc-vax-name">{{ vax.vaccine_name }}</div>
+        <div class="hc-vax-sub">
+          {{ vax.date_administered }}
+          {% if vax.administered_by %} · {{ vax.administered_by }}{% endif %}
+          {% if vax.next_due_date %} · Due {{ vax.next_due_date }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="hc-empty" style="padding-top:16px;">No vaccination records yet.</div>
+  {% endif %}
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- ── PROFILE TAB ── -->
+<div id="tab-profile" class="tab-panel">
+  <div style="padding:14px 18px 12px;">
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);margin-bottom:4px;">Care Profile</div>
+    <div style="font-size:13px;color:var(--ink3);">Private — only you can see this.</div>
   </div>
 
+  <div class="hc-profile-grid">
+    <div class="hc-profile-cell">
+      <div class="hc-profile-cell-label">Blood type</div>
+      <div class="hc-profile-cell-val">{{ health_profile.blood_type or '—' }}</div>
+    </div>
+    <div class="hc-profile-cell">
+      <div class="hc-profile-cell-label">Allergies</div>
+      <div class="hc-profile-cell-val" style="font-size:12px;">{{ health_profile.allergies or 'None listed' }}</div>
+    </div>
+    <div class="hc-profile-cell" style="grid-column:1/-1;">
+      <div class="hc-profile-cell-label">Emergency contact</div>
+      <div class="hc-profile-cell-val">{{ health_profile.emergency_contact_name or '—' }}</div>
+    </div>
+    <div class="hc-profile-cell" style="grid-column:1/-1;">
+      <div class="hc-profile-cell-label">Primary doctor</div>
+      <div class="hc-profile-cell-val">
+        {% if primary_doctor %}{{ primary_doctor.name }}
+        {% else %}Not assigned{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:8px 18px 0;">
+    <button class="hc-btn secondary" onclick="openProfileEditSheet()">Edit care profile</button>
+  </div>
+
+  <!-- Insurance details -->
+  <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Insurance</div>
+  <div class="hc-section">
+    {% for plan_id, plan in insurance_plans.items() %}
+    <div style="padding:12px 18px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;{% if plan_id == health_profile.insurance_plan %}background:var(--bg2);{% endif %}">
+      <div style="width:8px;height:8px;border-radius:50%;background:{{ plan.color }};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;color:var(--ink);">{{ plan.name }}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:1px;">
+          {% if plan.monthly_premium > 0 %}✦{{ plan.monthly_premium }}/mo · {% endif %}
+          Copay from ✦{{ plan.copay_primary }}
+        </div>
+      </div>
+      {% if plan_id == health_profile.insurance_plan %}
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#3a7a52;text-transform:uppercase;">Active</div>
+      {% else %}
+      <button class="hc-section-action" onclick="switchInsurance('{{ plan_id }}')">Switch</button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="scroll-pad"></div>
 </div>
+
 {% endblock %}
 
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
 
-  // ── Tab switching ─────────────────────────────────────────────────────────
-  function showTab(id) {
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.hc-tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + id).style.display = 'block';
-    const tabs = document.querySelectorAll('.hc-tab');
-    const tabMap = { overview:0, appointments:1, medications:2, records:3, profile:4 };
+  // ── Tab switching (uses base .tab active class, not custom hc-tab) ─────────
+  function showHcTab(id) {
+    document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + id)?.classList.add('active');
+    const tabMap = { overview: 0, appointments: 1, medications: 2, records: 3, profile: 4 };
+    const tabs = document.querySelectorAll('.tab');
     if (tabMap[id] !== undefined) tabs[tabMap[id]]?.classList.add('active');
   }
 
@@ -695,7 +701,6 @@
   }
 
   // ── Schedule appointment sheet ────────────────────────────────────────────
-
   const APPT_TYPES = {{ appointment_types | tojson }};
   const DOCTORS    = {{ doctors | tojson }};
   const INSURANCE  = {{ insurance_plan | tojson }};
@@ -703,7 +708,6 @@
   let schedStep = 0;
   let schedData = { type: null, specialty: null, doctor_id: null, date: null, time: null, concerns: '' };
 
-  // Inject schedule sheet
   (function() {
     const el = document.createElement('div');
     el.innerHTML = `
@@ -715,32 +719,27 @@
     <div class="hc-sheet-title">New appointment</div>
     <div class="hc-sheet-step" id="sched-step"></div>
   </div>
-
   <div class="hc-screen active" id="sched-screen-0">
     <div class="hc-screen-q">What kind of care do you need?</div>
     <div class="hc-screen-sub">Choose the category that fits best.</div>
     <div class="hc-options" id="sched-type-options"></div>
   </div>
-
   <div class="hc-screen" id="sched-screen-1">
     <div class="hc-screen-q">What specifically?</div>
     <div class="hc-screen-sub">Pick the type of appointment.</div>
     <div class="hc-options" id="sched-specialty-options"></div>
   </div>
-
   <div class="hc-screen" id="sched-screen-2">
     <div class="hc-screen-q">Any concerns to share?</div>
     <div class="hc-screen-sub">Optional — gives your doctor context before the visit.</div>
     <textarea class="hc-textarea" id="sched-concerns" placeholder="e.g. headaches for 3 days, need a refill, routine checkup…"></textarea>
     <button class="hc-next-btn" onclick="schedNext()">Continue →</button>
   </div>
-
   <div class="hc-screen" id="sched-screen-3">
     <div class="hc-screen-q">Choose your doctor</div>
     <div class="hc-screen-sub">Filtered to specialists in this area of care.</div>
     <div id="sched-doctor-list"></div>
   </div>
-
   <div class="hc-screen" id="sched-screen-4">
     <div class="hc-screen-q">When?</div>
     <div class="hc-screen-sub">Pick a date for your appointment.</div>
@@ -750,7 +749,6 @@
     <input class="hc-input" type="time" id="sched-time" />
     <button class="hc-next-btn" onclick="schedNext()">Continue →</button>
   </div>
-
   <div class="hc-screen" id="sched-screen-5">
     <div class="hc-screen-q">Confirm appointment</div>
     <div id="sched-confirm-content"></div>
@@ -760,7 +758,6 @@
 </div>`;
     while (el.firstChild) document.body.appendChild(el.firstChild);
 
-    // Populate type options
     const opts = document.getElementById('sched-type-options');
     Object.entries(APPT_TYPES).forEach(([key, type]) => {
       const btn = document.createElement('button');
@@ -770,7 +767,6 @@
       opts.appendChild(btn);
     });
 
-    // Set min date to tomorrow
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     document.getElementById('sched-date').min = tomorrow.toISOString().split('T')[0];
   })();
@@ -784,7 +780,6 @@
 
   function openScheduleSheetWithReferral(specialty, doctorId) {
     openScheduleSheet();
-    // Pre-select based on referral — find matching type
     const typeKey = Object.entries(APPT_TYPES).find(([k,v]) =>
       v.doctors.includes(doctorId) || specialty.includes(k)
     )?.[0];
@@ -813,17 +808,13 @@
   function pickType(key, prefillDoctor) {
     schedData.type = key;
     const type = APPT_TYPES[key];
-    // Populate specialties
     const opts = document.getElementById('sched-specialty-options');
     opts.innerHTML = '';
     type.specialties.forEach(spec => {
       const btn = document.createElement('button');
       btn.className = 'hc-option';
       btn.textContent = spec;
-      btn.onclick = () => {
-        schedData.specialty = spec;
-        schedStep = 2; showSchedScreen(2);
-      };
+      btn.onclick = () => { schedData.specialty = spec; schedStep = 2; showSchedScreen(2); };
       opts.appendChild(btn);
     });
     schedStep = 1; showSchedScreen(1);
@@ -859,10 +850,7 @@
           <div class="hc-doctor-pronouns">${doc.pronouns}</div>
           <div class="hc-doctor-bio">${doc.bio}</div>
         </div>`;
-      el.onclick = () => {
-        schedData.doctor_id = did;
-        schedStep = 4; showSchedScreen(4);
-      };
+      el.onclick = () => { schedData.doctor_id = did; schedStep = 4; showSchedScreen(4); };
       list.appendChild(el);
     });
   }
@@ -873,7 +861,7 @@
     const copayKey = 'copay_' + (type?.copay_category || 'primary');
     const copay   = INSURANCE[copayKey] ?? INSURANCE.copay_primary ?? 0;
     document.getElementById('sched-confirm-content').innerHTML = `
-      <div style="background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--bg4);padding:14px;margin-bottom:14px;">
+      <div style="background:var(--bg2);border-radius:var(--radius-sm);border:0.5px solid var(--border2);padding:14px;margin-bottom:14px;">
         <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px;">${schedData.specialty}</div>
         <div style="font-size:12px;color:var(--ink3);">${doctor?.name || ''}</div>
         <div style="font-size:12px;color:var(--ink3);margin-top:2px;">${schedData.date}${schedData.time ? ' · ' + schedData.time : ''}</div>
@@ -901,13 +889,8 @@
         })
       });
       const d = await res.json();
-      if (res.ok) {
-        closeScheduleSheet();
-        toast('Appointment scheduled ✓');
-        setTimeout(() => location.reload(), 1400);
-      } else {
-        toast(d.detail || 'Could not schedule');
-      }
+      if (res.ok) { closeScheduleSheet(); toast('Appointment scheduled ✓'); setTimeout(() => location.reload(), 1400); }
+      else { toast(d.detail || 'Could not schedule'); }
     } catch(e) { toast('Error: ' + e.message); }
   }
 
@@ -920,12 +903,8 @@
         body: JSON.stringify({ token: TOKEN })
       });
       const d = await res.json();
-      if (res.ok) {
-        toast('Appointment completed ✓');
-        setTimeout(() => location.reload(), 1400);
-      } else {
-        toast(d.detail || 'Could not complete');
-      }
+      if (res.ok) { toast('Appointment completed ✓'); setTimeout(() => location.reload(), 1400); }
+      else { toast(d.detail || 'Could not complete'); }
     } catch(e) { toast('Error: ' + e.message); }
   }
 
@@ -958,17 +937,16 @@
         <div style="font-size:12px;color:var(--ink3);margin-bottom:4px;">${d.doctor_name} · ${d.scheduled_date}</div>
         <span class="hc-appt-status ${d.status}" style="display:inline-block;margin-bottom:12px;">${d.status}</span>
         ${d.summary ? `<div style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:14px;background:var(--bg2);padding:12px;border-radius:var(--radius-sm);">${d.summary}</div>` : ''}`;
-
       if (d.medications?.length) {
         html += `<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:6px;">Prescribed</div>`;
         d.medications.forEach(m => {
-          html += `<div style="padding:8px 0;border-bottom:1px solid var(--bg3);">💊 <strong>${m.name}</strong> — ${m.dosage || ''} ${m.frequency || ''}</div>`;
+          html += `<div style="padding:8px 0;border-bottom:0.5px solid var(--border);">💊 <strong>${m.name}</strong> — ${m.dosage || ''} ${m.frequency || ''}</div>`;
         });
       }
       if (d.conditions?.length) {
         html += `<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin:12px 0 6px;">Diagnosis</div>`;
         d.conditions.forEach(c => {
-          html += `<div style="padding:8px 0;border-bottom:1px solid var(--bg3);">🔵 <strong>${c.condition_name}</strong> — ${c.severity}</div>`;
+          html += `<div style="padding:8px 0;border-bottom:0.5px solid var(--border);">🔵 <strong>${c.condition_name}</strong> — ${c.severity}</div>`;
         });
       }
       if (d.referrals?.length) {
@@ -980,13 +958,13 @@
       if (d.lab_results?.length) {
         html += `<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin:12px 0 6px;">Lab results</div>`;
         d.lab_results.forEach(l => {
-          html += `<div style="padding:8px 0;border-bottom:1px solid var(--bg3);">🧪 ${l.test_name}: ${l.result_value} <span class="hc-lab-badge ${l.status}">${l.status}</span></div>`;
+          html += `<div style="padding:8px 0;border-bottom:0.5px solid var(--border);">🧪 ${l.test_name}: ${l.result_value} <span class="hc-lab-badge ${l.status}">${l.status}</span></div>`;
         });
       }
       if (d.status === 'scheduled') {
         html += `<div style="display:flex;gap:8px;margin-top:16px;">
           <button onclick="completeAppt(${id});closeApptDetail();" class="hc-next-btn" style="flex:1;margin:0;">Mark complete</button>
-          <button onclick="cancelAppt(${id})" style="flex:1;padding:14px;background:var(--rose-light);color:var(--rose);border:1px solid rgba(156,80,80,.2);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+          <button onclick="cancelAppt(${id})" style="flex:1;padding:14px;background:var(--rose-light);color:var(--rose);border:0.5px solid rgba(156,80,80,.2);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
         </div>`;
       }
       body.innerHTML = html;
@@ -1007,13 +985,8 @@
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: TOKEN })
       });
-      if (res.ok) {
-        closeApptDetail();
-        toast('Appointment cancelled');
-        setTimeout(() => location.reload(), 1400);
-      } else {
-        const d = await res.json(); toast(d.detail || 'Could not cancel');
-      }
+      if (res.ok) { closeApptDetail(); toast('Appointment cancelled'); setTimeout(() => location.reload(), 1400); }
+      else { const d = await res.json(); toast(d.detail || 'Could not cancel'); }
     } catch(e) { toast('Error: ' + e.message); }
   }
 
@@ -1042,8 +1015,7 @@
     } catch(e) { toast('Error: ' + e.message); }
   }
 
-  // ── Insurance sheet ───────────────────────────────────────────────────────
-  function openInsuranceSheet() { showTab('profile'); }
+  function openInsuranceSheet() { showHcTab('profile'); }
 
   // ── Profile edit sheet ────────────────────────────────────────────────────
   (function() {
