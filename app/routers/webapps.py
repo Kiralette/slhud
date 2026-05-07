@@ -962,6 +962,14 @@ async def ritual(
 
         cycle_history = [dict(r) for r in ch_rows]
 
+        # calendar_days: {dateStr: [marker1, marker2, ...]} - supports multiple per day
+        def cal_add(d, key, val):
+            """Add a marker to calendar_days without overwriting existing ones."""
+            if key not in d:
+                d[key] = []
+            if val not in d[key]:
+                d[key].append(val)
+
         if latest_cycle:
             calendar_days = {}
             for c in cycle_history:
@@ -970,13 +978,13 @@ async def ritual(
                         s   = date.fromisoformat(c["cycle_start_slt"][:10])
                         dur = c.get("period_duration_days") or period_dur
                         for i in range(dur):
-                            calendar_days[(s + timedelta(days=i)).isoformat()] = "confirmed_period"
+                            cal_add(calendar_days, (s + timedelta(days=i)).isoformat(), "confirmed_period")
                         end = date.fromisoformat(c["cycle_end_slt"][:10]) if c.get("cycle_end_slt") \
                               else s + timedelta(days=dur)
                         for i in range(1, 4):
                             k = (end + timedelta(days=i)).isoformat()
                             if k not in calendar_days:
-                                calendar_days[k] = "post_glow"
+                                cal_add(calendar_days, k, "post_glow")
                     except Exception:
                         pass
 
@@ -996,13 +1004,13 @@ async def ritual(
                     if i < used_dur:
                         pass
                     elif fs <= i <= fe:
-                        calendar_days[key] = "ovulatory" if i == ov_day else "fertile_window"
+                        cal_add(calendar_days, key, "ovulatory" if i == ov_day else "fertile_window")
                     elif i < fs:
-                        calendar_days[key] = "phase_follicular"
+                        cal_add(calendar_days, key, "phase_follicular")
                     elif i >= pms_s:
-                        calendar_days[key] = "phase_pms"
+                        cal_add(calendar_days, key, "phase_pms")
                     else:
-                        calendar_days[key] = "phase_luteal"
+                        cal_add(calendar_days, key, "phase_luteal")
             except Exception:
                 pass
 
@@ -1015,7 +1023,7 @@ async def ritual(
                     for i in range(-3, dur + 3):
                         k = (ns + timedelta(days=i)).isoformat()
                         if k not in calendar_days:
-                            calendar_days[k] = "predicted_start" if 0 <= i < dur else "predicted_window"
+                            cal_add(calendar_days, k, "predicted_start" if 0 <= i < dur else "predicted_window")
                     p_ov = ns + timedelta(days=round(avg) - 14)
                     p_fs = p_ov - timedelta(days=4)
                     p_fe = p_ov + timedelta(days=1)
@@ -1023,7 +1031,7 @@ async def ritual(
                     while d <= p_fe:
                         k = d.isoformat()
                         if k not in calendar_days:
-                            calendar_days[k] = "ovulatory" if d == p_ov else "fertile_window"
+                            cal_add(calendar_days, k, "ovulatory" if d == p_ov else "fertile_window")
                         d += timedelta(days=1)
                 except Exception:
                     pass
@@ -1143,7 +1151,7 @@ async def ritual(
                     dval = imeta.get(cal_key)
                     if dval:
                         try:
-                            calendar_days[date.fromisoformat(dval[:10]).isoformat()] = cal_label
+                            cal_add(calendar_days, date.fromisoformat(dval[:10]).isoformat(), cal_label)
                         except Exception:
                             pass
             except Exception:
@@ -1229,16 +1237,16 @@ async def ritual(
                 pinfo = occ["pregnancy_info"]
                 try:
                     if pinfo.get("due_date"):
-                        calendar_days[pinfo["due_date"]] = "due_date"
+                        cal_add(calendar_days, pinfo["due_date"], "due_date")
                     import json as _pjson
                     pmeta = _pjson.loads(occ.get("metadata") or "{}")
                     lmp = pmeta.get("lmp_date")
                     if lmp:
-                        calendar_days[date.fromisoformat(lmp[:10]).isoformat()] = "conception"
+                        cal_add(calendar_days, date.fromisoformat(lmp[:10]).isoformat(), "conception")
                 except Exception:
                     pass
 
-    # Add healthcare appointments to calendar
+    # Add healthcare appointments to calendar (supports multiple per day via list)
     try:
         if is_postgres():
             hc_rows = await db.fetch(
@@ -1257,8 +1265,7 @@ async def ritual(
             try:
                 hdate = date.fromisoformat(hrow["scheduled_date"][:10]).isoformat()
                 val   = "healthcare_scheduled" if hrow["status"] == "scheduled" else "healthcare_completed"
-                if hdate not in hc_cal:
-                    hc_cal[hdate] = val
+                cal_add(hc_cal, hdate, val)
             except Exception:
                 pass
     except Exception:

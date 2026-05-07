@@ -58,25 +58,40 @@
   }
 
   /* ── Period shading ── */
-  .cal-day.confirmed_period  { background: #f5e0e8; color: var(--ink2); }
-  .cal-day.predicted_start   { background: #f9d0dc; color: var(--ink2); }
-  .cal-day.predicted_window  { background: rgba(245,220,232,0.4); }
-  .cal-day.post_glow::after  { background: var(--gold) !important; }
-  /* Cycle phase shading */
-  .cal-day.phase_follicular  { background: rgba(255,245,220,0.5); }
-  .cal-day.phase_luteal      { background: rgba(220,210,240,0.4); }
-  .cal-day.phase_pms         { background: rgba(240,210,220,0.4); }
-  .cal-day.fertile_window    { background: rgba(200,235,210,0.6); }
-  .cal-day.ovulatory         { background: #c8ecd4; font-weight: 700; }
-  /* Pregnancy & IVF key dates */
-  .cal-day.conception        { background: #fde8f0; border: 1px solid #e8a0bb; }
-  .cal-day.due_date          { background: #fde8c0; border: 1px solid #d4a020; font-weight:700; }
-  .cal-day.ivf_stimulation   { background: rgba(180,210,250,0.5); }
-  .cal-day.ivf_retrieval     { background: #b4d2fa; font-weight: 700; }
-  .cal-day.ivf_transfer      { background: #c8e8ff; font-weight: 700; border: 1px solid #6aade0; }
-  .cal-day.ivf_beta          { background: #d4b4fa; font-weight: 700; border: 1px solid #9060d0; }
-  .cal-day.healthcare_scheduled { background: rgba(180,220,200,0.5); border: 1px solid #6aad8a; }
-  .cal-day.healthcare_completed { background: rgba(180,220,200,0.25); }
+  /* Calendar dot system — multiple dots per day, no full-day shading */
+  .cal-day-dots {
+    display: flex; gap: 2px; justify-content: center;
+    flex-wrap: wrap; max-width: 28px; margin: 1px auto 0;
+    min-height: 6px;
+  }
+  .cal-dot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+  }
+  .cal-dot.confirmed_period  { background: #d4748a; }
+  .cal-dot.predicted_start   { background: #e8a0b4; }
+  .cal-dot.predicted_window  { background: #f0c8d4; }
+  .cal-dot.post_glow         { background: var(--gold); }
+  .cal-dot.phase_follicular  { background: #d4b870; opacity:.7; }
+  .cal-dot.phase_luteal      { background: #a090c0; opacity:.7; }
+  .cal-dot.phase_pms         { background: #c09090; opacity:.7; }
+  .cal-dot.fertile_window    { background: #70b890; }
+  .cal-dot.ovulatory         { background: #40a870; width:7px; height:7px; }
+  .cal-dot.conception        { background: #e080b0; }
+  .cal-dot.due_date          { background: #d4a020; width:7px; height:7px; }
+  .cal-dot.ivf_stimulation   { background: #80a8e0; }
+  .cal-dot.ivf_retrieval     { background: #4080d0; }
+  .cal-dot.ivf_transfer      { background: #60b0e8; width:7px; height:7px; }
+  .cal-dot.ivf_beta          { background: #9060d0; width:7px; height:7px; }
+  .cal-dot.healthcare_scheduled { background: #3a9a6a; width:7px; height:7px; }
+  .cal-dot.healthcare_completed { background: #8ac8a8; }
+  /* Today ring instead of bold */
+  .cal-day.today { color: var(--ink); }
+  .cal-day.today .cal-day-num {
+    background: var(--ink); color: var(--bg);
+    border-radius: 50%; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto;
+  }
 
   /* ── Holiday dot ── */
   .cal-day .holiday-dot {
@@ -1160,31 +1175,22 @@
 
   function renderCalendar() {
     const grid = document.getElementById('cal-grid');
-    // Remove all but header row (7 dow cells)
     while (grid.children.length > 7) grid.removeChild(grid.lastChild);
 
     document.getElementById('month-label').textContent = `${MONTHS[viewMonth-1]} ${viewYear}`;
 
-    const firstDay = new Date(viewYear, viewMonth-1, 1).getDay();
+    const firstDay   = new Date(viewYear, viewMonth-1, 1).getDay();
     const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
     const daysInPrev  = new Date(viewYear, viewMonth-1, 0).getDate();
     const today = todayStr();
 
     let cells = [];
-
-    // Leading blanks from previous month
-    for (let i = firstDay - 1; i >= 0; i--) {
+    for (let i = firstDay - 1; i >= 0; i--)
       cells.push({ day: daysInPrev - i, month: viewMonth - 1, year: viewYear, other: true });
-    }
-    // This month
-    for (let d = 1; d <= daysInMonth; d++) {
+    for (let d = 1; d <= daysInMonth; d++)
       cells.push({ day: d, month: viewMonth, year: viewYear, other: false });
-    }
-    // Trailing blanks
-    const trailing = 42 - cells.length;
-    for (let d = 1; d <= trailing; d++) {
+    for (let d = 1; d <= 42 - cells.length; d++)
       cells.push({ day: d, month: viewMonth + 1, year: viewYear, other: true });
-    }
 
     cells.forEach(c => {
       const m = c.month < 1 ? 12 : c.month > 12 ? 1 : c.month;
@@ -1197,20 +1203,49 @@
       if (c.other) el.classList.add('other-month');
       if (dateStr === today) el.classList.add('today');
 
-      // Period shading
-      if (PERIOD_DAYS[dateStr]) el.classList.add(PERIOD_DAYS[dateStr]);
+      // Date number
+      const numEl = document.createElement('div');
+      numEl.className = 'cal-day-num';
+      numEl.textContent = c.day;
+      el.appendChild(numEl);
 
-      // Personal event dot
-      if (EVENTS_BY_DATE[dateStr]) el.classList.add('event-dot');
+      // Collect all markers for this day
+      const markers = [];
+      // Cycle/health markers (now an array from server)
+      const dayMarkers = PERIOD_DAYS[dateStr];
+      if (Array.isArray(dayMarkers)) {
+        dayMarkers.forEach(m => markers.push(m));
+      } else if (dayMarkers) {
+        markers.push(dayMarkers); // backwards compat with single string
+      }
+      // Personal event
+      if (EVENTS_BY_DATE[dateStr]) markers.push('event');
+      // Holiday
+      if (HOLIDAYS[mmdd] && !c.other) markers.push('holiday:' + HOLIDAYS[mmdd]);
 
-      el.textContent = c.day;
-
-      // Holiday mini emoji
-      if (HOLIDAYS[mmdd] && !c.other) {
-        const dot = document.createElement('span');
-        dot.className = 'holiday-dot';
-        dot.textContent = HOLIDAYS[mmdd];
-        el.appendChild(dot);
+      // Render dots
+      if (markers.length > 0) {
+        const dotsEl = document.createElement('div');
+        dotsEl.className = 'cal-day-dots';
+        markers.forEach(mk => {
+          if (mk.startsWith('holiday:')) {
+            const span = document.createElement('span');
+            span.style.fontSize = '8px';
+            span.style.lineHeight = '1';
+            span.textContent = mk.slice(8);
+            dotsEl.appendChild(span);
+          } else if (mk === 'event') {
+            const dot = document.createElement('div');
+            dot.className = 'cal-dot';
+            dot.style.background = 'var(--gold)';
+            dotsEl.appendChild(dot);
+          } else {
+            const dot = document.createElement('div');
+            dot.className = `cal-dot ${mk}`;
+            dotsEl.appendChild(dot);
+          }
+        });
+        el.appendChild(dotsEl);
       }
 
       el.onclick = () => openDayDetail(dateStr, mmdd, c.other);
@@ -1260,17 +1295,20 @@
 
     const rows = [];
 
-    // Period info
-    const periodType = PERIOD_DAYS[dateStr];
-    if (periodType && PERIOD_LABELS[periodType]) {
-      const p = PERIOD_LABELS[periodType];
-      rows.push(`<div class="day-detail-row">
-        <div class="day-detail-icon">${p.icon}</div>
-        <div class="day-detail-text">
-          <div class="day-detail-title">${p.label}</div>
-          <div class="day-detail-label">Cycle tracking</div>
-        </div></div>`);
-    }
+    // Cycle / health markers (now an array)
+    const dayMarkers = PERIOD_DAYS[dateStr];
+    const markerList = Array.isArray(dayMarkers) ? dayMarkers : (dayMarkers ? [dayMarkers] : []);
+    markerList.forEach(periodType => {
+      if (PERIOD_LABELS[periodType]) {
+        const p = PERIOD_LABELS[periodType];
+        rows.push(`<div class="day-detail-row">
+          <div class="day-detail-icon">${p.icon}</div>
+          <div class="day-detail-text">
+            <div class="day-detail-title">${p.label}</div>
+            <div class="day-detail-label">Cycle tracking</div>
+          </div></div>`);
+      }
+    });
 
     // Holiday
     if (HOLIDAYS[mmdd]) {
