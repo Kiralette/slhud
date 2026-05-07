@@ -1,0 +1,1146 @@
+{% extends "base.html" %}
+{% block title %}MyChart{% endblock %}
+
+{% block extra_style %}
+<style>
+  /* ── Tabs ── */
+  .hc-tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--bg4);
+    overflow-x: auto; scrollbar-width: none; padding: 0 18px;
+    background: var(--bg);
+  }
+  .hc-tabs::-webkit-scrollbar { display: none; }
+  .hc-tab {
+    font-size: 12px; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--ink4);
+    padding: 12px 14px; border: none; background: none;
+    cursor: pointer; white-space: nowrap;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+  }
+  .hc-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+  /* ── Cards ── */
+  .hc-card {
+    background: var(--bg2); border-radius: var(--radius);
+    border: 1px solid var(--bg4); padding: 14px 16px;
+    margin: 0 18px 10px;
+  }
+  .hc-card-title {
+    font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink4); margin-bottom: 6px;
+  }
+  .hc-card-value {
+    font-family: var(--font-head); font-size: 22px; color: var(--ink);
+  }
+  .hc-card-sub { font-size: 12px; color: var(--ink3); margin-top: 2px; line-height: 1.5; }
+
+  /* ── Profile card ── */
+  .hc-profile-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; padding: 0 18px; margin-bottom: 4px;
+  }
+  .hc-profile-cell {
+    background: var(--bg2); border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); padding: 10px 12px;
+  }
+  .hc-profile-cell-label {
+    font-size: 10px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink4); margin-bottom: 3px;
+  }
+  .hc-profile-cell-val { font-size: 13px; color: var(--ink); font-weight: 500; }
+
+  /* ── Insurance banner ── */
+  .hc-insurance {
+    margin: 14px 18px 0;
+    border-radius: var(--radius);
+    border: 1px solid var(--bg4);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hc-insurance-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .hc-insurance-name {
+    font-family: var(--font-head); font-size: 18px; color: var(--ink);
+  }
+  .hc-insurance-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+
+  /* ── Appointment rows ── */
+  .hc-appt-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+  }
+  .hc-appt-row:last-child { border-bottom: none; }
+  .hc-appt-icon {
+    width: 38px; height: 38px; border-radius: var(--radius-sm);
+    background: var(--bg3); display: flex; align-items: center;
+    justify-content: center; font-size: 18px; flex-shrink: 0;
+  }
+  .hc-appt-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .hc-appt-doctor { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+  .hc-appt-date { font-size: 11px; color: var(--ink4); margin-top: 3px; }
+  .hc-appt-status {
+    margin-left: auto; font-size: 10px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px;
+    border-radius: 4px; flex-shrink: 0;
+  }
+  .hc-appt-status.scheduled { background: var(--gold-light); color: var(--gold); }
+  .hc-appt-status.completed { background: #e8f5ee; color: #3a7a52; }
+  .hc-appt-status.cancelled { background: var(--bg3); color: var(--ink4); }
+  .hc-appt-status.missed    { background: var(--rose-light); color: var(--rose); }
+
+  /* ── Medication rows ── */
+  .hc-med-row {
+    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .hc-med-row:last-child { border-bottom: none; }
+  .hc-med-icon { font-size: 20px; margin-top: 1px; }
+  .hc-med-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .hc-med-detail { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+
+  /* ── Condition rows ── */
+  .hc-cond-row {
+    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hc-cond-row:last-child { border-bottom: none; }
+  .hc-cond-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .hc-cond-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .hc-cond-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+  .hc-cond-severity {
+    margin-left: auto; font-size: 10px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink4); flex-shrink: 0;
+  }
+
+  /* ── Lab result rows ── */
+  .hc-lab-row {
+    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hc-lab-row:last-child { border-bottom: none; }
+  .hc-lab-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .hc-lab-val { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+  .hc-lab-badge {
+    margin-left: auto; font-size: 10px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 4px; flex-shrink: 0;
+  }
+  .hc-lab-badge.normal   { background: #e8f5ee; color: #3a7a52; }
+  .hc-lab-badge.abnormal { background: var(--rose-light); color: var(--rose); }
+  .hc-lab-badge.pending  { background: var(--gold-light); color: var(--gold); }
+
+  /* ── Vax rows ── */
+  .hc-vax-row {
+    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hc-vax-row:last-child { border-bottom: none; }
+  .hc-vax-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .hc-vax-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+
+  /* ── Referral rows ── */
+  .hc-ref-row {
+    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hc-ref-row:last-child { border-bottom: none; }
+  .hc-ref-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .hc-ref-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+  .hc-ref-urgency {
+    margin-left: auto; font-size: 10px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0;
+  }
+  .hc-ref-urgency.urgent { color: var(--rose); }
+  .hc-ref-urgency.soon   { color: var(--gold); }
+  .hc-ref-urgency.routine { color: var(--ink4); }
+
+  /* ── Section block ── */
+  .hc-section {
+    background: var(--bg); border-radius: var(--radius);
+    border: 1px solid var(--bg4); margin: 0 18px 12px; overflow: hidden;
+  }
+  .hc-section-head {
+    padding: 11px 18px; border-bottom: 1px solid var(--bg3);
+    font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink3);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .hc-section-action {
+    font-size: 11px; font-weight: 600; letter-spacing: .04em;
+    color: var(--gold); background: none; border: none; cursor: pointer;
+    text-transform: none;
+  }
+
+  /* ── Action buttons ── */
+  .hc-btn {
+    display: block; width: calc(100% - 36px); margin: 0 18px 10px;
+    background: var(--ink); color: var(--bg); border: none;
+    border-radius: var(--radius-sm); padding: 13px 18px;
+    font-size: 13px; font-weight: 600; letter-spacing: .04em;
+    cursor: pointer; text-align: center; transition: background .15s;
+  }
+  .hc-btn:active { background: var(--ink2); }
+  .hc-btn.secondary {
+    background: var(--bg2); color: var(--ink);
+    border: 1px solid var(--bg4);
+  }
+  .hc-btn.secondary:active { background: var(--bg3); }
+
+  /* ── Empty state ── */
+  .hc-empty {
+    padding: 28px 18px; text-align: center;
+    color: var(--ink4); font-size: 13px;
+  }
+
+  /* ── Doctor card in picker ── */
+  .hc-doctor-card {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 0; border-bottom: 1px solid var(--bg3); cursor: pointer;
+  }
+  .hc-doctor-card:last-child { border-bottom: none; }
+  .hc-doctor-card.selected { opacity: 1; }
+  .hc-doctor-avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--bg3); display: flex; align-items: center;
+    justify-content: center; font-size: 20px; flex-shrink: 0;
+  }
+  .hc-doctor-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .hc-doctor-pronouns { font-size: 11px; color: var(--ink4); }
+  .hc-doctor-bio { font-size: 12px; color: var(--ink3); margin-top: 3px; line-height: 1.5; }
+
+  /* ── Schedule sheet ── */
+  .hc-sheet-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.35); z-index: 999;
+  }
+  .hc-sheet-overlay.open { display: block; }
+  .hc-sheet {
+    position: fixed; bottom: 0; left: 50%; z-index: 1000;
+    transform: translateX(-50%) translateY(100%);
+    width: min(420px, 100vw);
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.15);
+    transition: transform .3s cubic-bezier(.32,1,.32,1);
+    max-height: 88vh; overflow-y: auto;
+  }
+  .hc-sheet.open { transform: translateX(-50%) translateY(0); }
+  .hc-sheet-handle {
+    width: 36px; height: 4px; background: var(--bg4);
+    border-radius: 2px; margin: 12px auto 0;
+  }
+  .hc-sheet-topbar {
+    padding: 12px 18px 8px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--bg3);
+  }
+  .hc-sheet-title {
+    font-family: var(--font-head); font-size: 26px;
+    font-weight: 400; color: var(--ink);
+  }
+  .hc-sheet-back {
+    background: none; border: none; font-size: 20px;
+    color: var(--ink3); cursor: pointer; padding: 0;
+  }
+  .hc-sheet-step { margin-left: auto; font-size: 14px; color: var(--ink4); }
+
+  /* ── Schedule form ── */
+  .hc-screen { display: none; padding: 18px 18px 28px; }
+  .hc-screen.active { display: block; }
+  .hc-screen-q {
+    font-family: var(--font-head); font-size: 22px;
+    color: var(--ink); margin-bottom: 4px;
+  }
+  .hc-screen-sub { font-size: 13px; color: var(--ink3); margin-bottom: 18px; line-height: 1.5; }
+  .hc-options { display: flex; flex-direction: column; gap: 8px; }
+  .hc-option {
+    padding: 12px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 13px; color: var(--ink); cursor: pointer;
+    text-align: left; transition: all .15s; font-family: inherit;
+  }
+  .hc-option:active, .hc-option.selected {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .hc-option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hc-input {
+    width: 100%; padding: 12px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 14px; color: var(--ink); font-family: inherit;
+    margin-bottom: 12px; box-sizing: border-box;
+  }
+  .hc-input:focus { outline: none; border-color: var(--ink3); }
+  .hc-textarea {
+    width: 100%; padding: 12px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 13px; color: var(--ink); font-family: inherit;
+    resize: vertical; min-height: 80px; box-sizing: border-box;
+  }
+  .hc-textarea:focus { outline: none; border-color: var(--ink3); }
+  .hc-next-btn {
+    width: 100%; padding: 14px; background: var(--ink); color: var(--bg);
+    border: none; border-radius: var(--radius-sm); font-size: 14px;
+    font-weight: 600; cursor: pointer; margin-top: 14px; font-family: inherit;
+  }
+  .hc-next-btn:active { background: var(--ink2); }
+
+  /* ── Copay preview ── */
+  .hc-copay-preview {
+    background: var(--gold-light); border-radius: var(--radius-sm);
+    border: 1px solid rgba(154,124,78,.2); padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .hc-copay-amount {
+    font-family: var(--font-head); font-size: 28px; color: var(--gold);
+  }
+  .hc-copay-plan { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+
+  /* ── Scroll pad ── */
+  .scroll-pad { height: 40px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-scale">
+
+  <!-- Header -->
+  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bg3);">
+    <div style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin-bottom:2px;">MyChart</div>
+    <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);line-height:1;">Healthcare</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="hc-tabs" id="hc-tabs">
+    <button class="hc-tab active" onclick="showTab('overview')">Overview</button>
+    <button class="hc-tab" onclick="showTab('appointments')">Visits</button>
+    <button class="hc-tab" onclick="showTab('medications')">Meds</button>
+    <button class="hc-tab" onclick="showTab('records')">Records</button>
+    <button class="hc-tab" onclick="showTab('profile')">Profile</button>
+  </div>
+
+  <!-- ── OVERVIEW TAB ── -->
+  <div id="tab-overview" class="tab-content">
+
+    <!-- Insurance banner -->
+    <div class="hc-insurance" style="background:var(--bg2);">
+      <div class="hc-insurance-dot" style="background:{{ insurance_plan.color }};"></div>
+      <div>
+        <div class="hc-insurance-name">{{ insurance_plan.name }}</div>
+        <div class="hc-insurance-sub">Copay from ✦{{ insurance_plan.copay_primary }} · {% if insurance_plan.covers_dental %}Dental ✓{% else %}No dental{% endif %} · {% if insurance_plan.covers_vision %}Vision ✓{% else %}No vision{% endif %}</div>
+      </div>
+      <button class="hc-section-action" onclick="openInsuranceSheet()" style="margin-left:auto;">Change</button>
+    </div>
+
+    <!-- Schedule button -->
+    <div style="padding:14px 18px 0;">
+      <button class="hc-btn" onclick="openScheduleSheet()">+ Schedule appointment</button>
+    </div>
+
+    <!-- Pending referrals -->
+    {% if referrals %}
+    <div style="padding:10px 18px 0;">
+      {% for ref in referrals %}
+      <div class="hc-card" style="margin:0 0 8px;border-color:rgba(154,124,78,.3);background:var(--gold-light);">
+        <div class="hc-card-title">📋 Referral pending</div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink);">
+          {{ ref.doctor_info.name if ref.doctor_info else ref.referral_to_specialty }}
+        </div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px;">{{ ref.reason or 'Referred by your provider' }}</div>
+        <button class="hc-btn" onclick="openScheduleSheetWithReferral('{{ ref.referral_to_specialty }}','{{ ref.referral_to_doctor or '' }}')"
+          style="margin:10px 0 0;width:100%;">Schedule now</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Upcoming appointments -->
+    <div style="padding:10px 0 0;">
+      <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">
+        Upcoming appointments
+      </div>
+      {% if upcoming_appointments %}
+      <div class="hc-section" style="margin-top:0;">
+        {% for appt in upcoming_appointments[:3] %}
+        <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
+          <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="hc-appt-name">{{ appt.specialty }}</div>
+            <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
+            <div class="hc-appt-date">{{ appt.scheduled_date }}{% if appt.scheduled_time %} · {{ appt.scheduled_time }}{% endif %}</div>
+          </div>
+          <span class="hc-appt-status scheduled">Scheduled</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="hc-empty">No upcoming appointments.<br>Schedule one above.</div>
+      {% endif %}
+    </div>
+
+    <!-- Active medications -->
+    {% if medications %}
+    <div style="padding:4px 0 0;">
+      <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active medications</div>
+      <div class="hc-section" style="margin-top:0;">
+        {% for med in medications[:4] %}
+        <div class="hc-med-row">
+          <div class="hc-med-icon">💊</div>
+          <div>
+            <div class="hc-med-name">{{ med.name }}</div>
+            <div class="hc-med-detail">{{ med.dosage }}{% if med.frequency %} · {{ med.frequency }}{% endif %}{% if med.end_date %} · until {{ med.end_date }}{% endif %}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Active conditions -->
+    {% set active_conds = conditions | selectattr('status', 'in', ['active', 'managed', 'monitoring']) | list %}
+    {% if active_conds %}
+    <div style="padding:4px 0 0;">
+      <div style="padding:0 18px 8px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active conditions</div>
+      <div class="hc-section" style="margin-top:0;">
+        {% for cond in active_conds[:4] %}
+        <div class="hc-cond-row">
+          <div class="hc-cond-dot" style="background:{% if cond.severity == 'chronic' or cond.severity == 'significant' %}var(--rose){% elif cond.severity == 'moderate' %}var(--gold){% else %}#6aad7a{% endif %};"></div>
+          <div style="flex:1;">
+            <div class="hc-cond-name">{{ cond.condition_name }}</div>
+            <div class="hc-cond-sub">{{ cond.status | capitalize }}</div>
+          </div>
+          <div class="hc-cond-severity">{{ cond.severity }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ── VISITS TAB ── -->
+  <div id="tab-appointments" class="tab-content" style="display:none;">
+    <div style="padding:14px 18px 0;">
+      <button class="hc-btn" onclick="openScheduleSheet()">+ Schedule appointment</button>
+    </div>
+
+    {% if upcoming_appointments %}
+    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Upcoming</div>
+    <div class="hc-section">
+      {% for appt in upcoming_appointments %}
+      <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
+        <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="hc-appt-name">{{ appt.specialty }}</div>
+          <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
+          <div class="hc-appt-date">{{ appt.scheduled_date }}{% if appt.scheduled_time %} · {{ appt.scheduled_time }}{% endif %} · ✦{{ appt.copay_paid | int }}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="hc-appt-status scheduled">Scheduled</span>
+          <button class="hc-section-action" onclick="event.stopPropagation();completeAppt({{ appt.id }})">Mark done</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if past_appointments %}
+    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Past</div>
+    <div class="hc-section">
+      {% for appt in past_appointments[:20] %}
+      <div class="hc-appt-row" onclick="openApptDetail({{ appt.id }})">
+        <div class="hc-appt-icon">{{ appt.doctor_info.emoji if appt.doctor_info else '🏥' }}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="hc-appt-name">{{ appt.specialty }}</div>
+          <div class="hc-appt-doctor">{{ appt.doctor_name }}</div>
+          <div class="hc-appt-date">{{ appt.scheduled_date }}</div>
+          {% if appt.summary %}
+          <div style="font-size:11px;color:var(--ink4);margin-top:3px;">{{ appt.summary[:80] }}{% if appt.summary | length > 80 %}…{% endif %}</div>
+          {% endif %}
+        </div>
+        <span class="hc-appt-status {{ appt.status }}">{{ appt.status | capitalize }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    {% if not upcoming_appointments %}
+    <div class="hc-empty">No appointments yet.<br>Schedule your first visit above.</div>
+    {% endif %}
+    {% endif %}
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ── MEDICATIONS TAB ── -->
+  <div id="tab-medications" class="tab-content" style="display:none;">
+    {% if medications %}
+    <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Active</div>
+    <div class="hc-section">
+      {% for med in medications %}
+      {% if med.is_active %}
+      <div class="hc-med-row">
+        <div class="hc-med-icon">💊</div>
+        <div style="flex:1;">
+          <div class="hc-med-name">{{ med.name }}</div>
+          <div class="hc-med-detail">
+            {{ med.dosage }}{% if med.frequency %} · {{ med.frequency }}{% endif %}
+          </div>
+          {% if med.prescribed_for %}
+          <div style="font-size:11px;color:var(--ink4);margin-top:2px;">For: {{ med.prescribed_for }}</div>
+          {% endif %}
+          {% if med.end_date %}
+          <div style="font-size:11px;color:var(--gold);margin-top:2px;">Until {{ med.end_date }}</div>
+          {% endif %}
+          {% if med.notes %}
+          <div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;">{{ med.notes }}</div>
+          {% endif %}
+        </div>
+        <button onclick="deactivateMed({{ med.id }})" style="background:none;border:none;color:var(--ink4);font-size:18px;cursor:pointer;padding:0;flex-shrink:0;">×</button>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set inactive_meds = medications | selectattr('is_active', 'equalto', 0) | list %}
+    {% if inactive_meds %}
+    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Past</div>
+    <div class="hc-section">
+      {% for med in inactive_meds %}
+      <div class="hc-med-row" style="opacity:.5;">
+        <div class="hc-med-icon">💊</div>
+        <div>
+          <div class="hc-med-name">{{ med.name }}</div>
+          <div class="hc-med-detail">{{ med.dosage }} · Ended {{ med.end_date or 'N/A' }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not medications %}
+    <div class="hc-empty">No medications on file.<br>These are added automatically after appointments.</div>
+    {% endif %}
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ── RECORDS TAB ── -->
+  <div id="tab-records" class="tab-content" style="display:none;">
+
+    <!-- Conditions -->
+    <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Conditions</div>
+    {% if conditions %}
+    <div class="hc-section">
+      {% for cond in conditions %}
+      <div class="hc-cond-row" style="align-items:flex-start;padding-top:12px;padding-bottom:12px;">
+        <div class="hc-cond-dot" style="margin-top:5px;background:{% if cond.severity in ('chronic','significant') %}var(--rose){% elif cond.severity == 'moderate' %}var(--gold){% else %}#6aad7a{% endif %};"></div>
+        <div style="flex:1;">
+          <div class="hc-cond-name">{{ cond.condition_name }}</div>
+          <div class="hc-cond-sub">{{ cond.status | capitalize }} · {{ cond.severity | capitalize }} · {{ cond.diagnosed_date }}</div>
+          {% if cond.treatment_plan %}
+          <div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;">{{ cond.treatment_plan }}</div>
+          {% endif %}
+        </div>
+        <div class="hc-cond-severity">{{ cond.severity }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="hc-empty" style="padding-top:16px;">No conditions on file.</div>
+    {% endif %}
+
+    <!-- Lab Results -->
+    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Lab results</div>
+    {% if lab_results %}
+    <div class="hc-section">
+      {% for lab in lab_results %}
+      <div class="hc-lab-row">
+        <div style="flex:1;">
+          <div class="hc-lab-name">{{ lab.test_name }}</div>
+          <div class="hc-lab-val">
+            {{ lab.result_value }}{% if lab.unit %} {{ lab.unit }}{% endif %}
+            · {{ lab.result_date }}
+          </div>
+          {% if lab.reference_range %}
+          <div style="font-size:11px;color:var(--ink4);margin-top:2px;">Ref: {{ lab.reference_range }}</div>
+          {% endif %}
+        </div>
+        <span class="hc-lab-badge {{ lab.status }}">{{ lab.status }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="hc-empty" style="padding-top:16px;">No lab results on file.</div>
+    {% endif %}
+
+    <!-- Vaccinations -->
+    <div style="padding:8px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">
+      Vaccinations
+      <button class="hc-section-action" onclick="openVaxSheet()" style="float:right;">+ Add</button>
+    </div>
+    {% if vaccinations %}
+    <div class="hc-section">
+      {% for vax in vaccinations %}
+      <div class="hc-vax-row">
+        <div style="font-size:20px;">💉</div>
+        <div style="flex:1;">
+          <div class="hc-vax-name">{{ vax.vaccine_name }}</div>
+          <div class="hc-vax-sub">
+            {{ vax.date_administered }}
+            {% if vax.administered_by %} · {{ vax.administered_by }}{% endif %}
+            {% if vax.next_due_date %} · Due {{ vax.next_due_date }}{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="hc-empty" style="padding-top:16px;">No vaccination records yet.</div>
+    {% endif %}
+
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ── PROFILE TAB ── -->
+  <div id="tab-profile" class="tab-content" style="display:none;">
+    <div style="padding:14px 18px 12px;">
+      <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);margin-bottom:4px;">Care Profile</div>
+      <div style="font-size:13px;color:var(--ink3);">Private — only you can see this.</div>
+    </div>
+
+    <div class="hc-profile-grid">
+      <div class="hc-profile-cell">
+        <div class="hc-profile-cell-label">Blood type</div>
+        <div class="hc-profile-cell-val">{{ health_profile.blood_type or '—' }}</div>
+      </div>
+      <div class="hc-profile-cell">
+        <div class="hc-profile-cell-label">Allergies</div>
+        <div class="hc-profile-cell-val" style="font-size:12px;">{{ health_profile.allergies or 'None listed' }}</div>
+      </div>
+      <div class="hc-profile-cell" style="grid-column:1/-1;">
+        <div class="hc-profile-cell-label">Emergency contact</div>
+        <div class="hc-profile-cell-val">{{ health_profile.emergency_contact_name or '—' }}</div>
+      </div>
+      <div class="hc-profile-cell" style="grid-column:1/-1;">
+        <div class="hc-profile-cell-label">Primary doctor</div>
+        <div class="hc-profile-cell-val">
+          {% if primary_doctor %}{{ primary_doctor.name }}
+          {% else %}Not assigned{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:8px 18px 0;">
+      <button class="hc-btn secondary" onclick="openProfileEditSheet()">Edit care profile</button>
+    </div>
+
+    <!-- Insurance details -->
+    <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Insurance</div>
+    <div class="hc-section">
+      {% for plan_id, plan in insurance_plans.items() %}
+      <div style="padding:12px 18px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:10px;{% if plan_id == health_profile.insurance_plan %}background:var(--bg2);{% endif %}">
+        <div style="width:8px;height:8px;border-radius:50%;background:{{ plan.color }};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:var(--ink);">{{ plan.name }}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px;">
+            {% if plan.monthly_premium > 0 %}✦{{ plan.monthly_premium }}/mo · {% endif %}
+            Copay from ✦{{ plan.copay_primary }}
+          </div>
+        </div>
+        {% if plan_id == health_profile.insurance_plan %}
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#3a7a52;text-transform:uppercase;">Active</div>
+        {% else %}
+        <button class="hc-section-action" onclick="switchInsurance('{{ plan_id }}')">Switch</button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="scroll-pad"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN = "{{ token }}";
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+  function showTab(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.hc-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + id).style.display = 'block';
+    const tabs = document.querySelectorAll('.hc-tab');
+    const tabMap = { overview:0, appointments:1, medications:2, records:3, profile:4 };
+    if (tabMap[id] !== undefined) tabs[tabMap[id]]?.classList.add('active');
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    let t = document.getElementById('_toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = '_toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+        'background:#1c1814;color:#faf9f7;padding:10px 18px;border-radius:20px;' +
+        'font-size:13px;font-weight:600;z-index:9999;pointer-events:none;' +
+        'transition:opacity .3s;max-width:320px;text-align:center;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.style.opacity = '0', 2600);
+  }
+
+  // ── Schedule appointment sheet ────────────────────────────────────────────
+
+  const APPT_TYPES = {{ appointment_types | tojson }};
+  const DOCTORS    = {{ doctors | tojson }};
+  const INSURANCE  = {{ insurance_plan | tojson }};
+
+  let schedStep = 0;
+  let schedData = { type: null, specialty: null, doctor_id: null, date: null, time: null, concerns: '' };
+
+  // Inject schedule sheet
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div class="hc-sheet-overlay" id="sched-overlay" onclick="closeScheduleSheet()"></div>
+<div class="hc-sheet" id="sched-sheet">
+  <div class="hc-sheet-handle"></div>
+  <div class="hc-sheet-topbar">
+    <button class="hc-sheet-back" id="sched-back" onclick="schedBack()" style="display:none;">←</button>
+    <div class="hc-sheet-title">New appointment</div>
+    <div class="hc-sheet-step" id="sched-step"></div>
+  </div>
+
+  <div class="hc-screen active" id="sched-screen-0">
+    <div class="hc-screen-q">What kind of care do you need?</div>
+    <div class="hc-screen-sub">Choose the category that fits best.</div>
+    <div class="hc-options" id="sched-type-options"></div>
+  </div>
+
+  <div class="hc-screen" id="sched-screen-1">
+    <div class="hc-screen-q">What specifically?</div>
+    <div class="hc-screen-sub">Pick the type of appointment.</div>
+    <div class="hc-options" id="sched-specialty-options"></div>
+  </div>
+
+  <div class="hc-screen" id="sched-screen-2">
+    <div class="hc-screen-q">Any concerns to share?</div>
+    <div class="hc-screen-sub">Optional — gives your doctor context before the visit.</div>
+    <textarea class="hc-textarea" id="sched-concerns" placeholder="e.g. headaches for 3 days, need a refill, routine checkup…"></textarea>
+    <button class="hc-next-btn" onclick="schedNext()">Continue →</button>
+  </div>
+
+  <div class="hc-screen" id="sched-screen-3">
+    <div class="hc-screen-q">Choose your doctor</div>
+    <div class="hc-screen-sub">Filtered to specialists in this area of care.</div>
+    <div id="sched-doctor-list"></div>
+  </div>
+
+  <div class="hc-screen" id="sched-screen-4">
+    <div class="hc-screen-q">When?</div>
+    <div class="hc-screen-sub">Pick a date for your appointment.</div>
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Date</label>
+    <input class="hc-input" type="date" id="sched-date" />
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:6px;">Time (optional)</label>
+    <input class="hc-input" type="time" id="sched-time" />
+    <button class="hc-next-btn" onclick="schedNext()">Continue →</button>
+  </div>
+
+  <div class="hc-screen" id="sched-screen-5">
+    <div class="hc-screen-q">Confirm appointment</div>
+    <div id="sched-confirm-content"></div>
+    <button class="hc-next-btn" onclick="submitSchedule()">Confirm &amp; schedule</button>
+    <div style="font-size:12px;color:var(--ink4);text-align:center;margin-top:8px;">50% refund if cancelled before the appointment.</div>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+
+    // Populate type options
+    const opts = document.getElementById('sched-type-options');
+    Object.entries(APPT_TYPES).forEach(([key, type]) => {
+      const btn = document.createElement('button');
+      btn.className = 'hc-option';
+      btn.textContent = type.emoji + ' ' + type.label;
+      btn.onclick = () => pickType(key);
+      opts.appendChild(btn);
+    });
+
+    // Set min date to tomorrow
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('sched-date').min = tomorrow.toISOString().split('T')[0];
+  })();
+
+  function openScheduleSheet() {
+    schedStep = 0; schedData = { type: null, specialty: null, doctor_id: null, date: null, time: null, concerns: '' };
+    showSchedScreen(0);
+    document.getElementById('sched-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('sched-sheet').classList.add('open'), 10);
+  }
+
+  function openScheduleSheetWithReferral(specialty, doctorId) {
+    openScheduleSheet();
+    // Pre-select based on referral — find matching type
+    const typeKey = Object.entries(APPT_TYPES).find(([k,v]) =>
+      v.doctors.includes(doctorId) || specialty.includes(k)
+    )?.[0];
+    if (typeKey) setTimeout(() => pickType(typeKey, doctorId), 100);
+  }
+
+  function closeScheduleSheet() {
+    document.getElementById('sched-sheet').classList.remove('open');
+    document.getElementById('sched-overlay').classList.remove('open');
+  }
+
+  function showSchedScreen(n) {
+    document.querySelectorAll('#sched-sheet .hc-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('sched-screen-' + n)?.classList.add('active');
+    document.getElementById('sched-back').style.display = n > 0 ? 'block' : 'none';
+    document.getElementById('sched-step').textContent = (n + 1) + ' / 6';
+    document.getElementById('sched-sheet').scrollTop = 0;
+    if (n === 3) buildDoctorList();
+    if (n === 5) buildConfirm();
+  }
+
+  function schedBack() {
+    if (schedStep > 0) { schedStep--; showSchedScreen(schedStep); }
+  }
+
+  function pickType(key, prefillDoctor) {
+    schedData.type = key;
+    const type = APPT_TYPES[key];
+    // Populate specialties
+    const opts = document.getElementById('sched-specialty-options');
+    opts.innerHTML = '';
+    type.specialties.forEach(spec => {
+      const btn = document.createElement('button');
+      btn.className = 'hc-option';
+      btn.textContent = spec;
+      btn.onclick = () => {
+        schedData.specialty = spec;
+        schedStep = 2; showSchedScreen(2);
+      };
+      opts.appendChild(btn);
+    });
+    schedStep = 1; showSchedScreen(1);
+  }
+
+  function schedNext() {
+    if (schedStep === 2) {
+      schedData.concerns = document.getElementById('sched-concerns').value.trim();
+      schedStep = 3; showSchedScreen(3);
+    } else if (schedStep === 4) {
+      const d = document.getElementById('sched-date').value;
+      if (!d) { toast('Please pick a date'); return; }
+      schedData.date = d;
+      schedData.time = document.getElementById('sched-time').value || null;
+      schedStep = 5; showSchedScreen(5);
+    }
+  }
+
+  function buildDoctorList() {
+    const list = document.getElementById('sched-doctor-list');
+    list.innerHTML = '';
+    const type = APPT_TYPES[schedData.type];
+    const docIds = type?.doctors || Object.keys(DOCTORS);
+    docIds.forEach(did => {
+      const doc = DOCTORS[did];
+      if (!doc) return;
+      const el = document.createElement('div');
+      el.className = 'hc-doctor-card';
+      el.innerHTML = `
+        <div class="hc-doctor-avatar">${doc.emoji}</div>
+        <div>
+          <div class="hc-doctor-name">${doc.name}</div>
+          <div class="hc-doctor-pronouns">${doc.pronouns}</div>
+          <div class="hc-doctor-bio">${doc.bio}</div>
+        </div>`;
+      el.onclick = () => {
+        schedData.doctor_id = did;
+        schedStep = 4; showSchedScreen(4);
+      };
+      list.appendChild(el);
+    });
+  }
+
+  function buildConfirm() {
+    const type    = APPT_TYPES[schedData.type];
+    const doctor  = DOCTORS[schedData.doctor_id];
+    const copayKey = 'copay_' + (type?.copay_category || 'primary');
+    const copay   = INSURANCE[copayKey] ?? INSURANCE.copay_primary ?? 0;
+    document.getElementById('sched-confirm-content').innerHTML = `
+      <div style="background:var(--bg2);border-radius:var(--radius-sm);border:1px solid var(--bg4);padding:14px;margin-bottom:14px;">
+        <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px;">${schedData.specialty}</div>
+        <div style="font-size:12px;color:var(--ink3);">${doctor?.name || ''}</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px;">${schedData.date}${schedData.time ? ' · ' + schedData.time : ''}</div>
+        ${schedData.concerns ? `<div style="font-size:11px;color:var(--ink4);margin-top:6px;">Note: ${schedData.concerns}</div>` : ''}
+      </div>
+      <div class="hc-copay-preview">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">Copay</div>
+        <div class="hc-copay-amount">✦${copay}</div>
+        <div class="hc-copay-plan">${INSURANCE.name} · deducted on confirmation</div>
+      </div>`;
+  }
+
+  async function submitSchedule() {
+    try {
+      const res = await fetch('/healthcare/appointments/schedule', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN,
+          appointment_type: schedData.type,
+          specialty: schedData.specialty,
+          doctor_id: schedData.doctor_id,
+          scheduled_date: schedData.date,
+          scheduled_time: schedData.time,
+          concerns: schedData.concerns || null,
+        })
+      });
+      const d = await res.json();
+      if (res.ok) {
+        closeScheduleSheet();
+        toast('Appointment scheduled ✓');
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        toast(d.detail || 'Could not schedule');
+      }
+    } catch(e) { toast('Error: ' + e.message); }
+  }
+
+  // ── Complete appointment ──────────────────────────────────────────────────
+  async function completeAppt(id) {
+    if (!confirm('Mark this appointment as complete? Follow-up notes will be added automatically.')) return;
+    try {
+      const res = await fetch(`/healthcare/appointments/${id}/complete`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast('Appointment completed ✓');
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        toast(d.detail || 'Could not complete');
+      }
+    } catch(e) { toast('Error: ' + e.message); }
+  }
+
+  // ── Appointment detail sheet ──────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div class="hc-sheet-overlay" id="appt-detail-overlay" onclick="closeApptDetail()"></div>
+<div class="hc-sheet" id="appt-detail-sheet">
+  <div class="hc-sheet-handle"></div>
+  <div class="hc-sheet-topbar">
+    <div class="hc-sheet-title" id="appt-detail-title">Appointment</div>
+  </div>
+  <div style="padding:16px 18px 28px;" id="appt-detail-body">
+    <div style="color:var(--ink4);">Loading…</div>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  async function openApptDetail(id) {
+    document.getElementById('appt-detail-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('appt-detail-sheet').classList.add('open'), 10);
+    try {
+      const res = await fetch(`/healthcare/appointments/${id}?token=${TOKEN}`);
+      const d   = await res.json();
+      document.getElementById('appt-detail-title').textContent = d.specialty || 'Appointment';
+      const body = document.getElementById('appt-detail-body');
+      let html = `
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:4px;">${d.doctor_name} · ${d.scheduled_date}</div>
+        <span class="hc-appt-status ${d.status}" style="display:inline-block;margin-bottom:12px;">${d.status}</span>
+        ${d.summary ? `<div style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:14px;background:var(--bg2);padding:12px;border-radius:var(--radius-sm);">${d.summary}</div>` : ''}`;
+
+      if (d.medications?.length) {
+        html += `<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin-bottom:6px;">Prescribed</div>`;
+        d.medications.forEach(m => {
+          html += `<div style="padding:8px 0;border-bottom:1px solid var(--bg3);">💊 <strong>${m.name}</strong> — ${m.dosage || ''} ${m.frequency || ''}</div>`;
+        });
+      }
+      if (d.conditions?.length) {
+        html += `<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin:12px 0 6px;">Diagnosis</div>`;
+        d.conditions.forEach(c => {
+          html += `<div style="padding:8px 0;border-bottom:1px solid var(--bg3);">🔵 <strong>${c.condition_name}</strong> — ${c.severity}</div>`;
+        });
+      }
+      if (d.referrals?.length) {
+        html += `<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin:12px 0 6px;">Referral</div>`;
+        d.referrals.forEach(r => {
+          html += `<div style="padding:8px 0;">📋 ${r.referral_to_specialty} — ${r.urgency} · ${r.reason || ''}</div>`;
+        });
+      }
+      if (d.lab_results?.length) {
+        html += `<div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);margin:12px 0 6px;">Lab results</div>`;
+        d.lab_results.forEach(l => {
+          html += `<div style="padding:8px 0;border-bottom:1px solid var(--bg3);">🧪 ${l.test_name}: ${l.result_value} <span class="hc-lab-badge ${l.status}">${l.status}</span></div>`;
+        });
+      }
+      if (d.status === 'scheduled') {
+        html += `<div style="display:flex;gap:8px;margin-top:16px;">
+          <button onclick="completeAppt(${id});closeApptDetail();" class="hc-next-btn" style="flex:1;margin:0;">Mark complete</button>
+          <button onclick="cancelAppt(${id})" style="flex:1;padding:14px;background:var(--rose-light);color:var(--rose);border:1px solid rgba(156,80,80,.2);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+        </div>`;
+      }
+      body.innerHTML = html;
+    } catch(e) {
+      document.getElementById('appt-detail-body').innerHTML = '<div style="color:var(--rose);">Could not load.</div>';
+    }
+  }
+
+  function closeApptDetail() {
+    document.getElementById('appt-detail-sheet').classList.remove('open');
+    document.getElementById('appt-detail-overlay').classList.remove('open');
+  }
+
+  async function cancelAppt(id) {
+    if (!confirm('Cancel this appointment? You will receive a 50% copay refund.')) return;
+    try {
+      const res = await fetch(`/healthcare/appointments/${id}/cancel`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      if (res.ok) {
+        closeApptDetail();
+        toast('Appointment cancelled');
+        setTimeout(() => location.reload(), 1400);
+      } else {
+        const d = await res.json(); toast(d.detail || 'Could not cancel');
+      }
+    } catch(e) { toast('Error: ' + e.message); }
+  }
+
+  // ── Deactivate medication ─────────────────────────────────────────────────
+  async function deactivateMed(id) {
+    if (!confirm('Stop this medication?')) return;
+    try {
+      const res = await fetch(`/healthcare/medications/${id}/deactivate?token=${TOKEN}`, { method: 'POST' });
+      if (res.ok) { toast('Medication stopped'); setTimeout(() => location.reload(), 1400); }
+      else toast('Could not update');
+    } catch(e) { toast('Error: ' + e.message); }
+  }
+
+  // ── Insurance switch ──────────────────────────────────────────────────────
+  async function switchInsurance(planId) {
+    const PLAN_NAMES = {{ insurance_plans | tojson }};
+    const name = PLAN_NAMES[planId]?.name || planId;
+    if (!confirm('Switch to ' + name + '? Your new plan is active immediately.')) return;
+    try {
+      const res = await fetch('/healthcare/insurance', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, insurance_plan: planId })
+      });
+      if (res.ok) { toast('Insurance updated ✓'); setTimeout(() => location.reload(), 1400); }
+      else { const d = await res.json(); toast(d.detail || 'Could not update'); }
+    } catch(e) { toast('Error: ' + e.message); }
+  }
+
+  // ── Insurance sheet ───────────────────────────────────────────────────────
+  function openInsuranceSheet() { showTab('profile'); }
+
+  // ── Profile edit sheet ────────────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div class="hc-sheet-overlay" id="profile-edit-overlay" onclick="closeProfileEditSheet()"></div>
+<div class="hc-sheet" id="profile-edit-sheet" style="max-height:70vh;">
+  <div class="hc-sheet-handle"></div>
+  <div class="hc-sheet-topbar">
+    <div class="hc-sheet-title">Edit profile</div>
+  </div>
+  <div style="padding:16px 18px 28px;">
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:5px;">Blood type</label>
+    <input class="hc-input" type="text" id="edit-blood-type" placeholder="e.g. O+" value="{{ health_profile.blood_type or '' }}" />
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:5px;">Allergies</label>
+    <input class="hc-input" type="text" id="edit-allergies" placeholder="e.g. Penicillin, peanuts" value="{{ health_profile.allergies or '' }}" />
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:5px;">Emergency contact name</label>
+    <input class="hc-input" type="text" id="edit-emergency-name" placeholder="Display name" value="{{ health_profile.emergency_contact_name or '' }}" />
+    <button class="hc-next-btn" onclick="saveProfileEdit()">Save</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  function openProfileEditSheet() {
+    document.getElementById('profile-edit-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('profile-edit-sheet').classList.add('open'), 10);
+  }
+  function closeProfileEditSheet() {
+    document.getElementById('profile-edit-sheet').classList.remove('open');
+    document.getElementById('profile-edit-overlay').classList.remove('open');
+  }
+  async function saveProfileEdit() {
+    try {
+      const res = await fetch('/healthcare/profile', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN,
+          blood_type:             document.getElementById('edit-blood-type').value.trim() || null,
+          allergies:              document.getElementById('edit-allergies').value.trim() || null,
+          emergency_contact_name: document.getElementById('edit-emergency-name').value.trim() || null,
+        })
+      });
+      if (res.ok) { closeProfileEditSheet(); toast('Profile saved ✓'); setTimeout(() => location.reload(), 1400); }
+      else toast('Could not save');
+    } catch(e) { toast('Error: ' + e.message); }
+  }
+
+  // ── Vaccination add sheet ─────────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div class="hc-sheet-overlay" id="vax-overlay" onclick="closeVaxSheet()"></div>
+<div class="hc-sheet" id="vax-sheet" style="max-height:70vh;">
+  <div class="hc-sheet-handle"></div>
+  <div class="hc-sheet-topbar">
+    <div class="hc-sheet-title">Log vaccination</div>
+  </div>
+  <div style="padding:16px 18px 28px;">
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:5px;">Vaccine name</label>
+    <input class="hc-input" type="text" id="vax-name" placeholder="e.g. Influenza, COVID-19 booster" />
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:5px;">Date administered</label>
+    <input class="hc-input" type="date" id="vax-date" />
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:5px;">Next due date (optional)</label>
+    <input class="hc-input" type="date" id="vax-due" />
+    <label style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);display:block;margin-bottom:5px;">Administered by (optional)</label>
+    <input class="hc-input" type="text" id="vax-by" placeholder="Provider or clinic name" />
+    <button class="hc-next-btn" onclick="submitVax()">Add to record</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  function openVaxSheet() {
+    document.getElementById('vax-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('vax-sheet').classList.add('open'), 10);
+  }
+  function closeVaxSheet() {
+    document.getElementById('vax-sheet').classList.remove('open');
+    document.getElementById('vax-overlay').classList.remove('open');
+  }
+  async function submitVax() {
+    const name = document.getElementById('vax-name').value.trim();
+    const dt   = document.getElementById('vax-date').value;
+    if (!name || !dt) { toast('Vaccine name and date required'); return; }
+    try {
+      const res = await fetch('/healthcare/vaccinations/add', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN, vaccine_name: name, date_administered: dt,
+          next_due_date: document.getElementById('vax-due').value || null,
+          administered_by: document.getElementById('vax-by').value.trim() || null,
+        })
+      });
+      if (res.ok) { closeVaxSheet(); toast('Vaccination logged ✓'); setTimeout(() => location.reload(), 1400); }
+      else toast('Could not save');
+    } catch(e) { toast('Error: ' + e.message); }
+  }
+</script>
+{% endblock %}

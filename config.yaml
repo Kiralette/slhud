@@ -1661,6 +1661,112 @@ questionnaire:
 #  xp_reward: flat XP granted to knowledge skill on unlock
 # ============================================================
 
+  # ── Healthcare vibes ──────────────────────────────────────────────────────
+  health_checked_in:
+    vibe_key:    "health_checked_in"
+    display:     "Checked In ✅"
+    description: "Attended a healthcare appointment — Stress -5, Purpose +5."
+    is_negative: 0
+    auto: true
+
+  post_therapy:
+    vibe_key:    "post_therapy"
+    display:     "After Therapy 🌿"
+    description: "Attended a therapy session — Stress -15, Fun +5, Social feels lighter."
+    is_negative: 0
+    auto: true
+
+  new_diagnosis_processing:
+    vibe_key:    "new_diagnosis_processing"
+    display:     "Processing 💙"
+    description: "Received a new diagnosis — emotional weight, Purpose harder to restore."
+    is_negative: 1
+    auto: true
+
+  chronic_condition_vibe:
+    vibe_key:    "chronic_condition_vibe"
+    display:     "Living With It 🌊"
+    description: "Managing a chronic condition — Energy slightly harder to maintain."
+    is_negative: 1
+    auto: true
+
+  recovery_mode:
+    vibe_key:    "recovery_mode"
+    display:     "Recovery Mode 🛌"
+    description: "Recovering after a procedure or urgent visit — Energy -10, rest needed."
+    is_negative: 1
+    auto: true
+
+  post_appointment_relief:
+    vibe_key:    "post_appointment_relief"
+    display:     "Relief 😮‍💨"
+    description: "Appointment done — that weight is lifted. Stress -8."
+    is_negative: 0
+    auto: true
+
+  health_anxiety:
+    vibe_key:    "health_anxiety"
+    display:     "Health Anxiety 🌀"
+    description: "Upcoming appointment weighing on you — Fun harder to restore."
+    is_negative: 1
+    auto: true
+
+  prenatal_glow:
+    vibe_key:    "prenatal_glow"
+    display:     "Prenatal Glow 🌸"
+    description: "Attended a prenatal visit — Purpose +10, Social warmth."
+    is_negative: 0
+    auto: true
+
+  fresh_smile:
+    vibe_key:    "fresh_smile"
+    display:     "Fresh Smile ✨"
+    description: "Just had a dental cleaning — Fun +3, confidence."
+    is_negative: 0
+    auto: true
+
+  clear_vision:
+    vibe_key:    "clear_vision"
+    display:     "Clarity 👁️"
+    description: "Eye exam done — everything feels a little sharper."
+    is_negative: 0
+    auto: true
+
+  building_strength:
+    vibe_key:    "building_strength"
+    display:     "Building Strength 💪"
+    description: "Physical therapy session — Recovery +8 passive."
+    is_negative: 0
+    auto: true
+
+  medicated:
+    vibe_key:    "medicated"
+    display:     "Medicated 💊"
+    description: "On an active prescription — condition managed, mild passive effects."
+    is_negative: 0
+    auto: true
+
+  referral_pending:
+    vibe_key:    "referral_pending"
+    display:     "Referral Pending 📋"
+    description: "Waiting on a specialist referral — mild underlying anxiety."
+    is_negative: 1
+    auto: true
+
+  urgent_care_survivor:
+    vibe_key:    "urgent_care_survivor"
+    display:     "Recovering 🩹"
+    description: "After an urgent care or ER visit — Energy needs extra time."
+    is_negative: 1
+    auto: true
+
+  preventive_care:
+    vibe_key:    "preventive_care"
+    display:     "Taking Care 💚"
+    description: "Staying on top of preventive care — Knowledge XP +5% passive."
+    is_negative: 0
+    auto: true
+
 achievements:
   # ── NEEDS ───────────────────────────────────────────────
   well_fed_streak:

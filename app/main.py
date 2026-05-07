@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
 from app.database import init_db
-from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire, profile as profile_router
+from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire, profile as profile_router, healthcare
 from app.admin import panel
 from app.services.decay import run_decay_tick
 from app.services.economy import rotate_weekly_specials, bill_subscriptions
@@ -24,6 +24,11 @@ from app.services.ritual import (
 )
 from app.services.unexpected import run_unexpected_event_engine
 from app.services.traits import run_trait_vibe_engine
+from app.services.healthcare import (
+    run_medication_reminders, run_appointment_reminders,
+    run_missed_appointment_check, run_insurance_billing,
+    run_vaccination_reminders,
+)
 
 scheduler = AsyncIOScheduler()
 
@@ -55,6 +60,11 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(run_ivf_stage_progression, "cron", hour=0, minute=8, id="ivf_progression")
     scheduler.add_job(run_unexpected_event_engine, "cron", hour=0, minute=5, id="unexpected_events")
     scheduler.add_job(run_trait_vibe_engine, "cron", hour=0, minute=10, id="trait_vibes")
+    scheduler.add_job(run_medication_reminders,      "cron", hour=8, minute=0, id="med_reminders")
+    scheduler.add_job(run_appointment_reminders,     "cron", hour=8, minute=5, id="appt_reminders")
+    scheduler.add_job(run_missed_appointment_check,  "cron", hour=0, minute=15, id="missed_appts")
+    scheduler.add_job(run_vaccination_reminders,     "cron", hour=8, minute=10, id="vax_reminders")
+    scheduler.add_job(run_insurance_billing, "cron", day_of_week="sun", hour=6, minute=0, id="insurance_billing")
     scheduler.start()
     print(f"   Decay engine started ✓ (every {interval}s)\n")
     yield
@@ -94,6 +104,7 @@ app.include_router(occurrences.router)
 app.include_router(questionnaire.router)
 app.include_router(profile_router.router)
 app.include_router(profile_router.settings_router)
+app.include_router(healthcare.router)
 
 
 @app.get("/", tags=["health"])

@@ -526,6 +526,114 @@ async def _init_sqlite():
         """)
 
         await db.commit()
+
+        # ── Healthcare System Tables (SQLite) ─────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_profiles (
+                id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id               INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                blood_type              TEXT    DEFAULT NULL,
+                allergies               TEXT    DEFAULT NULL,
+                emergency_contact_name  TEXT    DEFAULT NULL,
+                emergency_contact_uuid  TEXT    DEFAULT NULL,
+                insurance_plan          TEXT    NOT NULL DEFAULT 'uninsured',
+                primary_doctor_id       TEXT    DEFAULT NULL,
+                created_at              TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_appointments (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id           INTEGER NOT NULL REFERENCES players(id),
+                appointment_type    TEXT    NOT NULL,
+                specialty           TEXT    NOT NULL,
+                doctor_id           TEXT    NOT NULL,
+                doctor_name         TEXT    NOT NULL,
+                scheduled_date      TEXT    NOT NULL,
+                scheduled_time      TEXT    DEFAULT NULL,
+                status              TEXT    NOT NULL DEFAULT 'scheduled',
+                concerns            TEXT    DEFAULT NULL,
+                summary             TEXT    DEFAULT NULL,
+                copay_paid          REAL    NOT NULL DEFAULT 0,
+                calendar_event_id   INTEGER DEFAULT NULL,
+                completed_at        TEXT    DEFAULT NULL,
+                created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_medications (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                appointment_id  INTEGER DEFAULT NULL REFERENCES healthcare_appointments(id),
+                name            TEXT    NOT NULL,
+                dosage          TEXT    DEFAULT NULL,
+                frequency       TEXT    DEFAULT NULL,
+                prescribed_for  TEXT    DEFAULT NULL,
+                start_date      TEXT    NOT NULL,
+                end_date        TEXT    DEFAULT NULL,
+                is_active       INTEGER NOT NULL DEFAULT 1,
+                refill_reminder_days INTEGER DEFAULT 7,
+                notes           TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_conditions (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                appointment_id  INTEGER DEFAULT NULL REFERENCES healthcare_appointments(id),
+                condition_name  TEXT    NOT NULL,
+                severity        TEXT    NOT NULL DEFAULT 'mild',
+                status          TEXT    NOT NULL DEFAULT 'active',
+                treatment_plan  TEXT    DEFAULT NULL,
+                follow_up_recommended INTEGER NOT NULL DEFAULT 0,
+                follow_up_weeks INTEGER DEFAULT NULL,
+                diagnosed_date  TEXT    NOT NULL,
+                notes           TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_referrals (
+                id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id             INTEGER NOT NULL REFERENCES players(id),
+                appointment_id        INTEGER NOT NULL REFERENCES healthcare_appointments(id),
+                referral_to_doctor    TEXT    DEFAULT NULL,
+                referral_to_specialty TEXT    NOT NULL,
+                urgency               TEXT    NOT NULL DEFAULT 'routine',
+                reason                TEXT    DEFAULT NULL,
+                status                TEXT    NOT NULL DEFAULT 'pending',
+                created_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_lab_results (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                appointment_id  INTEGER DEFAULT NULL REFERENCES healthcare_appointments(id),
+                test_name       TEXT    NOT NULL,
+                result_value    TEXT    DEFAULT NULL,
+                unit            TEXT    DEFAULT NULL,
+                reference_range TEXT    DEFAULT NULL,
+                result_date     TEXT    NOT NULL,
+                status          TEXT    NOT NULL DEFAULT 'normal',
+                notes           TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_vaccinations (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id           INTEGER NOT NULL REFERENCES players(id),
+                vaccine_name        TEXT    NOT NULL,
+                date_administered   TEXT    NOT NULL,
+                next_due_date       TEXT    DEFAULT NULL,
+                administered_by     TEXT    DEFAULT NULL,
+                lot_number          TEXT    DEFAULT NULL,
+                created_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.commit()
         print("   Database tables ready (SQLite)")
 
 
@@ -982,6 +1090,113 @@ async def _init_postgres():
                 peak_day_hit    INTEGER NOT NULL DEFAULT 0,
                 result          TEXT    DEFAULT NULL,
                 checked_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Healthcare System Tables (PostgreSQL) ─────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_profiles (
+                id                      SERIAL PRIMARY KEY,
+                player_id               INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                blood_type              TEXT    DEFAULT NULL,
+                allergies               TEXT    DEFAULT NULL,
+                emergency_contact_name  TEXT    DEFAULT NULL,
+                emergency_contact_uuid  TEXT    DEFAULT NULL,
+                insurance_plan          TEXT    NOT NULL DEFAULT 'uninsured',
+                primary_doctor_id       TEXT    DEFAULT NULL,
+                created_at              TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_appointments (
+                id                  SERIAL PRIMARY KEY,
+                player_id           INTEGER NOT NULL REFERENCES players(id),
+                appointment_type    TEXT    NOT NULL,
+                specialty           TEXT    NOT NULL,
+                doctor_id           TEXT    NOT NULL,
+                doctor_name         TEXT    NOT NULL,
+                scheduled_date      TEXT    NOT NULL,
+                scheduled_time      TEXT    DEFAULT NULL,
+                status              TEXT    NOT NULL DEFAULT 'scheduled',
+                concerns            TEXT    DEFAULT NULL,
+                summary             TEXT    DEFAULT NULL,
+                copay_paid          REAL    NOT NULL DEFAULT 0,
+                calendar_event_id   INTEGER DEFAULT NULL,
+                completed_at        TEXT    DEFAULT NULL,
+                created_at          TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_medications (
+                id              SERIAL PRIMARY KEY,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                appointment_id  INTEGER DEFAULT NULL REFERENCES healthcare_appointments(id),
+                name            TEXT    NOT NULL,
+                dosage          TEXT    DEFAULT NULL,
+                frequency       TEXT    DEFAULT NULL,
+                prescribed_for  TEXT    DEFAULT NULL,
+                start_date      TEXT    NOT NULL,
+                end_date        TEXT    DEFAULT NULL,
+                is_active       INTEGER NOT NULL DEFAULT 1,
+                refill_reminder_days INTEGER DEFAULT 7,
+                notes           TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_conditions (
+                id              SERIAL PRIMARY KEY,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                appointment_id  INTEGER DEFAULT NULL REFERENCES healthcare_appointments(id),
+                condition_name  TEXT    NOT NULL,
+                severity        TEXT    NOT NULL DEFAULT 'mild',
+                status          TEXT    NOT NULL DEFAULT 'active',
+                treatment_plan  TEXT    DEFAULT NULL,
+                follow_up_recommended INTEGER NOT NULL DEFAULT 0,
+                follow_up_weeks INTEGER DEFAULT NULL,
+                diagnosed_date  TEXT    NOT NULL,
+                notes           TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_referrals (
+                id                    SERIAL PRIMARY KEY,
+                player_id             INTEGER NOT NULL REFERENCES players(id),
+                appointment_id        INTEGER NOT NULL REFERENCES healthcare_appointments(id),
+                referral_to_doctor    TEXT    DEFAULT NULL,
+                referral_to_specialty TEXT    NOT NULL,
+                urgency               TEXT    NOT NULL DEFAULT 'routine',
+                reason                TEXT    DEFAULT NULL,
+                status                TEXT    NOT NULL DEFAULT 'pending',
+                created_at            TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_lab_results (
+                id              SERIAL PRIMARY KEY,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                appointment_id  INTEGER DEFAULT NULL REFERENCES healthcare_appointments(id),
+                test_name       TEXT    NOT NULL,
+                result_value    TEXT    DEFAULT NULL,
+                unit            TEXT    DEFAULT NULL,
+                reference_range TEXT    DEFAULT NULL,
+                result_date     TEXT    NOT NULL,
+                status          TEXT    NOT NULL DEFAULT 'normal',
+                notes           TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS healthcare_vaccinations (
+                id                  SERIAL PRIMARY KEY,
+                player_id           INTEGER NOT NULL REFERENCES players(id),
+                vaccine_name        TEXT    NOT NULL,
+                date_administered   TEXT    NOT NULL,
+                next_due_date       TEXT    DEFAULT NULL,
+                administered_by     TEXT    DEFAULT NULL,
+                lot_number          TEXT    DEFAULT NULL,
+                created_at          TEXT    NOT NULL DEFAULT (now()::text)
             )
         """)
     finally:

@@ -2289,3 +2289,169 @@ async def public_player_profile(
         "weekly_posts":     fs.get("weekly_post_count", 0),
         "post_streak":      fs.get("post_streak_days", 0),
     })
+
+
+# ── HEALTHCARE (MyChart) ──────────────────────────────────────────────────────
+@router.get("/healthcare", response_class=HTMLResponse)
+async def healthcare_app(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+
+    from datetime import date, timedelta
+    from app.routers.healthcare import (
+        DOCTORS, INSURANCE_PLANS, APPOINTMENT_TYPES, SPECIALTY_DOCTORS
+    )
+
+    today = date.today().isoformat()
+
+    # Get or create health profile
+    if is_postgres():
+        profile_row = await db.fetchrow(
+            "SELECT * FROM healthcare_profiles WHERE player_id = $1", player_id)
+        if not profile_row:
+            await db.execute(
+                "INSERT INTO healthcare_profiles (player_id) VALUES ($1) ON CONFLICT DO NOTHING",
+                player_id)
+            profile_row = await db.fetchrow(
+                "SELECT * FROM healthcare_profiles WHERE player_id = $1", player_id)
+    else:
+        async with db.execute(
+            "SELECT * FROM healthcare_profiles WHERE player_id = ?", (player_id,)
+        ) as cur:
+            profile_row = await cur.fetchone()
+        if not profile_row:
+            await db.execute(
+                "INSERT OR IGNORE INTO healthcare_profiles (player_id) VALUES (?)", (player_id,))
+            await db.commit()
+            async with db.execute(
+                "SELECT * FROM healthcare_profiles WHERE player_id = ?", (player_id,)
+            ) as cur:
+                profile_row = await cur.fetchone()
+
+    health_profile = dict(profile_row) if profile_row else {}
+    insurance_plan = INSURANCE_PLANS.get(
+        health_profile.get("insurance_plan", "uninsured"),
+        INSURANCE_PLANS["uninsured"]
+    )
+
+    # Appointments
+    if is_postgres():
+        appt_rows = await db.fetch(
+            """SELECT * FROM healthcare_appointments WHERE player_id = $1
+               ORDER BY scheduled_date DESC LIMIT 50""", player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM healthcare_appointments WHERE player_id = ?
+               ORDER BY scheduled_date DESC LIMIT 50""", (player_id,)
+        ) as cur:
+            appt_rows = await cur.fetchall()
+
+    appointments = []
+    for r in appt_rows:
+        d = dict(r)
+        d["doctor_info"] = DOCTORS.get(d["doctor_id"], {})
+        appointments.append(d)
+
+    upcoming_appointments = [a for a in appointments
+                              if a["status"] == "scheduled" and a["scheduled_date"] >= today]
+    past_appointments     = [a for a in appointments
+                              if a["status"] != "scheduled" or a["scheduled_date"] < today]
+
+    # Active medications
+    if is_postgres():
+        med_rows = await db.fetch(
+            """SELECT * FROM healthcare_medications WHERE player_id = $1 AND is_active = 1
+               ORDER BY created_at DESC""", player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM healthcare_medications WHERE player_id = ? AND is_active = 1
+               ORDER BY created_at DESC""", (player_id,)
+        ) as cur:
+            med_rows = await cur.fetchall()
+    medications = [dict(r) for r in med_rows]
+
+    # Conditions
+    if is_postgres():
+        cond_rows = await db.fetch(
+            """SELECT * FROM healthcare_conditions WHERE player_id = $1
+               ORDER BY diagnosed_date DESC""", player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM healthcare_conditions WHERE player_id = ?
+               ORDER BY diagnosed_date DESC""", (player_id,)
+        ) as cur:
+            cond_rows = await cur.fetchall()
+    conditions = [dict(r) for r in cond_rows]
+
+    # Pending referrals
+    if is_postgres():
+        ref_rows = await db.fetch(
+            """SELECT * FROM healthcare_referrals WHERE player_id = $1 AND status = 'pending'
+               ORDER BY created_at DESC""", player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM healthcare_referrals WHERE player_id = ? AND status = 'pending'
+               ORDER BY created_at DESC""", (player_id,)
+        ) as cur:
+            ref_rows = await cur.fetchall()
+    referrals = []
+    for r in ref_rows:
+        d = dict(r)
+        d["doctor_info"] = DOCTORS.get(d.get("referral_to_doctor", ""), {})
+        referrals.append(d)
+
+    # Lab results
+    if is_postgres():
+        lab_rows = await db.fetch(
+            """SELECT * FROM healthcare_lab_results WHERE player_id = $1
+               ORDER BY result_date DESC LIMIT 20""", player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM healthcare_lab_results WHERE player_id = ?
+               ORDER BY result_date DESC LIMIT 20""", (player_id,)
+        ) as cur:
+            lab_rows = await cur.fetchall()
+    lab_results = [dict(r) for r in lab_rows]
+
+    # Vaccinations
+    if is_postgres():
+        vax_rows = await db.fetch(
+            """SELECT * FROM healthcare_vaccinations WHERE player_id = $1
+               ORDER BY date_administered DESC""", player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM healthcare_vaccinations WHERE player_id = ?
+               ORDER BY date_administered DESC""", (player_id,)
+        ) as cur:
+            vax_rows = await cur.fetchall()
+    vaccinations = [dict(r) for r in vax_rows]
+
+    # Primary doctor info
+    primary_doctor = DOCTORS.get(health_profile.get("primary_doctor_id", ""), {})
+
+    return templates.TemplateResponse(request, "apps/healthcare.html", {
+        "token":                  token,
+        "player":                 player,
+        "today":                  today,
+        "health_profile":         health_profile,
+        "insurance_plan":         insurance_plan,
+        "insurance_plans":        INSURANCE_PLANS,
+        "primary_doctor":         primary_doctor,
+        "doctors":                DOCTORS,
+        "appointment_types":      APPOINTMENT_TYPES,
+        "specialty_doctors":      SPECIALTY_DOCTORS,
+        "upcoming_appointments":  upcoming_appointments,
+        "past_appointments":      past_appointments,
+        "medications":            medications,
+        "conditions":             conditions,
+        "referrals":              referrals,
+        "lab_results":            lab_results,
+        "vaccinations":           vaccinations,
+    })
