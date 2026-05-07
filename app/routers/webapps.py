@@ -1238,6 +1238,32 @@ async def ritual(
                 except Exception:
                     pass
 
+    # Add healthcare appointments to calendar
+    try:
+        if is_postgres():
+            hc_rows = await db.fetch(
+                """SELECT scheduled_date, appointment_type, status
+                   FROM healthcare_appointments WHERE player_id = $1
+                   AND status IN ('scheduled','completed')""", player_id)
+        else:
+            async with db.execute(
+                """SELECT scheduled_date, appointment_type, status
+                   FROM healthcare_appointments WHERE player_id = ?
+                   AND status IN ('scheduled','completed')""", (player_id,)
+            ) as cur:
+                hc_rows = await cur.fetchall()
+        for hrow in hc_rows:
+            try:
+                hdate = date.fromisoformat(hrow["scheduled_date"][:10]).isoformat()
+                val   = "healthcare_scheduled" if hrow["status"] == "scheduled" else "healthcare_completed"
+                # Don't overwrite existing cycle markers
+                if hdate not in calendar_days:
+                    calendar_days[hdate] = val
+            except Exception:
+                pass
+    except Exception:
+        pass  # healthcare table may not exist on older instances
+
     return templates.TemplateResponse(request, "apps/ritual.html", {
         "token":                token,
         "player":               player,

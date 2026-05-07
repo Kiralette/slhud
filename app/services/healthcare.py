@@ -197,18 +197,28 @@ async def run_insurance_billing(db=None):
 
         plan_name = INSURANCE_PLANS.get(row["insurance_plan"], {}).get("name", row["insurance_plan"])
 
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
         if is_postgres():
-            # Don't go below 0
             await db.execute(
-                """UPDATE players SET wallet_balance = GREATEST(0, wallet_balance - $1)
-                   WHERE id = $2""",
-                premium, row["player_id"])
+                """UPDATE wallets SET balance = GREATEST(0, balance - $1),
+                   total_spent = total_spent + $2, last_updated = $3
+                   WHERE player_id = $4""",
+                premium, premium, now, row["player_id"])
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES ($1, $2, 'purchase', $3, $4)""",
+                row["player_id"], -premium, f"Insurance premium: {plan_name}", now)
         else:
             await db.execute(
-                """UPDATE players
-                   SET wallet_balance = MAX(0, wallet_balance - ?)
-                   WHERE id = ?""",
-                (premium, row["player_id"]))
+                """UPDATE wallets SET balance = MAX(0, balance - ?),
+                   total_spent = total_spent + ?, last_updated = ?
+                   WHERE player_id = ?""",
+                (premium, premium, now, row["player_id"]))
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES (?, ?, 'purchase', ?, ?)""",
+                (row["player_id"], -premium, f"Insurance premium: {plan_name}", now))
 
         await push_notification(
             player_id=row["player_id"],

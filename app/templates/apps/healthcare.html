@@ -646,20 +646,25 @@
   <div style="padding:14px 18px 4px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Insurance</div>
   <div class="hc-section">
     {% for plan_id, plan in insurance_plans.items() %}
-    <div style="padding:12px 18px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;{% if plan_id == health_profile.insurance_plan %}background:var(--bg2);{% endif %}">
-      <div style="width:8px;height:8px;border-radius:50%;background:{{ plan.color }};flex-shrink:0;"></div>
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:600;color:var(--ink);">{{ plan.name }}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:1px;">
-          {% if plan.monthly_premium > 0 %}✦{{ plan.monthly_premium }}/mo · {% endif %}
-          Copay from ✦{{ plan.copay_primary }}
-        </div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--bg3);{% if plan_id == health_profile.insurance_plan %}background:var(--bg2);{% endif %}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:{{ plan.color }};flex-shrink:0;"></div>
+        <div style="font-size:14px;font-weight:600;color:var(--ink);flex:1;">{{ plan.name }}</div>
+        {% if plan_id == health_profile.insurance_plan %}
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#3a7a52;text-transform:uppercase;">Active</div>
+        {% else %}
+        <button class="hc-section-action" onclick="switchInsurance('{{ plan_id }}')">Switch</button>
+        {% endif %}
       </div>
-      {% if plan_id == health_profile.insurance_plan %}
-      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#3a7a52;text-transform:uppercase;">Active</div>
-      {% else %}
-      <button class="hc-section-action" onclick="switchInsurance('{{ plan_id }}')">Switch</button>
-      {% endif %}
+      <div style="font-size:12px;color:var(--ink3);line-height:1.5;margin-bottom:6px;">{{ plan.description }}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% if plan.monthly_premium > 0 %}<span style="font-size:10px;font-weight:600;background:var(--bg3);color:var(--ink3);padding:2px 7px;border-radius:4px;">✦{{ plan.monthly_premium }}/mo</span>{% endif %}
+        <span style="font-size:10px;font-weight:600;background:var(--bg3);color:var(--ink3);padding:2px 7px;border-radius:4px;">Copay from ✦{{ plan.copay_primary }}</span>
+        {% if plan.covers_dental %}<span style="font-size:10px;font-weight:600;background:#e8f5ee;color:#3a7a52;padding:2px 7px;border-radius:4px;">Dental ✓</span>{% endif %}
+        {% if plan.covers_vision %}<span style="font-size:10px;font-weight:600;background:#e8f5ee;color:#3a7a52;padding:2px 7px;border-radius:4px;">Vision ✓</span>{% endif %}
+        {% if plan.covers_ivf %}<span style="font-size:10px;font-weight:600;background:#eef0ff;color:#5060c0;padding:2px 7px;border-radius:4px;">IVF ✓</span>{% endif %}
+        {% if plan.haul_discount > 0 %}<span style="font-size:10px;font-weight:600;background:var(--gold-light);color:var(--gold);padding:2px 7px;border-radius:4px;">{{ plan.haul_discount }}% Haul discount</span>{% endif %}
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -896,7 +901,15 @@
 
   // ── Complete appointment ──────────────────────────────────────────────────
   async function completeAppt(id) {
-    if (!confirm('Mark this appointment as complete? Follow-up notes will be added automatically.')) return;
+    showConfirm(
+      'Mark as complete?',
+      'Follow-up notes, prescriptions, and diagnoses will be added automatically to your care profile.',
+      async () => { await _doCompleteAppt(id); },
+      'Mark complete'
+    );
+  }
+
+  async function _doCompleteAppt(id) {
     try {
       const res = await fetch(`/healthcare/appointments/${id}/complete`, {
         method: 'POST', headers: {'Content-Type':'application/json'},
@@ -979,7 +992,15 @@
   }
 
   async function cancelAppt(id) {
-    if (!confirm('Cancel this appointment? You will receive a 50% copay refund.')) return;
+    showConfirm(
+      'Cancel appointment?',
+      'You will receive a 50% copay refund back to your wallet.',
+      async () => { await _doCancelAppt(id); },
+      'Cancel appointment'
+    );
+  }
+
+  async function _doCancelAppt(id) {
     try {
       const res = await fetch(`/healthcare/appointments/${id}/cancel`, {
         method: 'POST', headers: {'Content-Type':'application/json'},
@@ -992,7 +1013,15 @@
 
   // ── Deactivate medication ─────────────────────────────────────────────────
   async function deactivateMed(id) {
-    if (!confirm('Stop this medication?')) return;
+    showConfirm(
+      'Stop medication?',
+      'This medication will be moved to your past medications list.',
+      async () => { await _doDeactivateMed(id); },
+      'Stop medication'
+    );
+  }
+
+  async function _doDeactivateMed(id) {
     try {
       const res = await fetch(`/healthcare/medications/${id}/deactivate?token=${TOKEN}`, { method: 'POST' });
       if (res.ok) { toast('Medication stopped'); setTimeout(() => location.reload(), 1400); }
@@ -1004,7 +1033,15 @@
   async function switchInsurance(planId) {
     const PLAN_NAMES = {{ insurance_plans | tojson }};
     const name = PLAN_NAMES[planId]?.name || planId;
-    if (!confirm('Switch to ' + name + '? Your new plan is active immediately.')) return;
+    showConfirm(
+      'Switch insurance?',
+      'Switch to ' + name + '? Your new plan is active immediately.',
+      async () => { await _doSwitchInsurance(planId); },
+      'Switch plan'
+    );
+  }
+
+  async function _doSwitchInsurance(planId) {
     try {
       const res = await fetch('/healthcare/insurance', {
         method: 'POST', headers: {'Content-Type':'application/json'},
@@ -1092,6 +1129,42 @@
   function openVaxSheet() {
     document.getElementById('vax-overlay').classList.add('open');
     setTimeout(() => document.getElementById('vax-sheet').classList.add('open'), 10);
+  }
+
+  // ── Confirm sheet (replaces browser confirm() which doesn't work in SL) ───
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div class="hc-sheet-overlay" id="confirm-overlay"></div>
+<div class="hc-sheet" id="confirm-sheet" style="max-height:50vh;">
+  <div class="hc-sheet-handle"></div>
+  <div style="padding:20px 18px 28px;">
+    <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);margin-bottom:8px;" id="confirm-title">Confirm</div>
+    <div style="font-size:14px;color:var(--ink3);line-height:1.6;margin-bottom:20px;" id="confirm-body"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="confirm-yes" class="hc-next-btn" style="flex:1;margin:0;">Confirm</button>
+      <button onclick="closeConfirmSheet()" style="flex:1;padding:14px;background:var(--bg2);color:var(--ink);border:1px solid var(--bg4);border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+    </div>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  let _confirmCallback = null;
+
+  function showConfirm(title, body, onConfirm, confirmLabel) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-body').textContent  = body;
+    const btn = document.getElementById('confirm-yes');
+    btn.textContent = confirmLabel || 'Confirm';
+    btn.onclick = () => { closeConfirmSheet(); onConfirm(); };
+    document.getElementById('confirm-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('confirm-sheet').classList.add('open'), 10);
+  }
+
+  function closeConfirmSheet() {
+    document.getElementById('confirm-sheet').classList.remove('open');
+    document.getElementById('confirm-overlay').classList.remove('open');
   }
   function closeVaxSheet() {
     document.getElementById('vax-sheet').classList.remove('open');

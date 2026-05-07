@@ -75,6 +75,8 @@
   .cal-day.ivf_retrieval     { background: #b4d2fa; font-weight: 700; }
   .cal-day.ivf_transfer      { background: #c8e8ff; font-weight: 700; border: 1px solid #6aade0; }
   .cal-day.ivf_beta          { background: #d4b4fa; font-weight: 700; border: 1px solid #9060d0; }
+  .cal-day.healthcare_scheduled { background: rgba(180,220,200,0.5); border: 1px solid #6aad8a; }
+  .cal-day.healthcare_completed { background: rgba(180,220,200,0.25); }
 
   /* ── Holiday dot ── */
   .cal-day .holiday-dot {
@@ -1242,7 +1244,9 @@
     ivf_stimulation:  { icon: '💉', label: 'IVF stimulation start' },
     ivf_retrieval:    { icon: '🌱', label: 'IVF retrieval day' },
     ivf_transfer:     { icon: '✨', label: 'IVF transfer day' },
-    ivf_beta:         { icon: '🩸', label: 'IVF beta (blood test) day' },
+    ivf_beta:             { icon: '🩸', label: 'IVF beta (blood test) day' },
+    healthcare_scheduled: { icon: '🏥', label: 'Healthcare appointment' },
+    healthcare_completed: { icon: '✅', label: 'Appointment completed' },
   };
 
   const MONTH_NAMES = ['January','February','March','April','May','June',
