@@ -36,62 +36,52 @@
   }
   .cal-day {
     position: relative;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    padding: 4px 0 2px;
     aspect-ratio: 1;
     border-radius: var(--radius-sm);
     font-size: 14px; font-weight: 400; color: var(--ink2);
     cursor: pointer; transition: background .1s;
+    box-sizing: border-box;
+  }
+  .cal-day-num {
+    display: flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    font-size: 13px; line-height: 1;
   }
   .cal-day:active { background: var(--bg3); }
-  .cal-day.today { font-weight: 700; color: var(--ink); }
-  .cal-day.today::after {
-    content: '';
-    position: absolute; bottom: 3px;
-    width: 4px; height: 4px; border-radius: 50%;
-    background: var(--gold);
-  }
+  .cal-day.today .cal-day-num { font-weight: 700; color: var(--ink); }
   .cal-day.other-month { color: var(--ink4); }
-  .cal-day.has-event { background: var(--bg3); }
-  .cal-day.event-dot::before {
-    content: ''; position: absolute; top: 4px; right: 4px;
-    width: 4px; height: 4px; border-radius: 50%; background: var(--gold);
-  }
 
   /* ── Period shading ── */
-  /* Calendar dot system — multiple dots per day, no full-day shading */
+  /* Calendar dot system */
   .cal-day-dots {
     display: flex; gap: 2px; justify-content: center;
-    flex-wrap: wrap; max-width: 28px; margin: 1px auto 0;
-    min-height: 6px;
+    flex-wrap: wrap; width: 100%; padding: 0 2px;
+    margin-top: 2px; min-height: 7px;
+    box-sizing: border-box;
   }
   .cal-dot {
     width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
   }
-  .cal-dot.confirmed_period  { background: #d4748a; }
-  .cal-dot.predicted_start   { background: #e8a0b4; }
-  .cal-dot.predicted_window  { background: #f0c8d4; }
-  .cal-dot.post_glow         { background: var(--gold); }
-  .cal-dot.phase_follicular  { background: #d4b870; opacity:.7; }
-  .cal-dot.phase_luteal      { background: #a090c0; opacity:.7; }
-  .cal-dot.phase_pms         { background: #c09090; opacity:.7; }
-  .cal-dot.fertile_window    { background: #70b890; }
-  .cal-dot.ovulatory         { background: #40a870; width:7px; height:7px; }
-  .cal-dot.conception        { background: #e080b0; }
-  .cal-dot.due_date          { background: #d4a020; width:7px; height:7px; }
-  .cal-dot.ivf_stimulation   { background: #80a8e0; }
-  .cal-dot.ivf_retrieval     { background: #4080d0; }
-  .cal-dot.ivf_transfer      { background: #60b0e8; width:7px; height:7px; }
-  .cal-dot.ivf_beta          { background: #9060d0; width:7px; height:7px; }
-  .cal-dot.healthcare_scheduled { background: #3a9a6a; width:7px; height:7px; }
+  .cal-dot.confirmed_period   { background: #d4748a; }
+  .cal-dot.predicted_start    { background: #e8a0b4; }
+  .cal-dot.predicted_window   { background: #f0c8d4; }
+  .cal-dot.post_glow          { background: var(--gold); }
+  .cal-dot.phase_follicular   { background: #d4b870; opacity:.7; }
+  .cal-dot.phase_luteal       { background: #a090c0; opacity:.7; }
+  .cal-dot.phase_pms          { background: #c09090; opacity:.7; }
+  .cal-dot.fertile_window     { background: #70b890; }
+  .cal-dot.ovulatory          { background: #40a870; }
+  .cal-dot.conception         { background: #e080b0; }
+  .cal-dot.due_date           { background: #d4a020; }
+  .cal-dot.ivf_stimulation    { background: #80a8e0; }
+  .cal-dot.ivf_retrieval      { background: #4080d0; }
+  .cal-dot.ivf_transfer       { background: #60b0e8; }
+  .cal-dot.ivf_beta           { background: #9060d0; }
+  .cal-dot.healthcare_scheduled { background: #3a9a6a; }
   .cal-dot.healthcare_completed { background: #8ac8a8; }
-  /* Today ring instead of bold */
-  .cal-day.today { color: var(--ink); }
-  .cal-day.today .cal-day-num {
-    background: var(--ink); color: var(--bg);
-    border-radius: 50%; width: 22px; height: 22px;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto;
-  }
 
   /* ── Holiday dot ── */
   .cal-day .holiday-dot {
