@@ -691,64 +691,6 @@ def _get_followup_profile(appointment_type: str, specialty: str, concerns: str) 
         },
 
         # ── Physical Therapy ──────────────────────────────────────────────────
-        "Birth control consultation": {
-            "vibe": "health_checked_in",
-            "need_effects": {"stress": -5},
-            "summary": "Birth control consultation completed. Method selected and prescription issued.",
-            "prescription": {
-                "name": "Oral Contraceptive", "dosage": "1 tablet",
-                "frequency": "Once daily at the same time each day",
-                "prescribed_for": "Contraception",
-                "duration_days": 90,
-                "notes": "Take at the same time daily. Contact provider if you experience side effects.",
-            },
-            "diagnosis": {
-                "condition_name": "Contraceptive management — active",
-                "severity": "mild", "status": "managed",
-                "treatment_plan": "Continue as prescribed. Follow up in 3 months.",
-                "follow_up_recommended": 1, "follow_up_weeks": 12,
-            },
-            "referral": None, "lab_result": None,
-        },
-        "Menopause management": {
-            "vibe": "health_checked_in",
-            "need_effects": {"stress": -5, "recovery": 3},
-            "summary": "Menopause management consultation completed. Symptom management plan established.",
-            "prescription": {
-                "name": "Hormone Therapy / Symptom Management",
-                "dosage": "As prescribed", "frequency": "As directed",
-                "prescribed_for": "Menopause symptom management",
-                "duration_days": 90,
-                "notes": "Monitor for changes and report any new symptoms.",
-            },
-            "diagnosis": {
-                "condition_name": "Menopause — under management",
-                "severity": "mild", "status": "managed",
-                "treatment_plan": "Hormone therapy and lifestyle adjustments. Follow up in 3 months.",
-                "follow_up_recommended": 1, "follow_up_weeks": 12,
-            },
-            "referral": None, "lab_result": None,
-        },
-        "Miscarriage / pregnancy loss support": {
-            "vibe": "new_diagnosis_processing",
-            "need_effects": {"stress": -8, "purpose": 3},
-            "summary": "Pregnancy loss support visit completed. Physical recovery assessed. Grief support resources provided.",
-            "prescription": None,
-            "diagnosis": {
-                "condition_name": "Pregnancy loss — support and recovery",
-                "severity": "significant", "status": "active",
-                "treatment_plan": "Physical recovery monitoring. Grief counseling strongly recommended. Follow up in 4 weeks.",
-                "follow_up_recommended": 1, "follow_up_weeks": 4,
-            },
-            "referral": {
-                "referral_to_doctor": "dr_fontaine",
-                "referral_to_specialty": "mental_health",
-                "urgency": "soon",
-                "reason": "Grief counseling following pregnancy loss.",
-            },
-            "lab_result": None,
-        },
-
         "Physical therapy session": {
             "vibe": "building_strength",
             "need_effects": {"recovery": 8, "stress": -5},
@@ -1082,13 +1024,48 @@ async def change_insurance(body: ChangeInsurance, db=Depends(get_db)):
         await db.commit()
 
     plan = INSURANCE_PLANS[body.insurance_plan]
+
+    # Charge first week's premium immediately when switching to a paid plan
+    WEEKLY_PREMIUMS = {
+        "clarity_basic":    6,
+        "clarity_plus":     15,
+        "luminos_prestige": 30,
+    }
+    premium = WEEKLY_PREMIUMS.get(body.insurance_plan, 0)
+    if premium > 0:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        if is_postgres():
+            await db.execute(
+                """UPDATE wallets SET balance = GREATEST(0, balance - $1),
+                   total_spent = total_spent + $2, last_updated = $3
+                   WHERE player_id = $4""",
+                premium, premium, now, player_id)
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES ($1, $2, 'purchase', $3, $4)""",
+                player_id, -premium,
+                f"Insurance first-week premium: {plan['name']}", now)
+        else:
+            await db.execute(
+                """UPDATE wallets SET balance = MAX(0, balance - ?),
+                   total_spent = total_spent + ?, last_updated = ?
+                   WHERE player_id = ?""",
+                (premium, premium, now, player_id))
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES (?, ?, 'purchase', ?, ?)""",
+                (player_id, -premium,
+                 f"Insurance first-week premium: {plan['name']}", now))
+            await db.commit()
+
     await push_notification(
         player_id=player_id, app_source="healthcare",
         title=f"Insurance updated: {plan['name']} 🏥",
-        body="Your coverage is active. You can schedule appointments in MyChart.",
+        body=f"Coverage active.{f' First week premium of ✦{premium} deducted.' if premium else ''} Next billing Sunday.",
         priority="low", db=db)
 
-    return {"status": "updated", "plan": plan}
+    return {"status": "updated", "plan": plan, "premium_charged": premium}
 
 
 # ── POST /healthcare/appointments/schedule ────────────────────────────────────
@@ -1147,30 +1124,14 @@ async def schedule_appointment(body: ScheduleAppointment, db=Depends(get_db)):
 
     # Deduct copay from wallet
     if copay > 0:
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc).isoformat()
         if is_postgres():
             await db.execute(
-                """UPDATE wallets SET balance = GREATEST(0, balance - $1),
-                   total_spent = total_spent + $2, last_updated = $3
-                   WHERE player_id = $4""",
-                copay, copay, now, player_id)
-            await db.execute(
-                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
-                   VALUES ($1, $2, 'purchase', $3, $4)""",
-                player_id, -copay,
-                f"Healthcare copay: {body.specialty} with {doctor['name']}", now)
+                "UPDATE players SET wallet_balance = wallet_balance - $1 WHERE id = $2",
+                copay, player_id)
         else:
             await db.execute(
-                """UPDATE wallets SET balance = MAX(0, balance - ?),
-                   total_spent = total_spent + ?, last_updated = ?
-                   WHERE player_id = ?""",
-                (copay, copay, now, player_id))
-            await db.execute(
-                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
-                   VALUES (?, ?, 'purchase', ?, ?)""",
-                (player_id, -copay,
-                 f"Healthcare copay: {body.specialty} with {doctor['name']}", now))
+                "UPDATE players SET wallet_balance = wallet_balance - ? WHERE id = ?",
+                (copay, player_id))
             await db.commit()
 
     # Fire notification
@@ -1554,29 +1515,15 @@ async def cancel_appointment(appointment_id: int, body: CompleteAppointment, db=
 
     # Partial copay refund (50%)
     if appt["copay_paid"] > 0:
-        from datetime import datetime, timezone
         refund = appt["copay_paid"] * 0.5
-        now    = datetime.now(timezone.utc).isoformat()
         if is_postgres():
             await db.execute(
-                """UPDATE wallets SET balance = balance + $1,
-                   total_earned = total_earned + $2, last_updated = $3
-                   WHERE player_id = $4""",
-                refund, refund, now, player_id)
-            await db.execute(
-                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
-                   VALUES ($1, $2, 'refund', $3, $4)""",
-                player_id, refund, "Cancellation refund (50%)", now)
+                "UPDATE players SET wallet_balance = wallet_balance + $1 WHERE id = $2",
+                refund, player_id)
         else:
             await db.execute(
-                """UPDATE wallets SET balance = balance + ?,
-                   total_earned = total_earned + ?, last_updated = ?
-                   WHERE player_id = ?""",
-                (refund, refund, now, player_id))
-            await db.execute(
-                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
-                   VALUES (?, ?, 'refund', ?, ?)""",
-                (player_id, refund, "Cancellation refund (50%)", now))
+                "UPDATE players SET wallet_balance = wallet_balance + ? WHERE id = ?",
+                (refund, player_id))
             await db.commit()
 
     return {"status": "cancelled", "refund": appt["copay_paid"] * 0.5}
