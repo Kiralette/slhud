@@ -185,4 +185,15 @@ async def get_me(authorization: str = None, db=Depends(get_db)):
     if not row:
         raise HTTPException(status_code=401, detail="Token invalid or player not found.")
 
+    # Mark player as online now that we've confirmed their token
+    if is_postgres():
+        await db.execute(
+            "UPDATE players SET is_online = 1, last_seen = now()::text WHERE token = $1",
+            token)
+    else:
+        await db.execute(
+            "UPDATE players SET is_online = 1, last_seen = datetime('now') WHERE token = ?",
+            (token,))
+        await db.commit()
+
     return {"player_id": row["id"], "display_name": row["display_name"]}
