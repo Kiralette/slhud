@@ -1124,14 +1124,30 @@ async def schedule_appointment(body: ScheduleAppointment, db=Depends(get_db)):
 
     # Deduct copay from wallet
     if copay > 0:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
         if is_postgres():
             await db.execute(
-                "UPDATE players SET wallet_balance = wallet_balance - $1 WHERE id = $2",
-                copay, player_id)
+                """UPDATE wallets SET balance = GREATEST(0, balance - $1),
+                   total_spent = total_spent + $2, last_updated = $3
+                   WHERE player_id = $4""",
+                copay, copay, now, player_id)
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES ($1, $2, 'purchase', $3, $4)""",
+                player_id, -copay,
+                f"Healthcare copay: {body.specialty} with {doctor['name']}", now)
         else:
             await db.execute(
-                "UPDATE players SET wallet_balance = wallet_balance - ? WHERE id = ?",
-                (copay, player_id))
+                """UPDATE wallets SET balance = MAX(0, balance - ?),
+                   total_spent = total_spent + ?, last_updated = ?
+                   WHERE player_id = ?""",
+                (copay, copay, now, player_id))
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES (?, ?, 'purchase', ?, ?)""",
+                (player_id, -copay,
+                 f"Healthcare copay: {body.specialty} with {doctor['name']}", now))
             await db.commit()
 
     # Fire notification

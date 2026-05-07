@@ -1252,13 +1252,13 @@ async def ritual(
                    AND status IN ('scheduled','completed')""", (player_id,)
             ) as cur:
                 hc_rows = await cur.fetchall()
+        hc_cal = cycle_prediction.setdefault("calendar_days", {})
         for hrow in hc_rows:
             try:
                 hdate = date.fromisoformat(hrow["scheduled_date"][:10]).isoformat()
                 val   = "healthcare_scheduled" if hrow["status"] == "scheduled" else "healthcare_completed"
-                # Don't overwrite existing cycle markers
-                if hdate not in calendar_days:
-                    calendar_days[hdate] = val
+                if hdate not in hc_cal:
+                    hc_cal[hdate] = val
             except Exception:
                 pass
     except Exception:
