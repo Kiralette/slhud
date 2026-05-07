@@ -110,6 +110,30 @@ app.include_router(profile_router.settings_router)
 app.include_router(healthcare.router)
 
 
+@app.get("/debug/token", tags=["health"])
+async def debug_token(token: str = "", db=Depends(get_db)):
+    """Temporary debug endpoint — checks if a token exists in the DB."""
+    from app.database import is_postgres
+    if not token:
+        return {"error": "no token provided"}
+    try:
+        if is_postgres():
+            row = await db.fetchrow(
+                "SELECT id, display_name, is_banned FROM players WHERE token = $1", token)
+        else:
+            async with db.execute(
+                "SELECT id, display_name, is_banned FROM players WHERE token = ?", (token,)
+            ) as cur:
+                row = await cur.fetchone()
+        if row:
+            return {"found": True, "id": row["id"], "name": row["display_name"], "banned": row["is_banned"]}
+        else:
+            count = await db.fetchval("SELECT COUNT(*) FROM players") if is_postgres() else None
+            return {"found": False, "total_players": count}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/", tags=["health"])
 async def root():
     return {"status": "ok", "service": "SL HUD API", "version": "0.1.0"}
