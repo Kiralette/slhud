@@ -1,0 +1,750 @@
+{% extends "base.html" %}
+{% block title %}Atlas{% endblock %}
+
+{% block extra_style %}
+<style>
+  .at-tabs {
+    display: flex; border-bottom: 1px solid var(--bg4);
+    background: var(--bg); padding: 0 18px; flex-shrink: 0;
+  }
+  .at-tab {
+    flex: 1; padding: 12px 0; font-size: 12px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink4); background: none; border: none;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color .15s, border-color .15s;
+    font-family: inherit;
+  }
+  .at-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+  .at-card {
+    background: var(--bg2); border: 1px solid var(--bg4);
+    border-radius: var(--radius); margin: 0 18px 12px;
+    overflow: hidden; cursor: pointer; transition: box-shadow .15s;
+  }
+  .at-card:active { box-shadow: 0 2px 12px rgba(28,24,20,.12); }
+  .at-card-photo {
+    height: 140px; background: var(--bg3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; background-size: cover; background-position: center;
+    position: relative;
+  }
+  .at-card-cat {
+    position: absolute; bottom: 8px; left: 10px;
+    background: rgba(28,24,20,.6); color: #fff;
+    font-size: 10px; font-weight: 600; letter-spacing: .06em;
+    padding: 3px 8px; border-radius: 10px; text-transform: uppercase;
+  }
+  .at-card-body { padding: 12px 14px; }
+  .at-card-name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .at-card-region { font-size: 12px; color: var(--ink4); margin-bottom: 6px; }
+  .at-card-stats { display: flex; gap: 10px; font-size: 11px; color: var(--ink3); align-items: center; flex-wrap: wrap; }
+  .at-stars { color: var(--gold); }
+
+  .at-list-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; border-bottom: 1px solid var(--bg3); cursor: pointer;
+  }
+  .at-list-row:last-child { border-bottom: none; }
+  .at-list-thumb {
+    width: 52px; height: 52px; border-radius: var(--radius-sm);
+    background: var(--bg3); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; background-size: cover; background-position: center;
+  }
+  .at-list-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .at-list-sub { font-size: 11px; color: var(--ink4); margin-top: 2px; }
+
+  /* Sheets */
+  .at-sheet-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 998;
+  }
+  .at-sheet {
+    position: fixed; bottom: 0; left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: min(420px,100vw); background: var(--bg);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.15);
+    transition: transform .3s; z-index: 999;
+    max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .at-sheet.open { transform: translateX(-50%) translateY(0); }
+  .at-sheet-handle {
+    width: 36px; height: 4px; background: var(--bg4);
+    border-radius: 2px; margin: 12px auto 0; flex-shrink: 0;
+  }
+  .at-sheet-scroll { overflow-y: auto; flex: 1; padding-bottom: 24px; }
+  .at-sheet-photo {
+    height: 200px; background: var(--bg3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px; background-size: cover; background-position: center;
+  }
+  .at-sheet-header { padding: 14px 18px 10px; border-bottom: 1px solid var(--bg3); }
+  .at-sheet-name { font-family: var(--font-head); font-size: 26px; color: var(--ink); }
+  .at-sheet-region { font-size: 12px; color: var(--ink4); margin-top: 2px; }
+  .at-sheet-stats { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: var(--ink3); flex-wrap: wrap; }
+  .at-sheet-actions {
+    display: flex; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+  }
+  .at-action-btn {
+    flex: 1; padding: 10px 6px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 11px; font-weight: 600; color: var(--ink);
+    cursor: pointer; font-family: inherit; text-align: center; transition: background .12s;
+  }
+  .at-action-btn:active { background: var(--bg3); }
+  .at-action-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .at-section-head {
+    padding: 12px 18px 6px; font-size: 11px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink4);
+  }
+  .at-links { display: flex; gap: 8px; padding: 8px 18px 12px; flex-wrap: wrap; }
+  .at-link-btn {
+    padding: 7px 12px; border-radius: 20px; border: 1px solid var(--bg4);
+    background: var(--bg2); font-size: 12px; font-weight: 600; color: var(--ink3);
+    cursor: pointer; font-family: inherit; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .at-review { padding: 12px 18px; border-bottom: 1px solid var(--bg3); }
+  .at-review:last-child { border-bottom: none; }
+  .at-review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .at-review-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .at-review-stars { color: var(--gold); font-size: 12px; }
+  .at-review-body { font-size: 13px; color: var(--ink2); line-height: 1.5; margin-top: 4px; }
+  .at-helpful-btn {
+    background: none; border: none; font-size: 11px;
+    color: var(--ink4); cursor: pointer; font-family: inherit; margin-top: 6px; padding: 0;
+  }
+  .at-helpful-btn.active { color: var(--gold); }
+
+  /* Star picker */
+  .at-star-picker { display: flex; gap: 6px; padding: 8px 0; font-size: 28px; cursor: pointer; }
+  .at-star-pick { color: var(--bg4); transition: color .1s; }
+  .at-star-pick.lit { color: var(--gold); }
+
+  /* Add form */
+  .at-field { padding: 0 18px 12px; }
+  .at-label {
+    display: block; font-size: 11px; font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--ink4); margin-bottom: 5px;
+  }
+  .at-input {
+    width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 14px; color: var(--ink); font-family: inherit; box-sizing: border-box;
+  }
+  .at-input:focus { outline: none; border-color: var(--ink3); }
+  .at-textarea {
+    width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 13px; color: var(--ink); font-family: inherit;
+    resize: vertical; min-height: 72px; box-sizing: border-box;
+  }
+  .at-textarea:focus { outline: none; border-color: var(--ink3); }
+  .at-pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
+  .at-pill {
+    padding: 6px 13px; border-radius: 20px; border: 1px solid var(--bg4);
+    background: var(--bg2); font-size: 12px; color: var(--ink3); cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .at-pill.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .at-save-btn {
+    display: block; width: calc(100% - 36px); margin: 8px 18px 0;
+    background: var(--ink); color: var(--bg); border: none;
+    border-radius: var(--radius-sm); padding: 13px;
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+
+  .at-filter-bar {
+    display: flex; gap: 8px; padding: 10px 18px;
+    overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+  }
+  .at-filter-bar::-webkit-scrollbar { display: none; }
+  .at-filter-chip {
+    padding: 6px 12px; border-radius: 20px; white-space: nowrap;
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 12px; color: var(--ink3); cursor: pointer;
+    font-family: inherit; flex-shrink: 0; transition: all .12s;
+  }
+  .at-filter-chip.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .at-empty { padding: 60px 24px; text-align: center; color: var(--ink4); }
+  .at-empty-icon { font-size: 44px; margin-bottom: 10px; }
+  .at-empty-text { font-size: 13px; line-height: 1.6; }
+  .at-subhead-row {
+    display: flex; align-items: center; padding: 10px 18px 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink4);
+  }
+  .scroll-pad { height: 40px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-scale">
+
+  <!-- Header -->
+  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div>
+      <div style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin-bottom:2px;">Location Guide</div>
+      <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);line-height:1;">Atlas 🗺️</div>
+    </div>
+    <button onclick="openAddSheet()" style="background:var(--ink);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">+ Add</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="at-tabs">
+    <button class="at-tab active" onclick="showAtTab('discover')">Discover</button>
+    <button class="at-tab" onclick="showAtTab('my-places')">My Places</button>
+    <button class="at-tab" onclick="showAtTab('added')">Added by Me</button>
+  </div>
+
+  <!-- DISCOVER -->
+  <div id="at-tab-discover" style="overflow-y:auto;display:flex;flex-direction:column;">
+    <div class="at-filter-bar">
+      <button class="at-filter-chip active" onclick="setFilter(this,'all')">All</button>
+      <button class="at-filter-chip" onclick="setFilter(this,'places')">Places</button>
+      <button class="at-filter-chip" onclick="setFilter(this,'shopping')">Shopping</button>
+      <button class="at-filter-chip" onclick="setFilter(this,'top_rated')">Top rated</button>
+      <button class="at-filter-chip" onclick="setFilter(this,'newest')">Newest</button>
+      <button class="at-filter-chip" onclick="setFilter(this,'most_saved')">Most saved</button>
+    </div>
+    <div id="at-discover-list" style="padding-top:4px;">
+      {% if trending %}
+        {% for loc in trending %}
+        <div class="at-card" onclick="openDetail({{ loc.id }})">
+          <div class="at-card-photo" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+            {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
+            <div class="at-card-cat">{{ loc.sub_category | replace('_',' ') }}</div>
+          </div>
+          <div class="at-card-body">
+            <div class="at-card-name">{{ loc.name }}</div>
+            <div class="at-card-region">{{ loc.region_name }}{% if loc.parcel_name and loc.parcel_name != loc.name %} · {{ loc.parcel_name }}{% endif %}</div>
+            <div class="at-card-stats">
+              {% if loc.average_stars > 0 %}
+              <span class="at-stars">{% for i in range(loc.average_stars | int) %}★{% endfor %}</span>
+              <span>{{ "%.1f"|format(loc.average_stars) }}</span>
+              <span>{{ loc.review_count }} review{{ 's' if loc.review_count != 1 }}</span>
+              {% endif %}
+              {% if loc.checkin_count > 0 %}<span>{{ loc.checkin_count }} check-in{{ 's' if loc.checkin_count != 1 }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="at-empty">
+          <div class="at-empty-icon">🌐</div>
+          <div class="at-empty-text">No locations yet.<br>Be the first to add one!</div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- MY PLACES -->
+  <div id="at-tab-my-places" style="display:none;overflow-y:auto;">
+    <div class="at-subhead-row">Want to Go ({{ want_count }})</div>
+    {% if want_to_go %}
+    <div style="margin:0 18px 14px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--bg4);overflow:hidden;">
+      {% for loc in want_to_go %}
+      <div class="at-list-row" onclick="openDetail({{ loc.id }})">
+        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+          {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
+        </div>
+        <div style="flex:1;">
+          <div class="at-list-name">{{ loc.name }}</div>
+          <div class="at-list-sub">{{ loc.region_name }} · {{ loc.sub_category | replace('_',' ') }}</div>
+        </div>
+        <div style="color:var(--ink4);font-size:18px;">›</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:16px 18px;color:var(--ink4);font-size:13px;">Nothing saved yet. Browse Discover and tap Want to Go.</div>
+    {% endif %}
+
+    <div class="at-subhead-row" style="margin-top:8px;">Been There ({{ been_count }})</div>
+    {% if been_there %}
+    <div style="margin:0 18px 14px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--bg4);overflow:hidden;">
+      {% for loc in been_there %}
+      <div class="at-list-row" onclick="openDetail({{ loc.id }})">
+        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+          {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
+        </div>
+        <div style="flex:1;">
+          <div class="at-list-name">{{ loc.name }}</div>
+          <div class="at-list-sub">{{ loc.region_name }} · {{ loc.sub_category | replace('_',' ') }}</div>
+        </div>
+        {% if loc.average_stars > 0 %}<div style="font-size:12px;color:var(--gold);">★ {{ "%.1f"|format(loc.average_stars) }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:16px 18px;color:var(--ink4);font-size:13px;">No check-ins yet. Check in when you visit a location to build your travel log.</div>
+    {% endif %}
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ADDED BY ME -->
+  <div id="at-tab-added" style="display:none;overflow-y:auto;">
+    {% if my_locations %}
+    <div style="margin:12px 18px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--bg4);overflow:hidden;">
+      {% for loc in my_locations %}
+      <div class="at-list-row" onclick="openDetail({{ loc.id }})">
+        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+          {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
+        </div>
+        <div style="flex:1;">
+          <div class="at-list-name">{{ loc.name }}</div>
+          <div class="at-list-sub">{{ loc.region_name }} · {{ loc.visibility }}</div>
+        </div>
+        {% if loc.average_stars > 0 %}<div style="font-size:12px;color:var(--gold);">★ {{ "%.1f"|format(loc.average_stars) }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="at-empty">
+      <div class="at-empty-icon">📍</div>
+      <div class="at-empty-text">You haven't added any locations yet.<br>Tap + Add to share a spot.</div>
+    </div>
+    {% endif %}
+    <div class="scroll-pad"></div>
+  </div>
+
+</div>
+
+<!-- DETAIL SHEET -->
+<div class="at-sheet-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+<div class="at-sheet" id="detail-sheet">
+  <div class="at-sheet-handle"></div>
+  <div class="at-sheet-scroll" id="detail-content">
+    <div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>
+  </div>
+</div>
+
+<!-- ADD SHEET -->
+<div class="at-sheet-overlay" id="add-overlay" onclick="closeAddSheet()"></div>
+<div class="at-sheet" id="add-sheet">
+  <div class="at-sheet-handle"></div>
+  <div class="at-sheet-scroll">
+    <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+      <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Add location</div>
+      <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Share a spot with the community or save it privately.</div>
+    </div>
+    <div style="padding-top:12px;">
+      <div class="at-field">
+        <label class="at-label">Display name</label>
+        <input class="at-input" id="add-name" placeholder="e.g. The Blue Lounge, Collabor88" maxlength="120">
+      </div>
+      <div class="at-field">
+        <label class="at-label">Region name</label>
+        <input class="at-input" id="add-region" placeholder="e.g. Bellisseria" maxlength="120">
+      </div>
+      <div class="at-field">
+        <label class="at-label">Parcel name</label>
+        <input class="at-input" id="add-parcel" placeholder="e.g. Collabor88 Main" maxlength="120">
+      </div>
+      <div class="at-field">
+        <label class="at-label">Description</label>
+        <textarea class="at-textarea" id="add-desc" placeholder="What's this place like?" maxlength="400"></textarea>
+      </div>
+      <div class="at-field">
+        <label class="at-label">Category</label>
+        <div class="at-pill-group" id="add-parent-pills">
+          <button class="at-pill selected" onclick="selectParent(this,'places')">Places</button>
+          <button class="at-pill" onclick="selectParent(this,'shopping')">Shopping</button>
+        </div>
+      </div>
+      <div class="at-field">
+        <label class="at-label">Sub-category</label>
+        <div class="at-pill-group" id="add-sub-pills"></div>
+      </div>
+      <div class="at-field">
+        <label class="at-label">Visibility</label>
+        <div class="at-pill-group">
+          <button class="at-pill selected" onclick="atPick(this,'vis')" data-val="public">Public</button>
+          <button class="at-pill" onclick="atPick(this,'vis')" data-val="friends">Friends</button>
+          <button class="at-pill" onclick="atPick(this,'vis')" data-val="private">Private</button>
+        </div>
+      </div>
+      <div class="at-section-head" style="margin-top:4px;">Links <span style="font-weight:400;color:var(--ink4);">(optional)</span></div>
+      <div class="at-field">
+        <label class="at-label">Marketplace URL</label>
+        <input class="at-input" id="add-marketplace" type="url" placeholder="https://marketplace.secondlife.com/…">
+      </div>
+      <div class="at-field">
+        <label class="at-label">Instagram</label>
+        <input class="at-input" id="add-instagram" type="url" placeholder="https://instagram.com/…">
+      </div>
+      <div class="at-field">
+        <label class="at-label">Flickr</label>
+        <input class="at-input" id="add-flickr" type="url" placeholder="https://flickr.com/…">
+      </div>
+      <div class="at-field">
+        <label class="at-label">Primfeed</label>
+        <input class="at-input" id="add-primfeed" type="url" placeholder="https://primfeed.com/…">
+      </div>
+      <button class="at-save-btn" onclick="submitLocation()">Add to Atlas</button>
+      <div style="height:16px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW SHEET -->
+<div class="at-sheet-overlay" id="review-overlay" onclick="closeReviewSheet()"></div>
+<div class="at-sheet" id="review-sheet">
+  <div class="at-sheet-handle"></div>
+  <div class="at-sheet-scroll">
+    <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+      <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Leave a review</div>
+      <div style="font-size:12px;color:var(--ink4);margin-top:2px;" id="review-loc-name"></div>
+    </div>
+    <div style="padding:14px 18px;">
+      <label class="at-label">Rating <span style="font-weight:400;color:var(--ink4);">(optional)</span></label>
+      <div class="at-star-picker" id="star-picker">
+        <span class="at-star-pick" onclick="setStar(1)">★</span>
+        <span class="at-star-pick" onclick="setStar(2)">★</span>
+        <span class="at-star-pick" onclick="setStar(3)">★</span>
+        <span class="at-star-pick" onclick="setStar(4)">★</span>
+        <span class="at-star-pick" onclick="setStar(5)">★</span>
+      </div>
+      <label class="at-label" style="margin-top:10px;">Review <span style="font-weight:400;color:var(--ink4);">(optional)</span></label>
+      <textarea class="at-textarea" id="review-body" placeholder="Tell others about this place…" maxlength="500"></textarea>
+      <button class="at-save-btn" style="margin:10px 0 0;" onclick="submitReview()">Submit</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN = "{{ token }}";
+
+  const SUB_CATS   = {{ sub_categories | tojson }};
+  const SUB_LABELS = {{ sub_labels | tojson }};
+
+  let _activeFilter = 'all';
+  let _addParent    = 'places';
+  let _addSub       = '';
+  let _addVis       = 'public';
+  let _detailId     = null;
+  let _reviewLocId  = null;
+  let _reviewStar   = null;
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  function showAtTab(id) {
+    ['discover','my-places','added'].forEach(t => {
+      const el = document.getElementById('at-tab-' + t);
+      if (el) el.style.display = t === id ? 'flex' : 'none';
+      if (t === id && el) el.style.flexDirection = 'column';
+    });
+    document.querySelectorAll('.at-tab').forEach((el, i) => {
+      el.classList.toggle('active', ['discover','my-places','added'][i] === id);
+    });
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    let t = document.getElementById('_toast');
+    if (!t) {
+      t = document.createElement('div'); t.id = '_toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c1814;color:#faf9f7;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s;max-width:320px;text-align:center;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.style.opacity = '0', 2600);
+  }
+
+  // ── Filter ────────────────────────────────────────────────────────────────
+  function setFilter(btn, val) {
+    document.querySelectorAll('.at-filter-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _activeFilter = val;
+    loadDiscover();
+  }
+
+  async function loadDiscover() {
+    const list = document.getElementById('at-discover-list');
+    list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
+    let url = `/atlas/locations?token=${TOKEN}&limit=30`;
+    if (_activeFilter === 'places')     url += '&parent_category=places';
+    if (_activeFilter === 'shopping')   url += '&parent_category=shopping';
+    if (_activeFilter === 'top_rated')  url += '&sort=top_rated';
+    if (_activeFilter === 'newest')     url += '&sort=newest';
+    if (_activeFilter === 'most_saved') url += '&sort=most_saved';
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      const locs = data.locations || [];
+      if (!locs.length) {
+        list.innerHTML = '<div class="at-empty"><div class="at-empty-icon">🌐</div><div class="at-empty-text">No locations found.</div></div>';
+        return;
+      }
+      list.innerHTML = locs.map(loc => `
+        <div class="at-card" onclick="openDetail(${loc.id})">
+          <div class="at-card-photo" ${loc.parcel_photo_uuid ? `style="background-image:url('https://secondlife.com/app/image/${loc.parcel_photo_uuid}/2')"` : ''}>
+            ${!loc.parcel_photo_uuid ? '🏙️' : ''}
+            <div class="at-card-cat">${(loc.sub_category||'').replace(/_/g,' ')}</div>
+          </div>
+          <div class="at-card-body">
+            <div class="at-card-name">${loc.name}</div>
+            <div class="at-card-region">${loc.region_name}${loc.parcel_name && loc.parcel_name !== loc.name ? ' · ' + loc.parcel_name : ''}</div>
+            <div class="at-card-stats">
+              ${loc.average_stars > 0 ? `<span class="at-stars">${'★'.repeat(Math.round(loc.average_stars))}</span><span>${parseFloat(loc.average_stars).toFixed(1)}</span><span>${loc.review_count} review${loc.review_count!==1?'s':''}</span>` : ''}
+              ${loc.checkin_count > 0 ? `<span>${loc.checkin_count} check-in${loc.checkin_count!==1?'s':''}</span>` : ''}
+            </div>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      list.innerHTML = '<div class="at-empty"><div class="at-empty-text">Could not load locations.</div></div>';
+    }
+  }
+
+  // ── Detail sheet ──────────────────────────────────────────────────────────
+  async function openDetail(id) {
+    _detailId = id;
+    document.getElementById('detail-overlay').style.display = 'block';
+    document.getElementById('detail-sheet').classList.add('open');
+    document.getElementById('detail-content').innerHTML =
+      '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
+    try {
+      const res  = await fetch(`/atlas/locations/${id}?token=${TOKEN}`);
+      const data = await res.json();
+      renderDetail(data);
+    } catch(e) {
+      document.getElementById('detail-content').innerHTML =
+        '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
+    }
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-sheet').classList.remove('open');
+    document.getElementById('detail-overlay').style.display = 'none';
+    _detailId = null;
+  }
+
+  function renderDetail(data) {
+    const loc  = data.location;
+    const revs = data.reviews || [];
+    const my   = data.my_review;
+    const wtg  = data.in_want_to_go;
+    const bt   = data.in_been_there;
+
+    const starsStr = loc.average_stars > 0
+      ? `<span class="at-stars">${'★'.repeat(Math.round(loc.average_stars))}</span> ${parseFloat(loc.average_stars).toFixed(1)} (${loc.review_count} review${loc.review_count!==1?'s':''})`
+      : 'No reviews yet';
+
+    const links = [];
+    if (loc.slurl)           links.push(`<a class="at-link-btn" href="${loc.slurl}">📍 Teleport</a>`);
+    if (loc.marketplace_url) links.push(`<a class="at-link-btn" href="${loc.marketplace_url}" target="_blank">🛍 Marketplace</a>`);
+    if (loc.instagram_url)   links.push(`<a class="at-link-btn" href="${loc.instagram_url}" target="_blank">📸 Instagram</a>`);
+    if (loc.flickr_url)      links.push(`<a class="at-link-btn" href="${loc.flickr_url}" target="_blank">🖼 Flickr</a>`);
+    if (loc.primfeed_url)    links.push(`<a class="at-link-btn" href="${loc.primfeed_url}" target="_blank">✦ Primfeed</a>`);
+
+    const reviewsHtml = revs.length
+      ? revs.map(r => `
+        <div class="at-review">
+          <div class="at-review-header">
+            <span class="at-review-name">${r.reviewer_name}</span>
+            ${r.stars ? `<span class="at-review-stars">${'★'.repeat(Math.round(r.stars))}</span>` : ''}
+            <span style="color:var(--ink4);font-size:11px;margin-left:auto;">${(r.created_at||'').slice(0,10)}</span>
+          </div>
+          ${r.body ? `<div class="at-review-body">${r.body}</div>` : ''}
+          <button class="at-helpful-btn ${r.viewer_found_helpful ? 'active' : ''}" onclick="toggleHelpful(${r.id},this)">
+            👍 Helpful${r.helpful_count > 0 ? ` (${r.helpful_count})` : ''}
+          </button>
+        </div>`).join('')
+      : '<div style="padding:16px 18px;color:var(--ink4);font-size:13px;">No reviews yet. Be the first!</div>';
+
+    document.getElementById('detail-content').innerHTML = `
+      <div class="at-sheet-photo" ${loc.parcel_photo_uuid ? `style="background-image:url('https://secondlife.com/app/image/${loc.parcel_photo_uuid}/2')"` : ''}>
+        ${!loc.parcel_photo_uuid ? '🏙️' : ''}
+      </div>
+      <div class="at-sheet-header">
+        <div class="at-sheet-name">${loc.name}</div>
+        <div class="at-sheet-region">${loc.region_name} · ${loc.parcel_name}</div>
+        <div class="at-sheet-stats">
+          <span>${starsStr}</span>
+          <span>·</span><span>${loc.checkin_count} check-in${loc.checkin_count!==1?'s':''}</span>
+          <span>·</span><span>${loc.save_count} saved</span>
+        </div>
+      </div>
+      <div class="at-sheet-actions">
+        <button class="at-action-btn primary" onclick="doCheckin(${loc.id})">✓ Check in</button>
+        <button class="at-action-btn ${wtg?'primary':''}" id="btn-wtg-${loc.id}"
+          onclick="toggleSave(${loc.id},'want_to_go',this)">
+          ${wtg ? '🔖 Saved' : '🔖 Want to Go'}
+        </button>
+        <button class="at-action-btn" onclick="openReviewSheet(${loc.id},'${(loc.name||'').replace(/'/g,"\\'")}')">
+          ${my ? '✏️ Edit review' : '★ Review'}
+        </button>
+      </div>
+      ${links.length ? `<div class="at-links">${links.join('')}</div>` : ''}
+      ${loc.description ? `<div style="padding:12px 18px;font-size:13px;color:var(--ink2);line-height:1.6;border-bottom:1px solid var(--bg3);">${loc.description}</div>` : ''}
+      <div class="at-section-head">Reviews</div>
+      ${reviewsHtml}
+    `;
+  }
+
+  async function doCheckin(id) {
+    try {
+      const res = await fetch(`/atlas/locations/${id}/checkin`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      if (res.ok) {
+        toast('Checked in ✓');
+        // Prompt review
+        const locName = document.querySelector('.at-sheet-name')?.textContent || '';
+        openReviewSheet(id, locName);
+      } else toast('Could not check in');
+    } catch(e) { toast('Error'); }
+  }
+
+  async function toggleSave(id, listType, btn) {
+    const isSaved = btn.classList.contains('primary');
+    try {
+      if (isSaved) {
+        await fetch(`/atlas/locations/${id}/save?token=${TOKEN}&list_type=${listType}`, { method: 'DELETE' });
+        btn.classList.remove('primary');
+        btn.textContent = '🔖 Want to Go';
+        toast('Removed from Want to Go');
+      } else {
+        await fetch(`/atlas/locations/${id}/save`, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ token: TOKEN, list_type: listType })
+        });
+        btn.classList.add('primary');
+        btn.textContent = '🔖 Saved';
+        toast('Saved to Want to Go ✓');
+      }
+    } catch(e) { toast('Error'); }
+  }
+
+  async function toggleHelpful(reviewId, btn) {
+    try {
+      const res = await fetch(`/atlas/reviews/${reviewId}/helpful`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      const d = await res.json();
+      btn.classList.toggle('active', d.status === 'marked_helpful');
+    } catch(e) {}
+  }
+
+  // ── Review sheet ──────────────────────────────────────────────────────────
+  function openReviewSheet(locId, name) {
+    _reviewLocId = locId; _reviewStar = null;
+    document.getElementById('review-loc-name').textContent = name;
+    document.getElementById('review-body').value = '';
+    document.querySelectorAll('.at-star-pick').forEach(s => s.classList.remove('lit'));
+    document.getElementById('review-overlay').style.display = 'block';
+    document.getElementById('review-sheet').classList.add('open');
+  }
+  function closeReviewSheet() {
+    document.getElementById('review-sheet').classList.remove('open');
+    document.getElementById('review-overlay').style.display = 'none';
+  }
+  function setStar(n) {
+    _reviewStar = n;
+    document.querySelectorAll('.at-star-pick').forEach((s, i) => s.classList.toggle('lit', i < n));
+  }
+  async function submitReview() {
+    if (!_reviewLocId) return;
+    try {
+      const res = await fetch(`/atlas/locations/${_reviewLocId}/review`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN, stars: _reviewStar,
+          body:  document.getElementById('review-body').value.trim() || null
+        })
+      });
+      if (res.ok) {
+        closeReviewSheet(); toast('Review submitted ✓');
+        if (_detailId) openDetail(_detailId);
+      } else toast('Could not submit');
+    } catch(e) { toast('Error'); }
+  }
+
+  // ── Add location sheet ────────────────────────────────────────────────────
+  function openAddSheet() {
+    _addParent = 'places'; _addSub = ''; _addVis = 'public';
+    renderSubPills('places');
+    ['add-name','add-region','add-parcel','add-desc','add-marketplace','add-instagram','add-flickr','add-primfeed']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('add-overlay').style.display = 'block';
+    document.getElementById('add-sheet').classList.add('open');
+  }
+  function closeAddSheet() {
+    document.getElementById('add-sheet').classList.remove('open');
+    document.getElementById('add-overlay').style.display = 'none';
+  }
+
+  function selectParent(btn, val) {
+    document.querySelectorAll('#add-parent-pills .at-pill').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    _addParent = val;
+    renderSubPills(val);
+  }
+
+  function renderSubPills(parent) {
+    const subs = SUB_CATS[parent] || [];
+    _addSub = subs[0] || 'other';
+    document.getElementById('add-sub-pills').innerHTML = subs.map((s, i) =>
+      `<button class="at-pill ${i===0?'selected':''}" onclick="pickSub(this,'${s}')">${SUB_LABELS[s]||s.replace(/_/g,' ')}</button>`
+    ).join('');
+  }
+
+  function pickSub(btn, val) {
+    document.querySelectorAll('#add-sub-pills .at-pill').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    _addSub = val;
+  }
+
+  function atPick(btn, group) {
+    btn.closest('.at-pill-group').querySelectorAll('.at-pill').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    if (group === 'vis') _addVis = btn.dataset.val;
+  }
+
+  async function submitLocation() {
+    const name   = document.getElementById('add-name').value.trim();
+    const region = document.getElementById('add-region').value.trim();
+    const parcel = document.getElementById('add-parcel').value.trim();
+    if (!name || !region || !parcel) { toast('Name, region, and parcel are required'); return; }
+    try {
+      const res = await fetch('/atlas/locations', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN, name, region_name: region, parcel_name: parcel,
+          description:     document.getElementById('add-desc').value.trim() || null,
+          parent_category: _addParent, sub_category: _addSub, visibility: _addVis,
+          marketplace_url: document.getElementById('add-marketplace').value.trim() || null,
+          instagram_url:   document.getElementById('add-instagram').value.trim() || null,
+          flickr_url:      document.getElementById('add-flickr').value.trim() || null,
+          primfeed_url:    document.getElementById('add-primfeed').value.trim() || null,
+        })
+      });
+      const d = await res.json();
+      if (res.ok) {
+        closeAddSheet();
+        if (d.status === 'existing') {
+          toast('Already in Atlas — opening it.');
+        } else {
+          toast('Location added ✓');
+          loadDiscover();
+        }
+        openDetail(d.location_id);
+      } else toast(d.detail || 'Could not add');
+    } catch(e) { toast('Error'); }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  // Initialise tab display
+  document.getElementById('at-tab-discover').style.display = 'flex';
+  document.getElementById('at-tab-discover').style.flexDirection = 'column';
+</script>
+{% endblock %}

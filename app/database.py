@@ -738,6 +738,76 @@ async def _init_sqlite():
             )
         """)
         await db.commit()
+
+        # ── Atlas (Location Guide) Tables (SQLite) ────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_locations (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id         INTEGER NOT NULL REFERENCES players(id),
+                region_name       TEXT    NOT NULL,
+                parcel_name       TEXT    NOT NULL,
+                parcel_photo_uuid TEXT    DEFAULT NULL,
+                x                 REAL    DEFAULT 0,
+                y                 REAL    DEFAULT 0,
+                z                 REAL    DEFAULT 0,
+                name              TEXT    NOT NULL,
+                description       TEXT    DEFAULT NULL,
+                parent_category   TEXT    NOT NULL DEFAULT 'places',
+                sub_category      TEXT    NOT NULL DEFAULT 'other',
+                visibility        TEXT    NOT NULL DEFAULT 'public',
+                slurl             TEXT    DEFAULT NULL,
+                marketplace_url   TEXT    DEFAULT NULL,
+                instagram_url     TEXT    DEFAULT NULL,
+                flickr_url        TEXT    DEFAULT NULL,
+                primfeed_url      TEXT    DEFAULT NULL,
+                average_stars     REAL    NOT NULL DEFAULT 0,
+                review_count      INTEGER NOT NULL DEFAULT 0,
+                save_count        INTEGER NOT NULL DEFAULT 0,
+                checkin_count     INTEGER NOT NULL DEFAULT 0,
+                featured_until    TEXT    DEFAULT NULL,
+                created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+                updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_reviews (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                location_id INTEGER NOT NULL REFERENCES atlas_locations(id) ON DELETE CASCADE,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                stars       REAL    DEFAULT NULL,
+                body        TEXT    DEFAULT NULL,
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(location_id, player_id)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_saves (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                location_id INTEGER NOT NULL REFERENCES atlas_locations(id) ON DELETE CASCADE,
+                list_type   TEXT    NOT NULL DEFAULT 'want_to_go',
+                saved_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(player_id, location_id, list_type)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_checkins (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                location_id INTEGER NOT NULL REFERENCES atlas_locations(id) ON DELETE CASCADE,
+                visited_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_helpful_votes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                review_id   INTEGER NOT NULL REFERENCES atlas_reviews(id) ON DELETE CASCADE,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(review_id, player_id)
+            )
+        """)
+        await db.commit()
         print("   Database tables ready (SQLite)")
 
 
@@ -1140,6 +1210,75 @@ async def _init_postgres():
                 available_until      TEXT    NOT NULL,
                 is_pinned            INTEGER NOT NULL DEFAULT 0,
                 created_at           TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Atlas (Location Guide) Tables (PostgreSQL) ────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_locations (
+                id                SERIAL  PRIMARY KEY,
+                player_id         INTEGER NOT NULL REFERENCES players(id),
+                region_name       TEXT    NOT NULL,
+                parcel_name       TEXT    NOT NULL,
+                parcel_photo_uuid TEXT    DEFAULT NULL,
+                x                 REAL    DEFAULT 0,
+                y                 REAL    DEFAULT 0,
+                z                 REAL    DEFAULT 0,
+                name              TEXT    NOT NULL,
+                description       TEXT    DEFAULT NULL,
+                parent_category   TEXT    NOT NULL DEFAULT 'places',
+                sub_category      TEXT    NOT NULL DEFAULT 'other',
+                visibility        TEXT    NOT NULL DEFAULT 'public',
+                slurl             TEXT    DEFAULT NULL,
+                marketplace_url   TEXT    DEFAULT NULL,
+                instagram_url     TEXT    DEFAULT NULL,
+                flickr_url        TEXT    DEFAULT NULL,
+                primfeed_url      TEXT    DEFAULT NULL,
+                average_stars     REAL    NOT NULL DEFAULT 0,
+                review_count      INTEGER NOT NULL DEFAULT 0,
+                save_count        INTEGER NOT NULL DEFAULT 0,
+                checkin_count     INTEGER NOT NULL DEFAULT 0,
+                featured_until    TEXT    DEFAULT NULL,
+                created_at        TEXT    NOT NULL DEFAULT (now()::text),
+                updated_at        TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_reviews (
+                id          SERIAL  PRIMARY KEY,
+                location_id INTEGER NOT NULL REFERENCES atlas_locations(id) ON DELETE CASCADE,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                stars       REAL    DEFAULT NULL,
+                body        TEXT    DEFAULT NULL,
+                created_at  TEXT    NOT NULL DEFAULT (now()::text),
+                UNIQUE(location_id, player_id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_saves (
+                id          SERIAL  PRIMARY KEY,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                location_id INTEGER NOT NULL REFERENCES atlas_locations(id) ON DELETE CASCADE,
+                list_type   TEXT    NOT NULL DEFAULT 'want_to_go',
+                saved_at    TEXT    NOT NULL DEFAULT (now()::text),
+                UNIQUE(player_id, location_id, list_type)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_checkins (
+                id          SERIAL  PRIMARY KEY,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                location_id INTEGER NOT NULL REFERENCES atlas_locations(id) ON DELETE CASCADE,
+                visited_at  TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS atlas_helpful_votes (
+                id          SERIAL  PRIMARY KEY,
+                review_id   INTEGER NOT NULL REFERENCES atlas_reviews(id) ON DELETE CASCADE,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                created_at  TEXT    NOT NULL DEFAULT (now()::text),
+                UNIQUE(review_id, player_id)
             )
         """)
 

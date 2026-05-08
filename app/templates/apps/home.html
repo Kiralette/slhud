@@ -182,6 +182,11 @@
       <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#ddd8d0)">📖</div>
       <div class="app-icon-label">Guide</div>
     </a>
+    <a class="app-icon" href="/app/atlas?token={{ token }}">
+      <div class="notif-dot" id="hdot-atlas"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0f5,#c8dce8)">🗺️</div>
+      <div class="app-icon-label">Atlas</div>
+    </a>
     <a class="app-icon" href="/app/grind?token={{ token }}">
       <div class="notif-dot" id="hdot-grind"></div>
       <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e0dcd4)">💼</div>
@@ -256,9 +261,9 @@
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
-  const DOT_APPS = ['ping','flare','canvas','spark'];
-  const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',system:'✦',aura:'🫂',recharge:'⚡',wavelength:'🎧',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️',spark:'⚡',healthcare:'🏥' };
-  const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',system:'SL HUD',glow:'Glow',thrill:'Thrill',luminary:'Luminary',spark:'Spark',healthcare:'MyChart' };
+  const DOT_APPS = ['ping','flare','canvas','spark','atlas'];
+  const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',system:'✦',aura:'🫂',recharge:'⚡',wavelength:'🎧',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️',spark:'⚡',healthcare:'🏥',atlas:'🗺️' };
+  const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',system:'SL HUD',glow:'Glow',thrill:'Thrill',luminary:'Luminary',spark:'Spark',healthcare:'MyChart',atlas:'Atlas' };
 
   // Notifications
   let shownNotifIds = new Set(), bannerTimeout = null;

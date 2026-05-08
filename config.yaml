@@ -1789,6 +1789,21 @@ questionnaire:
     is_negative: 1
     auto: true
 
+  # ── Atlas vibes ──────────────────────────────────────────────────────────────
+  atlas_explorer:
+    vibe_key:    "atlas_explorer"
+    display:     "Explorer 🗺️"
+    description: "Checked into a new place. Curiosity +5."
+    is_negative: 0
+    auto: true
+
+  atlas_nostalgia:
+    vibe_key:    "atlas_nostalgia"
+    display:     "Nostalgic ✨"
+    description: "Revisiting a familiar place. Warmth +5."
+    is_negative: 0
+    auto: true
+
 achievements:
   # ── NEEDS ───────────────────────────────────────────────
   well_fed_streak:

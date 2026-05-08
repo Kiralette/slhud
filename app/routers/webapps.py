@@ -2697,3 +2697,106 @@ async def spark_app(
         "superlike_pack":     SUPERLIKE_PACK,
         "rewind_cost":        REWIND_COST,
     })
+
+
+# ── ATLAS ─────────────────────────────────────────────────────────────────────
+@router.get("/atlas", response_class=HTMLResponse)
+async def atlas_app(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+
+    from app.routers.atlas import PARENT_CATEGORIES, SUB_CATEGORIES, SUB_CATEGORY_LABELS, VISIBILITY_OPTIONS
+
+    # Fetch trending public locations
+    if is_postgres():
+        trending_rows = await db.fetch(
+            """SELECT al.*, p.display_name AS added_by_name
+               FROM atlas_locations al
+               JOIN players p ON p.id = al.player_id
+               WHERE al.visibility = 'public'
+               ORDER BY al.checkin_count DESC, al.save_count DESC, al.average_stars DESC
+               LIMIT 20""")
+        # My places counts
+        want_count = await db.fetchval(
+            "SELECT COUNT(*) FROM atlas_saves WHERE player_id = $1 AND list_type = 'want_to_go'",
+            player_id)
+        been_count = await db.fetchval(
+            "SELECT COUNT(*) FROM atlas_saves WHERE player_id = $1 AND list_type = 'been_there'",
+            player_id)
+        # My locations
+        my_locations_rows = await db.fetch(
+            "SELECT * FROM atlas_locations WHERE player_id = $1 ORDER BY created_at DESC LIMIT 20",
+            player_id)
+        # Want to go list
+        want_rows = await db.fetch(
+            """SELECT al.* FROM atlas_saves s
+               JOIN atlas_locations al ON al.id = s.location_id
+               WHERE s.player_id = $1 AND s.list_type = 'want_to_go'
+               ORDER BY s.saved_at DESC""", player_id)
+        # Been there list
+        been_rows = await db.fetch(
+            """SELECT al.* FROM atlas_saves s
+               JOIN atlas_locations al ON al.id = s.location_id
+               WHERE s.player_id = $1 AND s.list_type = 'been_there'
+               ORDER BY s.saved_at DESC""", player_id)
+    else:
+        async with db.execute(
+            """SELECT al.*, p.display_name AS added_by_name
+               FROM atlas_locations al
+               JOIN players p ON p.id = al.player_id
+               WHERE al.visibility = 'public'
+               ORDER BY al.checkin_count DESC, al.save_count DESC, al.average_stars DESC
+               LIMIT 20"""
+        ) as cur:
+            trending_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT COUNT(*) FROM atlas_saves WHERE player_id = ? AND list_type = 'want_to_go'",
+            (player_id,)
+        ) as cur:
+            want_count = (await cur.fetchone())[0]
+        async with db.execute(
+            "SELECT COUNT(*) FROM atlas_saves WHERE player_id = ? AND list_type = 'been_there'",
+            (player_id,)
+        ) as cur:
+            been_count = (await cur.fetchone())[0]
+        async with db.execute(
+            "SELECT * FROM atlas_locations WHERE player_id = ? ORDER BY created_at DESC LIMIT 20",
+            (player_id,)
+        ) as cur:
+            my_locations_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT al.* FROM atlas_saves s
+               JOIN atlas_locations al ON al.id = s.location_id
+               WHERE s.player_id = ? AND s.list_type = 'want_to_go'
+               ORDER BY s.saved_at DESC""", (player_id,)
+        ) as cur:
+            want_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT al.* FROM atlas_saves s
+               JOIN atlas_locations al ON al.id = s.location_id
+               WHERE s.player_id = ? AND s.list_type = 'been_there'
+               ORDER BY s.saved_at DESC""", (player_id,)
+        ) as cur:
+            been_rows = await cur.fetchall()
+
+    return templates.TemplateResponse(request, "apps/atlas.html", {
+        "token":             token,
+        "player":            player,
+        "trending":          [dict(r) for r in trending_rows],
+        "want_to_go":        [dict(r) for r in want_rows],
+        "been_there":        [dict(r) for r in been_rows],
+        "my_locations":      [dict(r) for r in my_locations_rows],
+        "want_count":        want_count or 0,
+        "been_count":        been_count or 0,
+        "parent_categories": PARENT_CATEGORIES,
+        "sub_categories":    SUB_CATEGORIES,
+        "sub_labels":        SUB_CATEGORY_LABELS,
+        "visibility_options": VISIBILITY_OPTIONS,
+    })
