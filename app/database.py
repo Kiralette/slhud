@@ -739,6 +739,22 @@ async def _init_sqlite():
         """)
         await db.commit()
 
+        # ── Player Location (Atlas heartbeat cache) (SQLite) ─────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS player_location (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id         INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                region_name       TEXT    DEFAULT NULL,
+                parcel_name       TEXT    DEFAULT NULL,
+                parcel_photo_uuid TEXT    DEFAULT NULL,
+                x                 REAL    DEFAULT 0,
+                y                 REAL    DEFAULT 0,
+                z                 REAL    DEFAULT 0,
+                slurl             TEXT    DEFAULT NULL,
+                updated_at        TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
         # ── Atlas (Location Guide) Tables (SQLite) ────────────────────────────
         await db.execute("""
             CREATE TABLE IF NOT EXISTS atlas_locations (
@@ -1210,6 +1226,22 @@ async def _init_postgres():
                 available_until      TEXT    NOT NULL,
                 is_pinned            INTEGER NOT NULL DEFAULT 0,
                 created_at           TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Player Location (Atlas heartbeat cache) (PostgreSQL) ─────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS player_location (
+                id                SERIAL  PRIMARY KEY,
+                player_id         INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                region_name       TEXT    DEFAULT NULL,
+                parcel_name       TEXT    DEFAULT NULL,
+                parcel_photo_uuid TEXT    DEFAULT NULL,
+                x                 REAL    DEFAULT 0,
+                y                 REAL    DEFAULT 0,
+                z                 REAL    DEFAULT 0,
+                slurl             TEXT    DEFAULT NULL,
+                updated_at        TEXT    NOT NULL DEFAULT (now()::text)
             )
         """)
 

@@ -19,7 +19,7 @@ Endpoints:
   GET    /atlas/nearby                       — locations in a given region
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from pydantic import BaseModel
 from datetime import datetime, timezone
 
@@ -783,6 +783,132 @@ async def my_locations(token: str, db=Depends(get_db)):
             rows = await cur.fetchall()
 
     return {"locations": [dict(r) for r in rows]}
+
+
+# ── POST /atlas/heartbeat ─────────────────────────────────────────────────────
+
+class AtlasHeartbeat(BaseModel):
+    region_name: str
+    parcel_name: str
+    parcel_photo_uuid: str | None = None
+    x: float = 0
+    y: float = 0
+    z: float = 0
+
+
+@router.post("/heartbeat")
+async def atlas_heartbeat(
+    body: AtlasHeartbeat,
+    authorization: str | None = Header(None),
+    db=Depends(get_db)
+):
+    """
+    Called by LSL HUD every 60s alongside the career heartbeat.
+    Captures the player's current region, parcel, photo UUID, and coordinates.
+    Stored in player_location (one row per player, upserted each tick).
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Authorization header.")
+    token = authorization.split(" ", 1)[1].strip()
+
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    region    = body.region_name.strip()[:120]
+    parcel    = body.parcel_name.strip()[:120]
+    slurl     = _build_slurl(region, body.x, body.y, body.z)
+    now       = datetime.now(timezone.utc).isoformat()
+
+    if is_postgres():
+        await db.execute(
+            """INSERT INTO player_location
+               (player_id, region_name, parcel_name, parcel_photo_uuid, x, y, z, slurl, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               ON CONFLICT (player_id) DO UPDATE SET
+                 region_name       = EXCLUDED.region_name,
+                 parcel_name       = EXCLUDED.parcel_name,
+                 parcel_photo_uuid = EXCLUDED.parcel_photo_uuid,
+                 x                 = EXCLUDED.x,
+                 y                 = EXCLUDED.y,
+                 z                 = EXCLUDED.z,
+                 slurl             = EXCLUDED.slurl,
+                 updated_at        = EXCLUDED.updated_at""",
+            player_id, region, parcel, body.parcel_photo_uuid,
+            body.x, body.y, body.z, slurl, now)
+    else:
+        await db.execute(
+            """INSERT INTO player_location
+               (player_id, region_name, parcel_name, parcel_photo_uuid, x, y, z, slurl, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(player_id) DO UPDATE SET
+                 region_name       = excluded.region_name,
+                 parcel_name       = excluded.parcel_name,
+                 parcel_photo_uuid = excluded.parcel_photo_uuid,
+                 x                 = excluded.x,
+                 y                 = excluded.y,
+                 z                 = excluded.z,
+                 slurl             = excluded.slurl,
+                 updated_at        = excluded.updated_at""",
+            (player_id, region, parcel, body.parcel_photo_uuid,
+             body.x, body.y, body.z, slurl, now))
+        await db.commit()
+
+    return {"ok": True}
+
+
+# ── GET /atlas/current-location ───────────────────────────────────────────────
+
+@router.get("/current-location")
+async def current_location(token: str, db=Depends(get_db)):
+    """
+    Returns the player's last known location from the atlas heartbeat cache.
+    Called by the webapp when the player taps 'Add this location' — pre-populates
+    the Add form with region, parcel, coords, photo UUID, and suggested name.
+    Returns nulls gracefully if no heartbeat has been received yet.
+    """
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+
+    if is_postgres():
+        row = await db.fetchrow(
+            "SELECT * FROM player_location WHERE player_id = $1", player_id)
+        loc = dict(row) if row else None
+    else:
+        async with db.execute(
+            "SELECT * FROM player_location WHERE player_id = ?", (player_id,)
+        ) as cur:
+            row = await cur.fetchone()
+            loc = dict(row) if row else None
+
+    if not loc:
+        return {
+            "region_name":       None,
+            "parcel_name":       None,
+            "parcel_photo_uuid": None,
+            "x":                 None,
+            "y":                 None,
+            "z":                 None,
+            "slurl":             None,
+            "suggested_name":    None,
+            "updated_at":        None,
+        }
+
+    return {
+        "region_name":       loc["region_name"],
+        "parcel_name":       loc["parcel_name"],
+        "parcel_photo_uuid": loc["parcel_photo_uuid"],
+        "x":                 loc["x"],
+        "y":                 loc["y"],
+        "z":                 loc["z"],
+        "slurl":             loc["slurl"],
+        "suggested_name":    loc["parcel_name"],  # parcel name is the best default display name
+        "updated_at":        loc["updated_at"],
+    }
 
 
 # ── GET /atlas/nearby ─────────────────────────────────────────────────────────
