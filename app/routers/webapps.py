@@ -926,6 +926,40 @@ async def ritual(
             (player_id, month_start, month_end)) as cur:
             friends_event_rows = await cur.fetchall()
 
+    # RSVPd events — events the player has said they're going to
+    if is_postgres():
+        rsvp_rows = await db.fetch(
+            """SELECT ce.*, p.display_name AS creator_name
+               FROM calendar_rsvps cr
+               JOIN calendar_events ce ON ce.id = cr.event_id
+               JOIN players p ON p.id = ce.player_id
+               WHERE cr.player_id = $1
+               AND ce.event_date_slt >= $2 AND ce.event_date_slt < $3
+               ORDER BY ce.event_date_slt ASC""",
+            player_id, month_start, month_end)
+        rsvp_event_ids = await db.fetch(
+            "SELECT event_id FROM calendar_rsvps WHERE player_id = $1", player_id)
+        rsvp_event_ids = {r["event_id"] for r in rsvp_event_ids}
+    else:
+        async with db.execute(
+            """SELECT ce.*, p.display_name AS creator_name
+               FROM calendar_rsvps cr
+               JOIN calendar_events ce ON ce.id = cr.event_id
+               JOIN players p ON p.id = ce.player_id
+               WHERE cr.player_id = ?
+               AND ce.event_date_slt >= ? AND ce.event_date_slt < ?
+               ORDER BY ce.event_date_slt ASC""",
+            (player_id, month_start, month_end)
+        ) as cur:
+            rsvp_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT event_id FROM calendar_rsvps WHERE player_id = ?", (player_id,)
+        ) as cur:
+            rsvp_ids_rows = await cur.fetchall()
+        rsvp_event_ids = {r["event_id"] for r in rsvp_ids_rows}
+
+    rsvp_events = [dict(r) for r in rsvp_rows]
+
     # Cycle data
     cycle_history    = []
     cycle_prediction = {"has_data": False, "calendar_days": {}}
@@ -1250,12 +1284,12 @@ async def ritual(
     try:
         if is_postgres():
             hc_rows = await db.fetch(
-                """SELECT scheduled_date, appointment_type, status
+                """SELECT scheduled_date, specialty, doctor_name, status
                    FROM healthcare_appointments WHERE player_id = $1
                    AND status IN ('scheduled','completed')""", player_id)
         else:
             async with db.execute(
-                """SELECT scheduled_date, appointment_type, status
+                """SELECT scheduled_date, specialty, doctor_name, status
                    FROM healthcare_appointments WHERE player_id = ?
                    AND status IN ('scheduled','completed')""", (player_id,)
             ) as cur:
@@ -1263,13 +1297,28 @@ async def ritual(
         hc_cal = cycle_prediction.setdefault("calendar_days", {})
         for hrow in hc_rows:
             try:
-                hdate = date.fromisoformat(hrow["scheduled_date"][:10]).isoformat()
-                val   = "healthcare_scheduled" if hrow["status"] == "scheduled" else "healthcare_completed"
+                hdate    = date.fromisoformat(hrow["scheduled_date"][:10]).isoformat()
+                prefix   = "healthcare_scheduled" if hrow["status"] == "scheduled" else "healthcare_completed"
+                specialty = (hrow["specialty"] or "Appointment").replace("|", "-")
+                doctor    = (hrow["doctor_name"] or "").replace("|", "-")
+                # Format: "healthcare_scheduled:Specialty|Doctor Name"
+                val = f"{prefix}:{specialty}|{doctor}"
                 cal_add(hc_cal, hdate, val)
             except Exception:
                 pass
     except Exception:
         pass  # healthcare table may not exist on older instances
+
+    # Add RSVPd events to calendar_days
+    rsvp_cal = cycle_prediction.setdefault("calendar_days", {})
+    for rev in rsvp_events:
+        try:
+            rdate = date.fromisoformat(rev["event_date_slt"][:10]).isoformat()
+            title   = (rev.get("title") or "Event").replace("|", "-")
+            creator = (rev.get("creator_name") or "").replace("|", "-")
+            cal_add(rsvp_cal, rdate, f"rsvp:{title}|{creator}")
+        except Exception:
+            pass
 
     return templates.TemplateResponse(request, "apps/ritual.html", {
         "token":                token,
@@ -1282,6 +1331,8 @@ async def ritual(
         "upcoming":             [dict(r) for r in upcoming_rows],
         "friends_events":       [dict(r) for r in friends_event_rows],
         "community":            [dict(r) for r in community_rows],
+        "rsvp_events":          rsvp_events,
+        "rsvp_event_ids":       list(rsvp_event_ids),
         "show_cycle_tab":       show_cycle_tab,
         "cycle_setup_done":     cycle_setup_done,
         "cycle_mode":           cycle_mode,

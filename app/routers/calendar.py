@@ -307,41 +307,106 @@ async def rsvp_event(event_id: int, body: RsvpRequest, db=Depends(get_db)):
     if not player:
         raise HTTPException(status_code=401, detail="Invalid token.")
 
-    # Verify public event exists
+    player_id = player["id"]
+
+    # Verify event exists and is public or friends-visible
     if is_postgres():
         event = await db.fetchrow(
-            "SELECT id, player_id, title FROM calendar_events WHERE id = $1 AND is_public = 1",
+            """SELECT id, player_id, title, visibility, is_public
+               FROM calendar_events WHERE id = $1
+               AND (is_public = 1 OR visibility IN ('public','friends'))""",
             event_id)
     else:
         async with db.execute(
-            "SELECT id, player_id, title FROM calendar_events WHERE id = ? AND is_public = 1",
+            """SELECT id, player_id, title, visibility, is_public
+               FROM calendar_events WHERE id = ?
+               AND (is_public = 1 OR visibility IN ('public','friends'))""",
             (event_id,)
         ) as cur:
             event = await cur.fetchone()
 
     if not event:
-        raise HTTPException(status_code=404, detail="Public event not found.")
+        raise HTTPException(status_code=404, detail="Event not found.")
 
-    # Increment RSVP count
+    # Toggle RSVP — check if already RSVPd
     if is_postgres():
-        await db.execute(
-            "UPDATE calendar_events SET rsvp_count = rsvp_count + 1 WHERE id = $1",
-            event_id)
+        existing = await db.fetchrow(
+            "SELECT id FROM calendar_rsvps WHERE player_id = $1 AND event_id = $2",
+            player_id, event_id)
     else:
-        await db.execute(
-            "UPDATE calendar_events SET rsvp_count = rsvp_count + 1 WHERE id = ?",
-            (event_id,))
-        await db.commit()
+        async with db.execute(
+            "SELECT id FROM calendar_rsvps WHERE player_id = ? AND event_id = ?",
+            (player_id, event_id)
+        ) as cur:
+            existing = await cur.fetchone()
 
-    # Notify event creator
-    if event["player_id"] != player["id"]:
-        await push_notification(
-            player_id=event["player_id"],
-            app_source="ritual",
-            title=f"{player['display_name']} RSVPd to {event['title']} 📅",
-            body="",
-            priority="low",
-            db=db,
-        )
+    if existing:
+        # Un-RSVP
+        if is_postgres():
+            await db.execute(
+                "DELETE FROM calendar_rsvps WHERE player_id = $1 AND event_id = $2",
+                player_id, event_id)
+            await db.execute(
+                "UPDATE calendar_events SET rsvp_count = GREATEST(0, rsvp_count - 1) WHERE id = $1",
+                event_id)
+        else:
+            await db.execute(
+                "DELETE FROM calendar_rsvps WHERE player_id = ? AND event_id = ?",
+                (player_id, event_id))
+            await db.execute(
+                "UPDATE calendar_events SET rsvp_count = MAX(0, rsvp_count - 1) WHERE id = ?",
+                (event_id,))
+            await db.commit()
+        return {"status": "un_rsvpd"}
+    else:
+        # RSVP
+        if is_postgres():
+            await db.execute(
+                "INSERT INTO calendar_rsvps (player_id, event_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                player_id, event_id)
+            await db.execute(
+                "UPDATE calendar_events SET rsvp_count = rsvp_count + 1 WHERE id = $1",
+                event_id)
+        else:
+            await db.execute(
+                "INSERT OR IGNORE INTO calendar_rsvps (player_id, event_id) VALUES (?, ?)",
+                (player_id, event_id))
+            await db.execute(
+                "UPDATE calendar_events SET rsvp_count = rsvp_count + 1 WHERE id = ?",
+                (event_id,))
+            await db.commit()
 
-    return {"status": "rsvpd"}
+        # Notify event creator
+        if event["player_id"] != player_id:
+            await push_notification(
+                player_id=event["player_id"],
+                app_source="ritual",
+                title=f"{player['display_name']} RSVPd to {event['title']} 📅",
+                body="",
+                priority="low",
+                db=db,
+            )
+
+        return {"status": "rsvpd"}
+
+
+# ── GET /calendar/rsvps ───────────────────────────────────────────────────────
+
+@router.get("/rsvps")
+async def get_my_rsvps(token: str, db=Depends(get_db)):
+    """Return list of event IDs the player has RSVPd to."""
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    if is_postgres():
+        rows = await db.fetch(
+            "SELECT event_id FROM calendar_rsvps WHERE player_id = $1", player_id)
+    else:
+        async with db.execute(
+            "SELECT event_id FROM calendar_rsvps WHERE player_id = ?", (player_id,)
+        ) as cur:
+            rows = await cur.fetchall()
+
+    return {"rsvp_event_ids": [r["event_id"] for r in rows]}

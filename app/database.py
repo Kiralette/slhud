@@ -542,6 +542,18 @@ async def _init_sqlite():
 
         await db.commit()
 
+        # ── Calendar RSVP table (SQLite) ───────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS calendar_rsvps (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                event_id    INTEGER NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(player_id, event_id)
+            )
+        """)
+        await db.commit()
+
         # ── Healthcare System Tables (SQLite) ─────────────────────────────────
         await db.execute("""
             CREATE TABLE IF NOT EXISTS healthcare_profiles (
@@ -1105,6 +1117,17 @@ async def _init_postgres():
                 peak_day_hit    INTEGER NOT NULL DEFAULT 0,
                 result          TEXT    DEFAULT NULL,
                 checked_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Calendar RSVP table (PostgreSQL) ──────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS calendar_rsvps (
+                id          SERIAL PRIMARY KEY,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                event_id    INTEGER NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,
+                created_at  TEXT    NOT NULL DEFAULT (now()::text),
+                UNIQUE(player_id, event_id)
             )
         """)
 

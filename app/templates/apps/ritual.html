@@ -82,6 +82,7 @@
   .cal-dot.ivf_beta           { background: #9060d0; }
   .cal-dot.healthcare_scheduled { background: #3a9a6a; }
   .cal-dot.healthcare_completed { background: #8ac8a8; }
+  .cal-dot.rsvp               { background: #7060e0; }
 
   /* ── Holiday dot ── */
   .cal-day .holiday-dot {
@@ -571,7 +572,11 @@
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:12px;color:var(--ink4);">{{ ev.rsvp_count }} going</span>
-          <button class="community-rsvp-btn" onclick="rsvpEvent({{ ev.id }}, this)">RSVP</button>
+          <button class="community-rsvp-btn{% if ev.id in rsvp_event_ids %} going{% endif %}"
+            onclick="rsvpEvent({{ ev.id }}, this)"
+            style="{% if ev.id in rsvp_event_ids %}background:var(--ink);color:var(--bg);{% endif %}">
+            {% if ev.id in rsvp_event_ids %}✓ Going{% else %}RSVP{% endif %}
+          </button>
         </div>
       </div>
       {% endfor %}
@@ -1231,7 +1236,11 @@
             dotsEl.appendChild(dot);
           } else {
             const dot = document.createElement('div');
-            dot.className = `cal-dot ${mk}`;
+            // Strip metadata suffix for CSS class lookup
+            // "healthcare_scheduled:Specialty|Doctor" → "healthcare_scheduled"
+            // "rsvp:Title|Creator" → "rsvp"
+            const dotClass = mk.includes(':') ? mk.split(':')[0] : mk;
+            dot.className = `cal-dot ${dotClass}`;
             dotsEl.appendChild(dot);
           }
         });
@@ -1289,13 +1298,48 @@
     const dayMarkers = PERIOD_DAYS[dateStr];
     const markerList = Array.isArray(dayMarkers) ? dayMarkers : (dayMarkers ? [dayMarkers] : []);
     markerList.forEach(periodType => {
+      // RSVP markers: "rsvp:Event Title|Creator Name"
+      if (periodType.startsWith('rsvp:')) {
+        const parts   = periodType.slice(5).split('|');
+        const title   = parts[0] || 'Event';
+        const creator = parts[1] || '';
+        rows.push(`<div class="day-detail-row">
+          <div class="day-detail-icon">🎉</div>
+          <div class="day-detail-text">
+            <div class="day-detail-title">${title}</div>
+            <div class="day-detail-label">Going · ${creator ? 'by ' + creator : 'Community event'}</div>
+          </div></div>`);
+        return;
+      }
+      const isHcScheduled = periodType.startsWith('healthcare_scheduled');
+      const isHcCompleted  = periodType.startsWith('healthcare_completed');
+      if (isHcScheduled || isHcCompleted) {
+        const parts    = periodType.split(':');
+        const meta     = parts[1] ? parts[1].split('|') : [];
+        const specialty = meta[0] || 'Appointment';
+        const doctor    = meta[1] || '';
+        const icon      = isHcScheduled ? '🏥' : '✅';
+        const status    = isHcScheduled ? 'Scheduled' : 'Completed';
+        rows.push(`<div class="day-detail-row">
+          <div class="day-detail-icon">${icon}</div>
+          <div class="day-detail-text">
+            <div class="day-detail-title">${specialty}</div>
+            <div class="day-detail-label">Healthcare · ${status}${doctor ? ' · ' + doctor : ''}</div>
+          </div></div>`);
+        return;
+      }
       if (PERIOD_LABELS[periodType]) {
         const p = PERIOD_LABELS[periodType];
+        const IVF_MARKERS       = new Set(['ivf_stimulation','ivf_retrieval','ivf_transfer','ivf_beta']);
+        const PREGNANCY_MARKERS = new Set(['conception','due_date']);
+        let categoryLabel = 'Cycle tracking';
+        if (IVF_MARKERS.has(periodType))       categoryLabel = 'IVF journey';
+        else if (PREGNANCY_MARKERS.has(periodType)) categoryLabel = 'Pregnancy';
         rows.push(`<div class="day-detail-row">
           <div class="day-detail-icon">${p.icon}</div>
           <div class="day-detail-text">
             <div class="day-detail-title">${p.label}</div>
-            <div class="day-detail-label">Cycle tracking</div>
+            <div class="day-detail-label">${categoryLabel}</div>
           </div></div>`);
       }
     });
@@ -1397,14 +1441,33 @@
   // ── Community RSVP ──────────────────────────────────────────
 
   async function rsvpEvent(id, btn) {
-    btn.disabled = true; btn.textContent = '✓ Going';
+    const isGoing = btn.classList.contains('going');
+    btn.disabled = true;
     try {
       const res = await fetch(`/calendar/rsvp/${id}`, {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: TOKEN })
       });
-      if (!res.ok) { btn.disabled = false; btn.textContent = 'RSVP'; }
-    } catch(e) { btn.disabled = false; btn.textContent = 'RSVP'; }
+      const data = await res.json();
+      if (res.ok) {
+        if (data.status === 'rsvpd') {
+          btn.textContent = '✓ Going';
+          btn.classList.add('going');
+          btn.style.background = 'var(--ink)';
+          btn.style.color = 'var(--bg)';
+          toast("You're going! 🎉");
+        } else {
+          btn.textContent = 'RSVP';
+          btn.classList.remove('going');
+          btn.style.background = '';
+          btn.style.color = '';
+          toast('RSVP removed');
+        }
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        btn.disabled = false;
+      }
+    } catch(e) { btn.disabled = false; toast('Connection error'); }
   }
 
   // ── Cycle quick actions ───────────────────────────────────────────────────
