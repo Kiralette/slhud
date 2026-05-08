@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import get_config
 from app.database import init_db, get_pg_pool, is_postgres
-from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire, profile as profile_router, healthcare
+from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire, profile as profile_router, healthcare, spark
 from app.admin import panel
 from app.services.decay import run_decay_tick
 from app.services.economy import rotate_weekly_specials, bill_subscriptions
@@ -108,6 +108,7 @@ app.include_router(questionnaire.router)
 app.include_router(profile_router.router)
 app.include_router(profile_router.settings_router)
 app.include_router(healthcare.router)
+app.include_router(spark.router)
 
 
 @app.get("/debug/token", tags=["health"])

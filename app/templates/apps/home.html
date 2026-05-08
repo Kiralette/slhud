@@ -173,6 +173,15 @@
       <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f5ee,#c8e8d8)">🏥</div>
       <div class="app-icon-label">MyChart</div>
     </a>
+    <a class="app-icon" href="/app/haul?token={{ token }}">
+      <div class="notif-dot" id="hdot-haul"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🛍️</div>
+      <div class="app-icon-label">Haul</div>
+    </a>
+    <a class="app-icon" href="/app/guide?token={{ token }}">
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#ddd8d0)">📖</div>
+      <div class="app-icon-label">Guide</div>
+    </a>
     <a class="app-icon" href="/app/grind?token={{ token }}">
       <div class="notif-dot" id="hdot-grind"></div>
       <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e0dcd4)">💼</div>
@@ -187,25 +196,25 @@
 
   <div class="section-title">Social & Media</div>
   <div class="app-grid">
-    <a class="app-icon" href="/app/flare?token={{ token }}">
-      <div class="notif-dot" id="hdot-flare"></div>
-      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
-      <div class="app-icon-label">Flare</div>
-    </a>
     <a class="app-icon" href="/app/ping?token={{ token }}">
       <div class="notif-dot" id="hdot-ping"></div>
       <div class="app-icon-bubble" style="background:linear-gradient(135deg,#e8f0eb,#c8e0d4)">💬</div>
       <div class="app-icon-label">Ping</div>
     </a>
+    <a class="app-icon" href="/app/flare?token={{ token }}">
+      <div class="notif-dot" id="hdot-flare"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fdf0dc,#f8e4b8)">✦</div>
+      <div class="app-icon-label">Flare</div>
+    </a>
+    <a class="app-icon" href="/app/spark?token={{ token }}">
+      <div class="notif-dot" id="hdot-spark"></div>
+      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#fde8f0,#f8c8d8)">⚡</div>
+      <div class="app-icon-label">Spark</div>
+    </a>
     <a class="app-icon" href="/app/wavelength?token={{ token }}">
       <div class="notif-dot" id="hdot-wavelength"></div>
       <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5eaea,#e8d0d0)">🎧</div>
       <div class="app-icon-label">Wavelength</div>
-    </a>
-    <a class="app-icon" href="/app/haul?token={{ token }}">
-      <div class="notif-dot" id="hdot-haul"></div>
-      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f5ede0,#ead8c0)">🛍️</div>
-      <div class="app-icon-label">Haul</div>
     </a>
   </div>
 
@@ -239,10 +248,6 @@
       <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#e8e4dc)">📚</div>
       <div class="app-icon-label">Pages</div>
     </a>
-    <a class="app-icon" href="/app/guide?token={{ token }}">
-      <div class="app-icon-bubble" style="background:linear-gradient(135deg,#f4f2ee,#ddd8d0)">📖</div>
-      <div class="app-icon-label">Guide</div>
-    </a>
   </div>
 </div><!-- /home-screen -->
 
@@ -251,9 +256,9 @@
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
-  const DOT_APPS = ['ping','flare','canvas'];
-  const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',system:'✦',aura:'🫂',recharge:'⚡',wavelength:'🎧',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️' };
-  const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',system:'SL HUD',glow:'Glow',thrill:'Thrill',luminary:'Luminary' };
+  const DOT_APPS = ['ping','flare','canvas','spark'];
+  const APP_ICONS = { ping:'💬',flare:'✦',canvas:'🪞',lumen_eats:'🍽️',sip:'💧',grind:'💼',vault:'💰',ritual:'🗓️',system:'✦',aura:'🫂',recharge:'⚡',wavelength:'🎧',haul:'🛍️',glow:'🛁',thrill:'🎉',luminary:'🕯️',spark:'⚡',healthcare:'🏥' };
+  const APP_NAMES = { ping:'Ping',flare:'Flare',canvas:'Canvas',lumen_eats:'Lumen Eats',sip:'Sip',grind:'Grind',vault:'Vault',ritual:'Ritual',aura:'Aura',recharge:'Recharge',wavelength:'Wavelength',haul:'Haul',system:'SL HUD',glow:'Glow',thrill:'Thrill',luminary:'Luminary',spark:'Spark',healthcare:'MyChart' };
 
   // Notifications
   let shownNotifIds = new Set(), bannerTimeout = null;

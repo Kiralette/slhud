@@ -1767,6 +1767,28 @@ questionnaire:
     is_negative: 0
     auto: true
 
+  # ── Spark (dating) vibes ─────────────────────────────────────────────────
+  new_spark_match:
+    vibe_key:    "new_spark_match"
+    display:     "Matched ✨"
+    description: "A new Spark match — butterflies."
+    is_negative: 0
+    auto: true
+
+  spark_butterflies:
+    vibe_key:    "spark_butterflies"
+    display:     "Butterflies 🦋"
+    description: "Something new and exciting. Fun +5."
+    is_negative: 0
+    auto: true
+
+  situationship_limbo:
+    vibe_key:    "situationship_limbo"
+    display:     "Situationship 🌀"
+    description: "Unclear where this is going. Social harder to restore."
+    is_negative: 1
+    auto: true
+
 achievements:
   # ── NEEDS ───────────────────────────────────────────────
   well_fed_streak:

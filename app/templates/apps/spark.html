@@ -1,0 +1,938 @@
+{% extends "base.html" %}
+{% block title %}Spark{% endblock %}
+
+{% block extra_style %}
+<style>
+  /* ── Tabs ── */
+  .sp-tabs {
+    display: flex; border-bottom: 1px solid var(--bg4);
+    background: var(--bg); padding: 0 18px;
+  }
+  .sp-tab {
+    flex: 1; padding: 12px 0; font-size: 12px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink4); background: none; border: none;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color .15s, border-color .15s;
+  }
+  .sp-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+  /* ── Card stack ── */
+  .sp-stack {
+    position: relative; height: 420px;
+    margin: 16px 18px 0; user-select: none;
+  }
+  .sp-card {
+    position: absolute; inset: 0;
+    background: var(--bg2); border-radius: 20px;
+    border: 1px solid var(--bg4);
+    box-shadow: 0 4px 24px rgba(28,24,20,.10);
+    overflow: hidden; cursor: grab;
+    transition: transform .18s, opacity .18s;
+    display: flex; flex-direction: column;
+  }
+  .sp-card:active { cursor: grabbing; }
+  .sp-card.gone-left  { transform: translateX(-130%) rotate(-20deg); opacity: 0; }
+  .sp-card.gone-right { transform: translateX(130%)  rotate(20deg);  opacity: 0; }
+  .sp-card-photo {
+    height: 220px; background: var(--bg3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px; flex-shrink: 0;
+    background-size: cover; background-position: center;
+  }
+  .sp-card-body { padding: 14px 16px 12px; flex: 1; overflow-y: auto; }
+  .sp-card-name { font-family: var(--font-head); font-size: 24px; color: var(--ink); }
+  .sp-card-meta { font-size: 12px; color: var(--ink4); margin-top: 2px; margin-bottom: 10px; }
+  .sp-card-tag {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 20px; margin: 0 4px 4px 0;
+    background: var(--bg3); color: var(--ink3);
+  }
+  .sp-card-prompt { margin-top: 10px; }
+  .sp-card-prompt-q {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 3px;
+  }
+  .sp-card-prompt-a { font-size: 13px; color: var(--ink2); line-height: 1.5; }
+
+  /* Superlike badge */
+  .sp-superlike-badge {
+    position: absolute; top: 14px; right: 14px;
+    background: #5060c0; color: #fff; font-size: 11px;
+    font-weight: 700; padding: 4px 9px; border-radius: 12px;
+    letter-spacing: .06em; display: none;
+  }
+  .sp-card.superliked .sp-superlike-badge { display: block; }
+
+  /* ── Action buttons ── */
+  .sp-actions {
+    display: flex; justify-content: center; align-items: center;
+    gap: 16px; padding: 14px 18px;
+  }
+  .sp-btn {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: none; cursor: pointer; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 10px rgba(28,24,20,.12);
+    transition: transform .1s;
+  }
+  .sp-btn:active { transform: scale(.92); }
+  .sp-btn-pass     { background: #fff8f5; color: #d47070; }
+  .sp-btn-like     { background: #f0f9f4; color: #4a9a6a; width: 60px; height: 60px; font-size: 26px; }
+  .sp-btn-super    { background: #eeeeff; color: #5060c0; }
+  .sp-btn-rewind   { background: var(--bg2); color: var(--gold); font-size: 18px; }
+  .sp-btn-disabled { opacity: .35; cursor: not-allowed; }
+
+  /* ── Like counter ── */
+  .sp-counter {
+    text-align: center; font-size: 12px; color: var(--ink4);
+    padding: 0 18px 4px;
+  }
+  .sp-counter span { color: var(--ink); font-weight: 600; }
+
+  /* ── Empty state ── */
+  .sp-empty {
+    padding: 60px 24px; text-align: center; color: var(--ink4);
+  }
+  .sp-empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .sp-empty-text { font-size: 14px; line-height: 1.6; }
+
+  /* ── Matches ── */
+  .sp-match-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    cursor: pointer;
+  }
+  .sp-match-row:last-child { border-bottom: none; }
+  .sp-match-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--bg3); display: flex; align-items: center;
+    justify-content: center; font-size: 24px; flex-shrink: 0;
+    background-size: cover; background-position: center;
+  }
+  .sp-match-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .sp-match-date { font-size: 11px; color: var(--ink4); margin-top: 2px; }
+  .sp-match-action { margin-left: auto; }
+  .sp-msg-btn {
+    padding: 7px 14px; border-radius: 20px;
+    background: var(--ink); color: var(--bg);
+    border: none; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .sp-unmatch-btn {
+    padding: 7px 14px; border-radius: 20px;
+    background: var(--bg3); color: var(--ink3);
+    border: none; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit; margin-top: 6px;
+  }
+
+  /* ── Profile setup ── */
+  .sp-section-head {
+    padding: 14px 18px 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink4);
+  }
+  .sp-field { padding: 0 18px 12px; }
+  .sp-label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink4);
+    display: block; margin-bottom: 5px;
+  }
+  .sp-input {
+    width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 14px; color: var(--ink); font-family: inherit;
+    box-sizing: border-box;
+  }
+  .sp-input:focus { outline: none; border-color: var(--ink3); }
+  .sp-textarea {
+    width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 13px; color: var(--ink); font-family: inherit;
+    resize: vertical; min-height: 80px; box-sizing: border-box;
+  }
+  .sp-textarea:focus { outline: none; border-color: var(--ink3); }
+  .sp-pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
+  .sp-pill {
+    padding: 6px 13px; border-radius: 20px;
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 12px; color: var(--ink3); cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .sp-pill.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .sp-save-btn {
+    display: block; width: calc(100% - 36px); margin: 4px 18px 16px;
+    background: var(--ink); color: var(--bg); border: none;
+    border-radius: var(--radius-sm); padding: 13px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    font-family: inherit;
+  }
+  .sp-save-btn:active { background: var(--ink2); }
+  .sp-save-btn.secondary {
+    background: var(--bg2); color: var(--ink);
+    border: 1px solid var(--bg4); margin-top: 0;
+  }
+
+  /* Active toggle */
+  .sp-active-banner {
+    margin: 14px 18px 0;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--bg4);
+    background: var(--bg2);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sp-toggle {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--bg4); border: none; cursor: pointer;
+    position: relative; transition: background .2s; flex-shrink: 0;
+  }
+  .sp-toggle.on { background: #4a9a6a; }
+  .sp-toggle::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; transition: left .2s;
+  }
+  .sp-toggle.on::after { left: 23px; }
+
+  /* Lumen shop */
+  .sp-shop-card {
+    margin: 0 18px 10px;
+    background: var(--bg2); border: 1px solid var(--bg4);
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sp-shop-icon { font-size: 28px; }
+  .sp-shop-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .sp-shop-desc { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+  .sp-shop-btn {
+    margin-left: auto; padding: 8px 14px;
+    background: var(--gold-light); color: var(--gold);
+    border: 1px solid rgba(154,124,78,.2); border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: inherit; flex-shrink: 0;
+  }
+  .sp-shop-btn:active { background: var(--gold); color: var(--bg); }
+
+  /* Filters */
+  .sp-filter-section { padding: 0 18px 12px; }
+
+  .scroll-pad { height: 40px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-scale">
+
+  <!-- Header -->
+  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin-bottom:2px;">Dating</div>
+      <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);line-height:1;">Spark ⚡</div>
+    </div>
+    {% if match_count > 0 %}
+    <div style="background:var(--rose);color:#fff;border-radius:12px;padding:4px 10px;font-size:12px;font-weight:700;">{{ match_count }} match{{ 'es' if match_count != 1 }}</div>
+    {% endif %}
+  </div>
+
+  <!-- Tabs -->
+  <div class="sp-tabs">
+    <button class="sp-tab active" onclick="showSpTab('discover')">Discover</button>
+    <button class="sp-tab" onclick="showSpTab('matches')">Matches</button>
+    <button class="sp-tab" onclick="showSpTab('profile')">My Profile</button>
+    <button class="sp-tab" onclick="showSpTab('filters')">Filters</button>
+  </div>
+
+  <!-- ── DISCOVER ── -->
+  <div id="sp-tab-discover" class="sp-tab-content">
+    <div class="sp-counter">
+      <span id="sp-likes-count">{{ spark_profile.daily_likes_remaining or 10 }}</span> likes left today
+      · <span id="sp-super-count">{{ spark_profile.daily_superlikes_remaining or 1 }}</span> superlike
+    </div>
+
+    {% if not spark_profile.is_active %}
+    <div style="margin:12px 18px;padding:14px;background:var(--gold-light);border-radius:var(--radius);border:1px solid rgba(154,124,78,.2);font-size:13px;color:var(--ink2);line-height:1.5;">
+      ⚡ Your Spark profile is paused. Activate it in <strong>My Profile</strong> to start discovering.
+    </div>
+    {% endif %}
+
+    <div class="sp-stack" id="sp-stack">
+      <div class="sp-empty" id="sp-empty" style="display:none;">
+        <div class="sp-empty-icon">✨</div>
+        <div class="sp-empty-text">You've seen everyone for now.<br>Check back later or adjust your filters.</div>
+      </div>
+      <!-- Cards injected by JS -->
+    </div>
+
+    <div class="sp-actions">
+      <button class="sp-btn sp-btn-rewind" id="sp-rewind-btn" onclick="doRewind()" title="Rewind (✦{{ rewind_cost }})">↩</button>
+      <button class="sp-btn sp-btn-pass" onclick="doSwipe('pass')" title="Pass">✕</button>
+      <button class="sp-btn sp-btn-like" onclick="doSwipe('like')" title="Like">♥</button>
+      <button class="sp-btn sp-btn-super" onclick="doSwipe('superlike')" title="Superlike ⚡">⚡</button>
+    </div>
+
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ── MATCHES ── -->
+  <div id="sp-tab-matches" class="sp-tab-content" style="display:none;">
+    {% if matches %}
+    <div style="padding:12px 18px 4px;font-size:11px;color:var(--ink4);">{{ match_count }} match{{ 'es' if match_count != 1 }} — tap to message</div>
+    <div style="margin:0 18px 14px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--bg4);overflow:hidden;">
+      {% for m in matches %}
+      <div class="sp-match-row">
+        <div class="sp-match-avatar" {% if m.profile_pic_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ m.profile_pic_uuid }}/2')"{% endif %}>
+          {% if not m.profile_pic_uuid %}👤{% endif %}
+        </div>
+        <div style="flex:1;">
+          <div class="sp-match-name">{{ m.display_name }}</div>
+          <div class="sp-match-date">Matched {{ m.matched_at[:10] if m.matched_at else '' }}</div>
+        </div>
+        <div class="sp-match-action" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <button class="sp-msg-btn" onclick="openPing('{{ m.other_player_id }}','{{ m.display_name }}')">Message</button>
+          <button class="sp-unmatch-btn" onclick="unmatch({{ m.id }}, this)">Unmatch</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="sp-empty">
+      <div class="sp-empty-icon">💫</div>
+      <div class="sp-empty-text">No matches yet.<br>Keep swiping — your person is out there.</div>
+    </div>
+    {% endif %}
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ── MY PROFILE ── -->
+  <div id="sp-tab-profile" class="sp-tab-content" style="display:none;">
+
+    <!-- Active toggle -->
+    <div class="sp-active-banner">
+      <button class="sp-toggle {% if spark_profile.is_active %}on{% endif %}" id="sp-active-toggle" onclick="toggleActive()"></button>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink);">
+          {% if spark_profile.is_active %}Profile active{% else %}Profile paused{% endif %}
+        </div>
+        <div style="font-size:11px;color:var(--ink4);">
+          {% if spark_profile.is_active %}Others can discover you{% else %}You won't appear in anyone's stack{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio -->
+    <div class="sp-section-head" style="margin-top:14px;">About you</div>
+    <div class="sp-field">
+      <label class="sp-label">Bio</label>
+      <textarea class="sp-textarea" id="sp-bio" maxlength="400" placeholder="Tell people a little about yourself…">{{ spark_profile.bio or '' }}</textarea>
+    </div>
+
+    <!-- Gender identity -->
+    <div class="sp-field">
+      <label class="sp-label">Gender identity</label>
+      <input class="sp-input" type="text" id="sp-gender-id" maxlength="60"
+        placeholder="e.g. woman, nonbinary, trans man…"
+        value="{{ spark_profile.gender_identity or '' }}">
+    </div>
+
+    <!-- Looking for -->
+    <div class="sp-field">
+      <label class="sp-label">Looking for</label>
+      <div class="sp-pill-group" id="sp-looking-for">
+        {% for opt in looking_for_options %}
+        <button class="sp-pill {% if spark_profile.looking_for == opt %}selected{% endif %}"
+          onclick="spPick(this,'looking_for','{{ opt }}')" data-key="looking_for" data-val="{{ opt }}">
+          {{ opt | capitalize }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Relationship style -->
+    <div class="sp-field">
+      <label class="sp-label">Relationship style</label>
+      <div class="sp-pill-group" id="sp-rel-style">
+        {% for opt in rel_style_options %}
+        <button class="sp-pill {% if spark_profile.relationship_style == opt %}selected{% endif %}"
+          onclick="spPick(this,'relationship_style','{{ opt }}')" data-key="relationship_style" data-val="{{ opt }}">
+          {{ opt | replace('_',' ') | capitalize }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Orientation -->
+    <div class="sp-field">
+      <label class="sp-label">Orientation</label>
+      <div class="sp-pill-group">
+        {% for opt in orientation_options %}
+        <button class="sp-pill {% if spark_profile.orientation == opt %}selected{% endif %}"
+          onclick="spPick(this,'orientation','{{ opt }}')" data-key="orientation" data-val="{{ opt }}">
+          {{ opt | replace('_',' ') | capitalize }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Seeking -->
+    <div class="sp-field">
+      <label class="sp-label">I want to meet</label>
+      <div class="sp-pill-group">
+        {% for opt in seeking_options %}
+        <button class="sp-pill {% if spark_profile.seeking == opt %}selected{% endif %}"
+          onclick="spPick(this,'seeking','{{ opt }}')" data-key="seeking" data-val="{{ opt }}">
+          {{ opt | capitalize }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Visibility -->
+    <div class="sp-field">
+      <label class="sp-label">Who can see my profile</label>
+      <div class="sp-pill-group">
+        {% set vis_labels = {'everyone': 'Everyone', 'followers_only': 'My followers', 'mutual_follows_only': 'Mutual follows only'} %}
+        {% for opt in visibility_options %}
+        <button class="sp-pill {% if spark_profile.visibility == opt %}selected{% endif %}"
+          onclick="spPick(this,'visibility','{{ opt }}')" data-key="visibility" data-val="{{ opt }}">
+          {{ vis_labels[opt] }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Prompts -->
+    <div class="sp-section-head">Prompts <span style="font-weight:400;color:var(--ink4);">(pick 3)</span></div>
+    {% for n in [1,2,3] %}
+    <div class="sp-field">
+      <label class="sp-label">Prompt {{ n }}</label>
+      <select class="sp-input" id="sp-prompt-{{ n }}-q" style="margin-bottom:6px;">
+        <option value="">— Choose a question —</option>
+        {% for q in prompt_questions %}
+        <option value="{{ q }}" {% if spark_profile['prompt_' ~ n ~ '_question'] == q %}selected{% endif %}>{{ q }}</option>
+        {% endfor %}
+      </select>
+      <textarea class="sp-textarea" id="sp-prompt-{{ n }}-a" style="min-height:60px;"
+        placeholder="Your answer…">{{ spark_profile['prompt_' ~ n ~ '_answer'] or '' }}</textarea>
+    </div>
+    {% endfor %}
+
+    <button class="sp-save-btn" onclick="saveProfile()">Save profile</button>
+
+    <!-- Lumen shop -->
+    <div class="sp-section-head" style="margin-top:8px;">Shop</div>
+    <div class="sp-shop-card">
+      <div class="sp-shop-icon">♥</div>
+      <div>
+        <div class="sp-shop-name">5 extra likes</div>
+        <div class="sp-shop-desc">✦25 · Balance: ✦{{ balance | int }}</div>
+      </div>
+      <button class="sp-shop-btn" onclick="buyLikes('small')">✦25</button>
+    </div>
+    <div class="sp-shop-card">
+      <div class="sp-shop-icon">♥</div>
+      <div>
+        <div class="sp-shop-name">20 extra likes</div>
+        <div class="sp-shop-desc">✦80 · Better value</div>
+      </div>
+      <button class="sp-shop-btn" onclick="buyLikes('large')">✦80</button>
+    </div>
+    <div class="sp-shop-card">
+      <div class="sp-shop-icon">⚡</div>
+      <div>
+        <div class="sp-shop-name">3 superlikes</div>
+        <div class="sp-shop-desc">✦30 · Notify them instantly</div>
+      </div>
+      <button class="sp-shop-btn" onclick="buySuperlikes()">✦30</button>
+    </div>
+    <div class="sp-shop-card">
+      <div class="sp-shop-icon">↩</div>
+      <div>
+        <div class="sp-shop-name">Rewind last pass</div>
+        <div class="sp-shop-desc">✦{{ rewind_cost }} · Undo your last pass</div>
+      </div>
+      <button class="sp-shop-btn" onclick="doRewind()">✦{{ rewind_cost }}</button>
+    </div>
+
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- ── FILTERS ── -->
+  <div id="sp-tab-filters" class="sp-tab-content" style="display:none;">
+    <div class="sp-section-head" style="padding-top:14px;">Discovery filters</div>
+    <div style="padding:4px 18px 8px;font-size:12px;color:var(--ink4);">Leave blank to see everyone.</div>
+
+    <div class="sp-filter-section">
+      <label class="sp-label">Gender</label>
+      <div class="sp-pill-group">
+        {% set fg = (spark_profile.filter_gender or '').split(',') %}
+        {% for g in ['women','men','nonbinary','everyone'] %}
+        <button class="sp-pill {% if g in fg %}selected{% endif %}"
+          onclick="spFilterToggle(this,'filter_gender','{{ g }}')">
+          {{ g | capitalize }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="sp-filter-section">
+      <label class="sp-label">Orientation</label>
+      <div class="sp-pill-group">
+        {% set fo = (spark_profile.filter_orientation or '').split(',') %}
+        {% for o in orientation_options %}
+        <button class="sp-pill {% if o in fo %}selected{% endif %}"
+          onclick="spFilterToggle(this,'filter_orientation','{{ o }}')">
+          {{ o | replace('_',' ') | capitalize }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="sp-filter-section">
+      <label class="sp-label">Looking for</label>
+      <div class="sp-pill-group">
+        {% set fl = (spark_profile.filter_looking_for or '').split(',') %}
+        {% for lf in looking_for_options + ['all'] %}
+        <button class="sp-pill {% if lf in fl %}selected{% endif %}"
+          onclick="spFilterToggle(this,'filter_looking_for','{{ lf }}')">
+          {{ lf | capitalize }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="sp-filter-section">
+      <label class="sp-label">Age range</label>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <select class="sp-input" id="sp-age-min" style="flex:1;">
+          <option value="">No min</option>
+          {% for ag in ['18-21','22-25','26-30','31-35','36-40','40+'] %}
+          <option value="{{ ag }}" {% if spark_profile.filter_age_min == ag %}selected{% endif %}>{{ ag }}</option>
+          {% endfor %}
+        </select>
+        <span style="color:var(--ink4);">to</span>
+        <select class="sp-input" id="sp-age-max" style="flex:1;">
+          <option value="">No max</option>
+          {% for ag in ['18-21','22-25','26-30','31-35','36-40','40+'] %}
+          <option value="{{ ag }}" {% if spark_profile.filter_age_max == ag %}selected{% endif %}>{{ ag }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <button class="sp-save-btn" onclick="saveFilters()">Apply filters</button>
+    <div class="scroll-pad"></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  const TOKEN = "{{ token }}";
+  let cards = [];       // current card stack data
+  let currentIdx = 0;   // index into cards
+  let profileData = {}; // accumulated profile field changes
+  let filterData  = {}; // accumulated filter changes
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────
+  function showSpTab(id) {
+    document.querySelectorAll('.sp-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.sp-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('sp-tab-' + id).style.display = 'block';
+    const tabs = ['discover','matches','profile','filters'];
+    const idx  = tabs.indexOf(id);
+    document.querySelectorAll('.sp-tab')[idx]?.classList.add('active');
+    if (id === 'discover') loadCards();
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    let t = document.getElementById('_toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = '_toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+        'background:#1c1814;color:#faf9f7;padding:10px 18px;border-radius:20px;' +
+        'font-size:13px;font-weight:600;z-index:9999;pointer-events:none;' +
+        'transition:opacity .3s;max-width:320px;text-align:center;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.style.opacity = '0', 2600);
+  }
+
+  // ── Card stack ────────────────────────────────────────────────────────────
+  async function loadCards() {
+    try {
+      const res = await fetch(`/spark/discover?token=${TOKEN}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      cards = data.cards || [];
+      currentIdx = 0;
+      renderStack();
+    } catch(e) {}
+  }
+
+  function renderStack() {
+    const stack = document.getElementById('sp-stack');
+    const empty = document.getElementById('sp-empty');
+    // Clear existing cards (keep empty state div)
+    Array.from(stack.children).forEach(el => {
+      if (el.id !== 'sp-empty') el.remove();
+    });
+
+    if (cards.length === 0 || currentIdx >= cards.length) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    // Render up to 3 cards (stacked visually, only top is interactive)
+    const visible = cards.slice(currentIdx, currentIdx + 3);
+    [...visible].reverse().forEach((card, i) => {
+      const realIdx = visible.length - 1 - i;
+      const el = buildCard(card);
+      el.style.transform = `scale(${1 - realIdx * 0.03}) translateY(${realIdx * 6}px)`;
+      el.style.zIndex = visible.length - realIdx;
+      el.style.pointerEvents = realIdx === 0 ? 'auto' : 'none';
+      stack.insertBefore(el, stack.firstChild);
+    });
+  }
+
+  function buildCard(card) {
+    const el = document.createElement('div');
+    el.className = 'sp-card';
+    el.dataset.id = card.player_id;
+
+    // Photo
+    const photo = document.createElement('div');
+    photo.className = 'sp-card-photo';
+    if (card.profile_pic_uuid) {
+      photo.style.backgroundImage = `url('https://secondlife.com/app/image/${card.profile_pic_uuid}/2')`;
+      photo.style.backgroundSize  = 'cover';
+    } else {
+      photo.textContent = '👤';
+    }
+    el.appendChild(photo);
+
+    // Superlike badge
+    const badge = document.createElement('div');
+    badge.className = 'sp-superlike-badge';
+    badge.textContent = '⚡ SUPERLIKE';
+    el.appendChild(badge);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'sp-card-body';
+
+    const name = document.createElement('div');
+    name.className = 'sp-card-name';
+    name.textContent = card.display_name || 'Unknown';
+    body.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'sp-card-meta';
+    const metaParts = [];
+    if (card.age_group) metaParts.push(card.age_group);
+    if (card.gender_identity || card.questionnaire_gender) metaParts.push(card.gender_identity || card.questionnaire_gender);
+    if (card.looking_for && card.looking_for !== 'open') metaParts.push('Looking for ' + card.looking_for);
+    meta.textContent = metaParts.join(' · ');
+    body.appendChild(meta);
+
+    // Tags
+    const tags = document.createElement('div');
+    if (card.relationship_style && card.relationship_style !== 'not_specified') {
+      const t = document.createElement('span');
+      t.className = 'sp-card-tag';
+      t.textContent = card.relationship_style.replace('_',' ');
+      tags.appendChild(t);
+    }
+    if (card.orientation && card.orientation !== 'not_specified') {
+      const t = document.createElement('span');
+      t.className = 'sp-card-tag';
+      t.textContent = card.orientation;
+      tags.appendChild(t);
+    }
+    body.appendChild(tags);
+
+    // Bio
+    if (card.bio) {
+      const bio = document.createElement('div');
+      bio.style.cssText = 'font-size:13px;color:var(--ink2);line-height:1.5;margin-top:8px;';
+      bio.textContent = card.bio;
+      body.appendChild(bio);
+    }
+
+    // Prompts
+    for (let n = 1; n <= 3; n++) {
+      const q = card[`prompt_${n}_question`];
+      const a = card[`prompt_${n}_answer`];
+      if (q && a) {
+        const pDiv = document.createElement('div');
+        pDiv.className = 'sp-card-prompt';
+        pDiv.innerHTML = `<div class="sp-card-prompt-q">${q}</div><div class="sp-card-prompt-a">${a}</div>`;
+        body.appendChild(pDiv);
+      }
+    }
+
+    el.appendChild(body);
+
+    // Report button
+    const rpt = document.createElement('button');
+    rpt.style.cssText = 'position:absolute;top:10px;left:10px;background:rgba(0,0,0,.3);color:#fff;border:none;border-radius:12px;padding:4px 9px;font-size:11px;cursor:pointer;';
+    rpt.textContent = '⚑';
+    rpt.onclick = (e) => { e.stopPropagation(); openReportSheet(card.player_id, card.display_name); };
+    el.appendChild(rpt);
+
+    return el;
+  }
+
+  async function doSwipe(action) {
+    if (currentIdx >= cards.length) return;
+    const card = cards[currentIdx];
+    const topCard = document.querySelector('.sp-card');
+    if (!topCard) return;
+
+    topCard.classList.add(action === 'pass' ? 'gone-left' : 'gone-right');
+    if (action === 'superlike') topCard.classList.add('superliked');
+
+    try {
+      const res = await fetch('/spark/swipe', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, target_id: card.player_id, action })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('sp-likes-count').textContent = data.likes_remaining;
+        document.getElementById('sp-super-count').textContent = data.superlikes_remaining;
+        if (data.matched) {
+          toast("It's a match ✨ Check your matches tab!");
+        }
+      } else {
+        toast(data.detail || 'Could not swipe');
+        topCard.classList.remove('gone-left', 'gone-right');
+        return;
+      }
+    } catch(e) {
+      topCard.classList.remove('gone-left', 'gone-right');
+      toast('Connection error');
+      return;
+    }
+
+    setTimeout(() => {
+      topCard.remove();
+      currentIdx++;
+      renderStack();
+    }, 220);
+  }
+
+  async function doRewind() {
+    try {
+      const res = await fetch(`/spark/rewind?token=${TOKEN}`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast(`Rewound ↩ ✦${data.cost} spent`);
+        // Re-insert the rewound card at front
+        currentIdx = Math.max(0, currentIdx - 1);
+        renderStack();
+      } else {
+        toast(data.detail || 'Could not rewind');
+      }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Profile picks ─────────────────────────────────────────────────────────
+  function spPick(btn, key, val) {
+    // Single-select within group
+    btn.closest('.sp-pill-group').querySelectorAll('.sp-pill').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    profileData[key] = val;
+  }
+
+  // ── Filter multi-select ───────────────────────────────────────────────────
+  function spFilterToggle(btn, key, val) {
+    btn.classList.toggle('selected');
+    // Collect all selected in this group
+    const group = btn.closest('.sp-pill-group');
+    const selected = [...group.querySelectorAll('.sp-pill.selected')].map(b => b.dataset?.val || b.textContent.trim().toLowerCase());
+    filterData[key] = selected.join(',');
+  }
+
+  // ── Active toggle ─────────────────────────────────────────────────────────
+  async function toggleActive() {
+    try {
+      const res = await fetch(`/spark/profile/activate?token=${TOKEN}`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const btn = document.getElementById('sp-active-toggle');
+        btn.classList.toggle('on', data.is_active);
+        toast(data.is_active ? 'Profile active ✓' : 'Profile paused');
+        setTimeout(() => location.reload(), 1200);
+      }
+    } catch(e) { toast('Error'); }
+  }
+
+  // ── Save profile ──────────────────────────────────────────────────────────
+  async function saveProfile() {
+    const body = {
+      token: TOKEN,
+      bio:             document.getElementById('sp-bio')?.value.trim() || null,
+      gender_identity: document.getElementById('sp-gender-id')?.value.trim() || null,
+      prompt_1_question: document.getElementById('sp-prompt-1-q')?.value || null,
+      prompt_1_answer:   document.getElementById('sp-prompt-1-a')?.value.trim() || null,
+      prompt_2_question: document.getElementById('sp-prompt-2-q')?.value || null,
+      prompt_2_answer:   document.getElementById('sp-prompt-2-a')?.value.trim() || null,
+      prompt_3_question: document.getElementById('sp-prompt-3-q')?.value || null,
+      prompt_3_answer:   document.getElementById('sp-prompt-3-a')?.value.trim() || null,
+      ...profileData,
+    };
+    try {
+      const res = await fetch('/spark/profile/setup', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      if (res.ok) { toast('Profile saved ✓'); }
+      else { const d = await res.json(); toast(d.detail || 'Could not save'); }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Save filters ──────────────────────────────────────────────────────────
+  async function saveFilters() {
+    const body = {
+      token: TOKEN,
+      filter_age_min: document.getElementById('sp-age-min')?.value || null,
+      filter_age_max: document.getElementById('sp-age-max')?.value || null,
+      ...filterData,
+    };
+    try {
+      const res = await fetch('/spark/profile/filters', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      if (res.ok) { toast('Filters saved ✓'); showSpTab('discover'); }
+      else { toast('Could not save filters'); }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Buy likes / superlikes ────────────────────────────────────────────────
+  async function buyLikes(pack) {
+    try {
+      const res = await fetch('/spark/buy-likes', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, pack })
+      });
+      const d = await res.json();
+      if (res.ok) { toast(`+${d.likes_added} likes ✓`); setTimeout(() => location.reload(), 1200); }
+      else toast(d.detail || 'Could not purchase');
+    } catch(e) { toast('Connection error'); }
+  }
+
+  async function buySuperlikes() {
+    try {
+      const res = await fetch('/spark/buy-superlikes', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, pack: 'standard' })
+      });
+      const d = await res.json();
+      if (res.ok) { toast(`+${d.superlikes_added} superlikes ✓`); setTimeout(() => location.reload(), 1200); }
+      else toast(d.detail || 'Could not purchase');
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Unmatch ───────────────────────────────────────────────────────────────
+  async function unmatch(matchId, btn) {
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/spark/matches/${matchId}/cancel`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      if (res.ok) {
+        toast('Unmatched');
+        btn.closest('.sp-match-row').remove();
+      } else {
+        btn.disabled = false; toast('Could not unmatch');
+      }
+    } catch(e) { btn.disabled = false; toast('Error'); }
+  }
+
+  // ── Open Ping for a match ─────────────────────────────────────────────────
+  function openPing(playerId, name) {
+    window.location.href = `/app/ping?token=${TOKEN}&open_thread=${playerId}`;
+  }
+
+  // ── Report sheet ──────────────────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:999;" id="report-overlay" onclick="closeReportSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:1000;max-height:60vh;overflow-y:auto;" id="report-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Report profile</div>
+    <div style="font-size:12px;color:var(--ink4);margin-top:2px;" id="report-target-name"></div>
+  </div>
+  <div style="padding:14px 18px 28px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink4);margin-bottom:8px;">Reason</div>
+    <div style="display:flex;flex-direction:column;gap:7px;" id="report-reasons">
+      <button class="sp-pill" onclick="selectReason(this,'inappropriate_content')">Inappropriate content</button>
+      <button class="sp-pill" onclick="selectReason(this,'harassment')">Harassment</button>
+      <button class="sp-pill" onclick="selectReason(this,'fake_profile')">Fake profile</button>
+      <button class="sp-pill" onclick="selectReason(this,'spam')">Spam</button>
+      <button class="sp-pill" onclick="selectReason(this,'other')">Other</button>
+    </div>
+    <textarea id="report-notes" class="sp-textarea" style="margin-top:12px;" placeholder="Additional notes (optional)" rows="2"></textarea>
+    <button class="sp-save-btn" style="margin:10px 0 0;" onclick="submitReport()">Submit report</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  let _reportTargetId = null, _reportReason = null;
+
+  function openReportSheet(playerId, name) {
+    _reportTargetId = playerId;
+    _reportReason   = null;
+    document.getElementById('report-target-name').textContent = name;
+    document.querySelectorAll('#report-reasons .sp-pill').forEach(b => b.classList.remove('selected'));
+    document.getElementById('report-notes').value = '';
+    document.getElementById('report-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('report-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+  }
+
+  function closeReportSheet() {
+    document.getElementById('report-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('report-overlay').style.display = 'none';
+  }
+
+  function selectReason(btn, reason) {
+    document.querySelectorAll('#report-reasons .sp-pill').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    _reportReason = reason;
+  }
+
+  async function submitReport() {
+    if (!_reportReason) { toast('Please select a reason'); return; }
+    try {
+      const res = await fetch('/spark/report', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN, reported_id: _reportTargetId,
+          reason: _reportReason,
+          notes: document.getElementById('report-notes').value.trim() || null,
+        })
+      });
+      if (res.ok) {
+        closeReportSheet();
+        toast('Report submitted. Thank you.');
+        doSwipe('pass'); // Auto-pass the reported profile
+      } else toast('Could not submit report');
+    } catch(e) { toast('Error'); }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadCards();
+</script>
+{% endblock %}

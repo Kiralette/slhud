@@ -2551,3 +2551,135 @@ async def healthcare_app(
         "lab_results":            lab_results,
         "vaccinations":           vaccinations,
     })
+
+
+# ── SPARK ─────────────────────────────────────────────────────────────────────
+@router.get("/spark", response_class=HTMLResponse)
+async def spark_app(
+    request: Request,
+    token: str = Query(""),
+    db=Depends(get_db)
+):
+    player = await get_player_by_token(token, db)
+    if not player:
+        return HTMLResponse("<h2 style='font-family:sans-serif;padding:40px;color:#888;'>Invalid or missing token.</h2>", status_code=401)
+
+    player_id = player["id"]
+
+    from app.routers.spark import (
+        PROMPT_QUESTIONS, LOOKING_FOR_OPTIONS, REL_STYLE_OPTIONS,
+        ORIENTATION_OPTIONS, SEEKING_OPTIONS, VISIBILITY_OPTIONS,
+        LIKE_PACKS, SUPERLIKE_PACK, REWIND_COST
+    )
+
+    # Get or create spark profile
+    if is_postgres():
+        sp_row = await db.fetchrow(
+            "SELECT * FROM spark_profiles WHERE player_id = $1", player_id)
+        if not sp_row:
+            await db.execute(
+                "INSERT INTO spark_profiles (player_id) VALUES ($1) ON CONFLICT DO NOTHING",
+                player_id)
+            sp_row = await db.fetchrow(
+                "SELECT * FROM spark_profiles WHERE player_id = $1", player_id)
+    else:
+        async with db.execute(
+            "SELECT * FROM spark_profiles WHERE player_id = ?", (player_id,)
+        ) as cur:
+            sp_row = await cur.fetchone()
+        if not sp_row:
+            await db.execute(
+                "INSERT OR IGNORE INTO spark_profiles (player_id) VALUES (?)", (player_id,))
+            await db.commit()
+            async with db.execute(
+                "SELECT * FROM spark_profiles WHERE player_id = ?", (player_id,)
+            ) as cur:
+                sp_row = await cur.fetchone()
+
+    spark_profile = dict(sp_row) if sp_row else {}
+
+    # Daily reset
+    from datetime import date
+    today_str = date.today().isoformat()
+    if spark_profile.get("daily_likes_reset_date") != today_str:
+        spark_profile["daily_likes_remaining"] = 10
+    if spark_profile.get("daily_superlikes_reset_date") != today_str:
+        spark_profile["daily_superlikes_remaining"] = 1
+
+    # Player's own profile details for pre-filling
+    if is_postgres():
+        player_profile = await db.fetchrow(
+            "SELECT age_group, sexuality, gender_expression, profile_pic_uuid, bio, pronouns FROM player_profiles WHERE player_id = $1",
+            player_id)
+    else:
+        async with db.execute(
+            "SELECT age_group, sexuality, gender_expression, profile_pic_uuid, bio, pronouns FROM player_profiles WHERE player_id = ?",
+            (player_id,)
+        ) as cur:
+            player_profile = await cur.fetchone()
+
+    player_profile = dict(player_profile) if player_profile else {}
+
+    # Active matches count
+    if is_postgres():
+        match_count = await db.fetchval(
+            """SELECT COUNT(*) FROM spark_matches
+               WHERE (player_a_id = $1 OR player_b_id = $1) AND status = 'active'""",
+            player_id)
+        matches_rows = await db.fetch(
+            """SELECT sm.*, p.display_name, pp.profile_pic_uuid
+               FROM spark_matches sm
+               JOIN players p ON p.id = CASE WHEN sm.player_a_id = $1 THEN sm.player_b_id ELSE sm.player_a_id END
+               LEFT JOIN player_profiles pp ON pp.player_id = p.id
+               WHERE (sm.player_a_id = $1 OR sm.player_b_id = $1) AND sm.status = 'active'
+               ORDER BY sm.matched_at DESC""", player_id)
+    else:
+        async with db.execute(
+            """SELECT COUNT(*) FROM spark_matches
+               WHERE (player_a_id = ? OR player_b_id = ?) AND status = 'active'""",
+            (player_id, player_id)
+        ) as cur:
+            match_count = (await cur.fetchone())[0]
+        async with db.execute(
+            """SELECT sm.*, p.display_name, pp.profile_pic_uuid
+               FROM spark_matches sm
+               JOIN players p ON p.id = CASE WHEN sm.player_a_id = ? THEN sm.player_b_id ELSE sm.player_a_id END
+               LEFT JOIN player_profiles pp ON pp.player_id = p.id
+               WHERE (sm.player_a_id = ? OR sm.player_b_id = ?) AND sm.status = 'active'
+               ORDER BY sm.matched_at DESC""",
+            (player_id, player_id, player_id)
+        ) as cur:
+            matches_rows = await cur.fetchall()
+
+    matches = []
+    for r in matches_rows:
+        d = dict(r)
+        d["other_player_id"] = d["player_b_id"] if d["player_a_id"] == player_id else d["player_a_id"]
+        matches.append(d)
+
+    # Wallet balance
+    if is_postgres():
+        wallet = await db.fetchrow("SELECT balance FROM wallets WHERE player_id = $1", player_id)
+    else:
+        async with db.execute("SELECT balance FROM wallets WHERE player_id = ?", (player_id,)) as cur:
+            wallet = await cur.fetchone()
+    balance = float(wallet["balance"]) if wallet else 0.0
+
+    return templates.TemplateResponse(request, "apps/spark.html", {
+        "token":              token,
+        "player":             player,
+        "player_profile":     player_profile,
+        "spark_profile":      spark_profile,
+        "match_count":        match_count or 0,
+        "matches":            matches,
+        "balance":            balance,
+        "prompt_questions":   PROMPT_QUESTIONS,
+        "looking_for_options": LOOKING_FOR_OPTIONS,
+        "rel_style_options":  REL_STYLE_OPTIONS,
+        "orientation_options": ORIENTATION_OPTIONS,
+        "seeking_options":    SEEKING_OPTIONS,
+        "visibility_options": VISIBILITY_OPTIONS,
+        "like_packs":         LIKE_PACKS,
+        "superlike_pack":     SUPERLIKE_PACK,
+        "rewind_cost":        REWIND_COST,
+    })
