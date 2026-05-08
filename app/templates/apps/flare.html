@@ -328,6 +328,25 @@
     {% if flare_stats.post_streak > 0 %}
     <div class="profile-streak">🔥 {{ flare_stats.post_streak }}-day streak</div>
     {% endif %}
+
+    {% if flare_profile.relationship_status %}
+    <div style="font-size:12px;color:var(--ink4);margin-top:6px;">
+      {% set rs_labels = {
+        'single': '💔 Single',
+        'taken': '💗 In a relationship',
+        'its_complicated': '💜 It's complicated',
+        'open': '💛 Open relationship',
+        'engaged': '💍 Engaged',
+        'married': '💒 Married',
+        'not_specified': ''
+      } %}
+      {{ rs_labels.get(flare_profile.relationship_status, '') }}
+    </div>
+    {% endif %}
+
+    <button onclick="openRelStatusSheet()" style="margin-top:8px;background:none;border:1px solid var(--bg4);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--ink4);cursor:pointer;">
+      {% if flare_profile.relationship_status and flare_profile.relationship_status != 'not_specified' %}Edit status{% else %}+ Add relationship status{% endif %}
+    </button>
   </div>
 
   {% if flare_stats.active_deal %}
@@ -521,6 +540,53 @@
   const MILESTONES = [50000, 10000, 5000, 1000, 500];
   function nextMilestone(count) {
     return MILESTONES.find(m => m > count) || null;
+  }
+  // ── Relationship status sheet ─────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:999;" id="relstatus-overlay" onclick="closeRelStatusSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:1000;max-height:65vh;overflow-y:auto;" id="relstatus-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Relationship status</div>
+    <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Shown on your Flare profile.</div>
+  </div>
+  <div style="padding:14px 18px 28px;display:flex;flex-direction:column;gap:8px;">
+    <button class="relstatus-opt" onclick="setRelStatus('single')">💔 Single</button>
+    <button class="relstatus-opt" onclick="setRelStatus('taken')">💗 In a relationship</button>
+    <button class="relstatus-opt" onclick="setRelStatus('its_complicated')">💜 It's complicated</button>
+    <button class="relstatus-opt" onclick="setRelStatus('open')">💛 Open relationship</button>
+    <button class="relstatus-opt" onclick="setRelStatus('engaged')">💍 Engaged</button>
+    <button class="relstatus-opt" onclick="setRelStatus('married')">💒 Married</button>
+    <button class="relstatus-opt" onclick="setRelStatus('not_specified')" style="color:var(--ink4);">Remove status</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+    // Inject styles
+    const style = document.createElement('style');
+    style.textContent = `.relstatus-opt { padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--bg4); background:var(--bg2); font-size:14px; color:var(--ink); cursor:pointer; text-align:left; font-family:inherit; transition:background .12s; } .relstatus-opt:active { background:var(--bg3); }`;
+    document.head.appendChild(style);
+  })();
+
+  function openRelStatusSheet() {
+    document.getElementById('relstatus-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('relstatus-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+  }
+  function closeRelStatusSheet() {
+    document.getElementById('relstatus-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('relstatus-overlay').style.display = 'none';
+  }
+  async function setRelStatus(status) {
+    closeRelStatusSheet();
+    try {
+      const res = await fetch('/profile/update-relationship-status', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, relationship_status: status })
+      });
+      if (res.ok) { toast('Status updated ✓'); setTimeout(() => location.reload(), 1200); }
+      else toast('Could not update');
+    } catch(e) { toast('Connection error'); }
   }
 </script>
 {% endblock %}

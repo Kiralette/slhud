@@ -511,12 +511,25 @@
   async function loadCards() {
     try {
       const res = await fetch(`/spark/discover?token=${TOKEN}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        document.getElementById('sp-empty-text').textContent = d.detail || 'Could not load profiles. Try again.';
+        document.getElementById('sp-empty').style.display = 'block';
+        return;
+      }
       const data = await res.json();
+      if (data.error) {
+        document.getElementById('sp-empty-text').textContent = 'Error: ' + data.error;
+        document.getElementById('sp-empty').style.display = 'block';
+        return;
+      }
       cards = data.cards || [];
       currentIdx = 0;
       renderStack();
-    } catch(e) {}
+    } catch(e) {
+      document.getElementById('sp-empty-text').textContent = 'Connection error. Try again.';
+      document.getElementById('sp-empty').style.display = 'block';
+    }
   }
 
   function renderStack() {

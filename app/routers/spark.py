@@ -212,8 +212,7 @@ async def _get_blocked_ids(player_id: int, db) -> set:
         blocked.discard(player_id)
         return blocked
     except Exception:
-        # Table may not exist yet — return empty set so discover still works
-        return set()
+        return set()  # blocks table may not exist yet
 
 
 async def _check_match(player_id: int, target_id: int, db) -> bool:
@@ -444,78 +443,70 @@ async def discover(token: str, db=Depends(get_db)):
     swiped = {r["target_id"] for r in swiped_rows}
     exclude = swiped | blocked | {player_id}
 
-    # Build visibility filter — who can see this player's profile
-    # We fetch profiles that this player is allowed to see based on THEIR visibility setting
-    visibility_clause_pg  = """
-        (sp2.visibility = 'everyone'
-         OR (sp2.visibility = 'followers_only' AND EXISTS (
-             SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = sp2.player_id
-         ))
-         OR (sp2.visibility = 'mutual_follows_only' AND EXISTS (
-             SELECT 1 FROM follows f1
-             JOIN follows f2 ON f1.follower_id = $1 AND f1.following_id = sp2.player_id
-                             AND f2.follower_id = sp2.player_id AND f2.following_id = $1
-         )))"""
-    visibility_clause_sq  = """
-        (sp2.visibility = 'everyone'
-         OR (sp2.visibility = 'followers_only' AND EXISTS (
-             SELECT 1 FROM follows WHERE follower_id = ? AND following_id = sp2.player_id
-         ))
-         OR (sp2.visibility = 'mutual_follows_only' AND EXISTS (
-             SELECT 1 FROM follows f1
-             JOIN follows f2 ON f1.follower_id = ? AND f1.following_id = sp2.player_id
-                             AND f2.follower_id = sp2.player_id AND f2.following_id = ?
-         )))"""
-
-    if is_postgres():
-        candidates = await db.fetch(
-            f"""SELECT sp2.*, p.display_name, pp.age_group, pp.gender_expression,
-                       pp.sexuality, pp.profile_pic_uuid
-                FROM spark_profiles sp2
-                JOIN players p ON p.id = sp2.player_id
-                LEFT JOIN player_profiles pp ON pp.player_id = sp2.player_id
-                WHERE sp2.player_id != $1
-                AND sp2.is_active = 1
-                AND {visibility_clause_pg}
-                ORDER BY
-                    -- Mutual follows first, then followers, then everyone
-                    CASE WHEN EXISTS (
-                        SELECT 1 FROM follows f1
-                        JOIN follows f2 ON f1.follower_id = $1 AND f1.following_id = sp2.player_id
-                                        AND f2.follower_id = sp2.player_id AND f2.following_id = $1
-                    ) THEN 0
-                    WHEN EXISTS (
-                        SELECT 1 FROM follows WHERE follower_id = sp2.player_id AND following_id = $1
-                    ) THEN 1
-                    ELSE 2 END,
-                    sp2.updated_at DESC
-                LIMIT 30""",
-            player_id, player_id)
-    else:
-        async with db.execute(
-            f"""SELECT sp2.*, p.display_name, pp.age_group, pp.gender_expression,
-                       pp.sexuality, pp.profile_pic_uuid
-                FROM spark_profiles sp2
-                JOIN players p ON p.id = sp2.player_id
-                LEFT JOIN player_profiles pp ON pp.player_id = sp2.player_id
-                WHERE sp2.player_id != ?
-                AND sp2.is_active = 1
-                AND {visibility_clause_sq}
-                ORDER BY
-                    CASE WHEN EXISTS (
-                        SELECT 1 FROM follows f1
-                        JOIN follows f2 ON f1.follower_id = ? AND f1.following_id = sp2.player_id
-                                        AND f2.follower_id = sp2.player_id AND f2.following_id = ?
-                    ) THEN 0
-                    WHEN EXISTS (
-                        SELECT 1 FROM follows WHERE follower_id = sp2.player_id AND following_id = ?
-                    ) THEN 1
-                    ELSE 2 END,
-                    sp2.updated_at DESC
-                LIMIT 30""",
-            (player_id, player_id, player_id, player_id, player_id, player_id)
-        ) as cur:
-            candidates = await cur.fetchall()
+    # Build visibility filter
+    # Everyone = always visible
+    # followers_only = viewer follows them
+    # mutual_follows_only = both follow each other
+    try:
+        if is_postgres():
+            candidates = await db.fetch(
+                """SELECT sp2.*, p.display_name, pp.age_group, pp.gender_expression,
+                          pp.sexuality, pp.profile_pic_uuid
+                   FROM spark_profiles sp2
+                   JOIN players p ON p.id = sp2.player_id
+                   LEFT JOIN player_profiles pp ON pp.player_id = sp2.player_id
+                   WHERE sp2.player_id != $1
+                   AND sp2.is_active = 1
+                   AND (
+                       sp2.visibility = 'everyone'
+                       OR (sp2.visibility = 'followers_only' AND EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = sp2.player_id
+                       ))
+                       OR (sp2.visibility = 'mutual_follows_only' AND EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = sp2.player_id
+                       ) AND EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = sp2.player_id AND following_id = $1
+                       ))
+                   )
+                   ORDER BY
+                       CASE WHEN EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = sp2.player_id
+                       ) AND EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = sp2.player_id AND following_id = $1
+                       ) THEN 0
+                       WHEN EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = sp2.player_id AND following_id = $1
+                       ) THEN 1
+                       ELSE 2 END,
+                       sp2.updated_at DESC
+                   LIMIT 30""", player_id)
+        else:
+            async with db.execute(
+                """SELECT sp2.*, p.display_name, pp.age_group, pp.gender_expression,
+                          pp.sexuality, pp.profile_pic_uuid
+                   FROM spark_profiles sp2
+                   JOIN players p ON p.id = sp2.player_id
+                   LEFT JOIN player_profiles pp ON pp.player_id = sp2.player_id
+                   WHERE sp2.player_id != ?
+                   AND sp2.is_active = 1
+                   AND (
+                       sp2.visibility = 'everyone'
+                       OR (sp2.visibility = 'followers_only' AND EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = ? AND following_id = sp2.player_id
+                       ))
+                       OR (sp2.visibility = 'mutual_follows_only' AND EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = ? AND following_id = sp2.player_id
+                       ) AND EXISTS (
+                           SELECT 1 FROM follows WHERE follower_id = sp2.player_id AND following_id = ?
+                       ))
+                   )
+                   ORDER BY sp2.updated_at DESC
+                   LIMIT 30""",
+                (player_id, player_id, player_id, player_id)
+            ) as cur:
+                candidates = await cur.fetchall()
+    except Exception as e:
+        return {"cards": [], "remaining": 0, "error": str(e)}
 
     # Apply filters and exclusions in Python
     filters = {

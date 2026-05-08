@@ -757,3 +757,120 @@ async def admin_rotate_specials(request: Request, db=Depends(get_db)):
 
     print(f"[admin] Manually rotated specials — {len(chosen)} items: {chosen}")
     return RedirectResponse(f"/admin?secret={secret}", status_code=303)
+
+
+# ── Spark reports ─────────────────────────────────────────────────────────────
+
+@router.get("/spark-reports", response_class=HTMLResponse)
+async def spark_reports(request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT sr.*, r.display_name AS reporter_name, t.display_name AS reported_name
+               FROM spark_reports sr
+               JOIN players r ON r.id = sr.reporter_id
+               JOIN players t ON t.id = sr.reported_id
+               ORDER BY sr.created_at DESC LIMIT 100""")
+    else:
+        async with db.execute(
+            """SELECT sr.*, r.display_name AS reporter_name, t.display_name AS reported_name
+               FROM spark_reports sr
+               JOIN players r ON r.id = sr.reporter_id
+               JOIN players t ON t.id = sr.reported_id
+               ORDER BY sr.created_at DESC LIMIT 100"""
+        ) as cur:
+            rows = await cur.fetchall()
+
+    reports = [dict(r) for r in rows]
+    pending = [r for r in reports if r["status"] == "pending"]
+    reviewed = [r for r in reports if r["status"] != "pending"]
+
+    STATUS_COLOR = {"pending": "#d47070", "reviewed": "#9a9a9a", "actioned": "#4a9a6a"}
+
+    html = f"""<!DOCTYPE html><html><head><title>Spark Reports — Admin</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; background: #faf9f7; color: #2a2420;
+         max-width: 900px; margin: 0 auto; padding: 24px; }}
+  h1 {{ font-size: 28px; margin-bottom: 4px; }}
+  .nav {{ margin-bottom: 20px; font-size: 14px; }}
+  .nav a {{ color: #9a7c4e; }}
+  table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+  th {{ text-align: left; padding: 8px 10px; border-bottom: 2px solid #e8e4dc;
+        font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #888; }}
+  td {{ padding: 10px; border-bottom: 1px solid #f0ece4; vertical-align: top; }}
+  tr:hover td {{ background: #f5f3ef; }}
+  .badge {{ display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+            font-weight: 600; color: #fff; }}
+  .actions form {{ display: inline; }}
+  .btn {{ padding: 5px 10px; border-radius: 6px; border: none; cursor: pointer;
+          font-size: 12px; font-weight: 600; margin-right: 4px; }}
+  .btn-review {{ background: #9a7c4e; color: #fff; }}
+  .btn-action  {{ background: #d47070; color: #fff; }}
+  .btn-dismiss {{ background: #e8e4dc; color: #555; }}
+  .section {{ margin: 20px 0 8px; font-size: 18px; font-weight: 600; }}
+  .notes {{ font-size: 12px; color: #777; margin-top: 3px; }}
+</style></head><body>
+<div class="nav"><a href="/admin?secret={secret}">← Back to admin</a></div>
+<h1>⚡ Spark Reports</h1>
+<p style="color:#777;font-size:13px;">{len(pending)} pending · {len(reviewed)} reviewed</p>
+"""
+
+    for section_label, section_rows in [("Pending", pending), ("Reviewed / Actioned", reviewed)]:
+        if not section_rows:
+            continue
+        html += f'<div class="section">{section_label}</div>'
+        html += '<table><thead><tr><th>Date</th><th>Reporter</th><th>Reported</th><th>Reason</th><th>Notes</th><th>Status</th><th>Actions</th></tr></thead><tbody>'
+        for r in section_rows:
+            color = STATUS_COLOR.get(r["status"], "#888")
+            html += f"""<tr>
+              <td>{r['created_at'][:10]}</td>
+              <td><a href="/admin/player/{r['reporter_id']}?secret={secret}">{r['reporter_name']}</a></td>
+              <td><a href="/admin/player/{r['reported_id']}?secret={secret}">{r['reported_name']}</a></td>
+              <td>{r['reason'].replace('_',' ')}</td>
+              <td class="notes">{r['notes'] or '—'}</td>
+              <td><span class="badge" style="background:{color};">{r['status']}</span></td>
+              <td class="actions">
+                <form method="post" action="/admin/spark-report/{r['id']}/update?secret={secret}">
+                  <input type="hidden" name="status" value="reviewed">
+                  <button class="btn btn-review">Mark reviewed</button>
+                </form>
+                <form method="post" action="/admin/spark-report/{r['id']}/update?secret={secret}">
+                  <input type="hidden" name="status" value="actioned">
+                  <button class="btn btn-action">Action taken</button>
+                </form>
+                <form method="post" action="/admin/spark-report/{r['id']}/update?secret={secret}">
+                  <input type="hidden" name="status" value="dismissed">
+                  <button class="btn btn-dismiss">Dismiss</button>
+                </form>
+              </td>
+            </tr>"""
+        html += '</tbody></table>'
+
+    html += '</body></html>'
+    return HTMLResponse(html)
+
+
+@router.post("/spark-report/{report_id}/update")
+async def update_spark_report(
+    report_id: int,
+    request: Request,
+    db=Depends(get_db)
+):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    form = await request.form()
+    status = form.get("status", "reviewed")
+
+    if is_postgres():
+        await db.execute(
+            "UPDATE spark_reports SET status = $1 WHERE id = $2",
+            status, report_id)
+    else:
+        await db.execute(
+            "UPDATE spark_reports SET status = ? WHERE id = ?",
+            (status, report_id))
+        await db.commit()
+
+    return RedirectResponse(f"/admin/spark-reports?secret={secret}", status_code=303)

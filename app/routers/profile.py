@@ -308,3 +308,46 @@ async def update_profile_pic(body: ProfilePicUpdate, db=Depends(get_db)):
         await db.commit()
 
     return {"status": "updated"}
+
+
+# ── POST /profile/update-relationship-status ──────────────────────────────────
+
+VALID_RELATIONSHIP_STATUSES = [
+    "single", "taken", "its_complicated", "open",
+    "engaged", "married", "not_specified",
+]
+
+
+class RelStatusUpdate(BaseModel):
+    token: str
+    relationship_status: str
+
+
+@router.post("/update-relationship-status")
+async def update_relationship_status(body: RelStatusUpdate, db=Depends(get_db)):
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    if body.relationship_status not in VALID_RELATIONSHIP_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status.")
+
+    player_id = player["id"]
+    val = body.relationship_status
+
+    if is_postgres():
+        await db.execute(
+            "INSERT INTO player_profiles (player_id) VALUES ($1) ON CONFLICT (player_id) DO NOTHING",
+            player_id)
+        await db.execute(
+            "UPDATE player_profiles SET relationship_status = $1 WHERE player_id = $2",
+            val, player_id)
+    else:
+        await db.execute(
+            "INSERT OR IGNORE INTO player_profiles (player_id) VALUES (?)", (player_id,))
+        await db.execute(
+            "UPDATE player_profiles SET relationship_status = ? WHERE player_id = ?",
+            (val, player_id))
+        await db.commit()
+
+    return {"status": "updated", "relationship_status": val}

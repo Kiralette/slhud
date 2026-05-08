@@ -729,16 +729,30 @@ async def flare(
 
     categories = cfg.get("flare", {}).get("categories", ["life"])
 
+    # Fetch relationship_status for profile display
+    if is_postgres():
+        flare_profile_row = await db.fetchrow(
+            "SELECT relationship_status, profile_pic_uuid FROM player_profiles WHERE player_id = $1",
+            player_id)
+    else:
+        async with db.execute(
+            "SELECT relationship_status, profile_pic_uuid FROM player_profiles WHERE player_id = ?",
+            (player_id,)
+        ) as cur:
+            flare_profile_row = await cur.fetchone()
+    flare_profile = dict(flare_profile_row) if flare_profile_row else {}
+
     return templates.TemplateResponse(request, "apps/flare.html", {
-        "token":          token,
-        "player":         player,
-        "wallet_balance": wallet_balance,
-        "feed":           [fmt_post(r) for r in feed_rows],
-        "discover":       [fmt_post(r) for r in discover_rows],
-        "profile_posts":  [fmt_post(r) for r in profile_posts_rows],
-        "flare_stats":    flare_stats,
-        "categories":     categories,
-        "following_ids":  list(following_ids),
+        "token":              token,
+        "player":             player,
+        "wallet_balance":     wallet_balance,
+        "feed":               [fmt_post(r) for r in feed_rows],
+        "discover":           [fmt_post(r) for r in discover_rows],
+        "profile_posts":      [fmt_post(r) for r in profile_posts_rows],
+        "flare_stats":        flare_stats,
+        "flare_profile":      flare_profile,
+        "categories":         categories,
+        "following_ids":      list(following_ids),
     })
 
 
