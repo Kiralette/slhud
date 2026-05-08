@@ -303,6 +303,7 @@
         <div class="sp-match-action" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
           <button class="sp-msg-btn" onclick="openPing('{{ m.other_player_id }}','{{ m.display_name }}')">Message</button>
           <button class="sp-unmatch-btn" onclick="unmatch({{ m.id }}, this)">Unmatch</button>
+          <button onclick="openReportSheet({{ m.other_player_id }}, '{{ m.display_name }}')" style="background:none;border:none;color:var(--ink4);font-size:11px;cursor:pointer;padding:2px 0;">⚑ Report</button>
         </div>
       </div>
       {% endfor %}

@@ -156,6 +156,20 @@ async def admin_home(request: Request, db=Depends(get_db)):
           <td style="font-size:0.72rem;color:#666;">{p['last_seen']}</td>
         </tr>"""
 
+    # Get pending Spark report count for dashboard badge
+    try:
+        if is_postgres():
+            pending_reports = await db.fetchval(
+                "SELECT COUNT(*) FROM spark_reports WHERE status = 'pending'")
+        else:
+            async with db.execute(
+                "SELECT COUNT(*) FROM spark_reports WHERE status = 'pending'"
+            ) as cur:
+                row = await cur.fetchone()
+                pending_reports = row[0] if row else 0
+    except Exception:
+        pending_reports = 0
+
     html = f"""<!DOCTYPE html><html><head><title>HUD Admin</title>{admin_style()}</head><body>
     <h1>✨ SL Phone HUD — Admin Panel</h1>
     <div class="subtitle">Decay interval: {cfg['server']['decay_interval_seconds']}s &nbsp;|&nbsp; <a href="/docs">API docs</a></div>
@@ -171,6 +185,9 @@ async def admin_home(request: Request, db=Depends(get_db)):
       <form method="post" action="/admin/rotate_specials?secret={secret}">
         <button type="submit">🔄 Rotate Weekly Specials Now</button>
       </form>
+      <a href="/admin/spark-reports?secret={secret}" style="display:inline-block;margin-top:10px;padding:8px 16px;background:#d47070;color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">
+        ⚡ Spark Reports {'<span style="background:#fff;color:#d47070;border-radius:10px;padding:1px 7px;font-size:12px;margin-left:6px;">' + str(pending_reports) + '</span>' if pending_reports else ''}
+      </a>
     </div>
     <h2>Players</h2>
     <table>
