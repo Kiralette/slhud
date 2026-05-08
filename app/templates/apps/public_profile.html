@@ -229,7 +229,6 @@ async function likePost(postId, token, btn) {
 async function toggleFollow(uuid, name, token, btn) {
   const isFollowing = btn.classList.contains('following');
   if (isFollowing) {
-    if (!confirm('Unfollow ' + name + '?')) return;
     try {
       const res = await fetch('/social/follow', {
         method: 'DELETE',
