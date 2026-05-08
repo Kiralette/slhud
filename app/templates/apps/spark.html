@@ -767,7 +767,7 @@
     const body = {
       token: TOKEN,
       bio:             document.getElementById('sp-bio')?.value.trim() || null,
-      gender_identity: profileData.gender_identity ?? "{{ spark_profile.gender_identity or '' }}" || null,
+      gender_identity: profileData.gender_identity || "{{ spark_profile.gender_identity or '' }}" || null,
       prompt_1_question: document.getElementById('sp-prompt-1-q')?.value || null,
       prompt_1_answer:   document.getElementById('sp-prompt-1-a')?.value.trim() || null,
       prompt_2_question: document.getElementById('sp-prompt-2-q')?.value || null,
