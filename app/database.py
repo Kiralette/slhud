@@ -500,9 +500,6 @@ async def _init_sqlite():
             "ALTER TABLE cycle_log ADD COLUMN override_note TEXT DEFAULT NULL",
             # player_occurrences — surrogate/partner linking
             "ALTER TABLE player_occurrences ADD COLUMN linked_player_uuid TEXT DEFAULT NULL",
-            # player_profiles — social/dating fields
-            "ALTER TABLE player_profiles ADD COLUMN relationship_status TEXT DEFAULT NULL",
-            "ALTER TABLE player_profiles ADD COLUMN profile_pic_uuid TEXT DEFAULT NULL",
         ]
         for sql in migrations_sqlite:
             try:
@@ -543,6 +540,83 @@ async def _init_sqlite():
             )
         """)
 
+        await db.commit()
+
+        # ── Spark (Dating) Tables (SQLite) ────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS spark_profiles (
+                id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id                   INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                is_active                   INTEGER NOT NULL DEFAULT 0,
+                bio                         TEXT    DEFAULT NULL,
+                looking_for                 TEXT    DEFAULT 'open',
+                relationship_style          TEXT    DEFAULT 'not_specified',
+                orientation                 TEXT    DEFAULT 'not_specified',
+                gender_identity             TEXT    DEFAULT NULL,
+                seeking                     TEXT    DEFAULT 'everyone',
+                prompt_1_question           TEXT    DEFAULT NULL,
+                prompt_1_answer             TEXT    DEFAULT NULL,
+                prompt_2_question           TEXT    DEFAULT NULL,
+                prompt_2_answer             TEXT    DEFAULT NULL,
+                prompt_3_question           TEXT    DEFAULT NULL,
+                prompt_3_answer             TEXT    DEFAULT NULL,
+                visibility                  TEXT    NOT NULL DEFAULT 'everyone',
+                filter_gender               TEXT    DEFAULT NULL,
+                filter_orientation          TEXT    DEFAULT NULL,
+                filter_looking_for          TEXT    DEFAULT NULL,
+                filter_age_min              TEXT    DEFAULT NULL,
+                filter_age_max              TEXT    DEFAULT NULL,
+                daily_likes_remaining       INTEGER NOT NULL DEFAULT 10,
+                daily_likes_reset_date      TEXT    DEFAULT NULL,
+                daily_superlikes_remaining  INTEGER NOT NULL DEFAULT 1,
+                daily_superlikes_reset_date TEXT    DEFAULT NULL,
+                created_at                  TEXT    NOT NULL DEFAULT (datetime('now')),
+                updated_at                  TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS spark_interests (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                target_id   INTEGER NOT NULL REFERENCES players(id),
+                action      TEXT    NOT NULL DEFAULT 'like',
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(player_id, target_id)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS spark_matches (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_a_id     INTEGER NOT NULL REFERENCES players(id),
+                player_b_id     INTEGER NOT NULL REFERENCES players(id),
+                status          TEXT    NOT NULL DEFAULT 'active',
+                matched_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+                cancelled_by    INTEGER DEFAULT NULL REFERENCES players(id),
+                cancelled_at    TEXT    DEFAULT NULL,
+                UNIQUE(player_a_id, player_b_id)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS spark_messages (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                match_id    INTEGER NOT NULL REFERENCES spark_matches(id) ON DELETE CASCADE,
+                sender_id   INTEGER NOT NULL REFERENCES players(id),
+                body        TEXT    NOT NULL,
+                sent_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+                is_read     INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS spark_reports (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                reporter_id     INTEGER NOT NULL REFERENCES players(id),
+                reported_id     INTEGER NOT NULL REFERENCES players(id),
+                reason          TEXT    NOT NULL DEFAULT 'other',
+                notes           TEXT    DEFAULT NULL,
+                status          TEXT    NOT NULL DEFAULT 'pending',
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
         await db.commit()
 
         # ── Calendar RSVP table (SQLite) ───────────────────────────────────────
@@ -1084,8 +1158,6 @@ async def _init_postgres():
             "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS is_override INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS override_note TEXT DEFAULT NULL",
             "ALTER TABLE player_occurrences ADD COLUMN IF NOT EXISTS linked_player_uuid TEXT DEFAULT NULL",
-            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS relationship_status TEXT DEFAULT NULL",
-            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS profile_pic_uuid TEXT DEFAULT NULL",
         ]
         for sql in migrations_pg:
             try:
@@ -1122,6 +1194,82 @@ async def _init_postgres():
                 peak_day_hit    INTEGER NOT NULL DEFAULT 0,
                 result          TEXT    DEFAULT NULL,
                 checked_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Spark (Dating) Tables (PostgreSQL) ────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS spark_profiles (
+                id                          SERIAL PRIMARY KEY,
+                player_id                   INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                is_active                   INTEGER NOT NULL DEFAULT 0,
+                bio                         TEXT    DEFAULT NULL,
+                looking_for                 TEXT    DEFAULT 'open',
+                relationship_style          TEXT    DEFAULT 'not_specified',
+                orientation                 TEXT    DEFAULT 'not_specified',
+                gender_identity             TEXT    DEFAULT NULL,
+                seeking                     TEXT    DEFAULT 'everyone',
+                prompt_1_question           TEXT    DEFAULT NULL,
+                prompt_1_answer             TEXT    DEFAULT NULL,
+                prompt_2_question           TEXT    DEFAULT NULL,
+                prompt_2_answer             TEXT    DEFAULT NULL,
+                prompt_3_question           TEXT    DEFAULT NULL,
+                prompt_3_answer             TEXT    DEFAULT NULL,
+                visibility                  TEXT    NOT NULL DEFAULT 'everyone',
+                filter_gender               TEXT    DEFAULT NULL,
+                filter_orientation          TEXT    DEFAULT NULL,
+                filter_looking_for          TEXT    DEFAULT NULL,
+                filter_age_min              TEXT    DEFAULT NULL,
+                filter_age_max              TEXT    DEFAULT NULL,
+                daily_likes_remaining       INTEGER NOT NULL DEFAULT 10,
+                daily_likes_reset_date      TEXT    DEFAULT NULL,
+                daily_superlikes_remaining  INTEGER NOT NULL DEFAULT 1,
+                daily_superlikes_reset_date TEXT    DEFAULT NULL,
+                created_at                  TEXT    NOT NULL DEFAULT (now()::text),
+                updated_at                  TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS spark_interests (
+                id          SERIAL PRIMARY KEY,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                target_id   INTEGER NOT NULL REFERENCES players(id),
+                action      TEXT    NOT NULL DEFAULT 'like',
+                created_at  TEXT    NOT NULL DEFAULT (now()::text),
+                UNIQUE(player_id, target_id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS spark_matches (
+                id              SERIAL PRIMARY KEY,
+                player_a_id     INTEGER NOT NULL REFERENCES players(id),
+                player_b_id     INTEGER NOT NULL REFERENCES players(id),
+                status          TEXT    NOT NULL DEFAULT 'active',
+                matched_at      TEXT    NOT NULL DEFAULT (now()::text),
+                cancelled_by    INTEGER DEFAULT NULL REFERENCES players(id),
+                cancelled_at    TEXT    DEFAULT NULL,
+                UNIQUE(player_a_id, player_b_id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS spark_messages (
+                id          SERIAL PRIMARY KEY,
+                match_id    INTEGER NOT NULL REFERENCES spark_matches(id) ON DELETE CASCADE,
+                sender_id   INTEGER NOT NULL REFERENCES players(id),
+                body        TEXT    NOT NULL,
+                sent_at     TEXT    NOT NULL DEFAULT (now()::text),
+                is_read     INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS spark_reports (
+                id              SERIAL PRIMARY KEY,
+                reporter_id     INTEGER NOT NULL REFERENCES players(id),
+                reported_id     INTEGER NOT NULL REFERENCES players(id),
+                reason          TEXT    NOT NULL DEFAULT 'other',
+                notes           TEXT    DEFAULT NULL,
+                status          TEXT    NOT NULL DEFAULT 'pending',
+                created_at      TEXT    NOT NULL DEFAULT (now()::text)
             )
         """)
 

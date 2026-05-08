@@ -969,3 +969,139 @@ async def report_profile(body: ReportBody, db=Depends(get_db)):
         await db.commit()
 
     return {"status": "reported"}
+
+
+# ── Spark Messages ────────────────────────────────────────────────────────────
+
+class SendMessage(BaseModel):
+    token: str
+    body: str
+
+
+@router.get("/matches/{match_id}/messages")
+async def get_match_messages(match_id: int, token: str, db=Depends(get_db)):
+    """Fetch messages for a match thread. Only accessible by the two matched players."""
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+
+    # Verify player is part of this match
+    if is_postgres():
+        match = await db.fetchrow(
+            """SELECT * FROM spark_matches WHERE id = $1
+               AND (player_a_id = $2 OR player_b_id = $2)""",
+            match_id, player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM spark_matches WHERE id = ?
+               AND (player_a_id = ? OR player_b_id = ?)""",
+            (match_id, player_id, player_id)
+        ) as cur:
+            match = await cur.fetchone()
+
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found.")
+
+    other_id = match["player_b_id"] if match["player_a_id"] == player_id else match["player_a_id"]
+
+    # Get other player's display name
+    if is_postgres():
+        other = await db.fetchrow(
+            "SELECT display_name FROM players WHERE id = $1", other_id)
+        messages = await db.fetch(
+            """SELECT * FROM spark_messages WHERE match_id = $1
+               ORDER BY sent_at ASC LIMIT 200""", match_id)
+        # Mark unread messages as read
+        await db.execute(
+            """UPDATE spark_messages SET is_read = 1
+               WHERE match_id = $1 AND sender_id != $2 AND is_read = 0""",
+            match_id, player_id)
+    else:
+        async with db.execute(
+            "SELECT display_name FROM players WHERE id = ?", (other_id,)
+        ) as cur:
+            other = await cur.fetchone()
+        async with db.execute(
+            """SELECT * FROM spark_messages WHERE match_id = ?
+               ORDER BY sent_at ASC LIMIT 200""", (match_id,)
+        ) as cur:
+            messages = await cur.fetchall()
+        await db.execute(
+            """UPDATE spark_messages SET is_read = 1
+               WHERE match_id = ? AND sender_id != ? AND is_read = 0""",
+            (match_id, player_id))
+        await db.commit()
+
+    return {
+        "match_id":      match_id,
+        "match_status":  match["status"],
+        "other_name":    other["display_name"] if other else "Unknown",
+        "other_id":      other_id,
+        "player_id":     player_id,
+        "messages":      [dict(m) for m in messages],
+    }
+
+
+@router.post("/matches/{match_id}/messages")
+async def send_match_message(match_id: int, body: SendMessage, db=Depends(get_db)):
+    """Send a message in a Spark match thread."""
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    text      = body.body.strip()[:1000]
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    # Verify player is part of this active match
+    if is_postgres():
+        match = await db.fetchrow(
+            """SELECT * FROM spark_matches WHERE id = $1
+               AND (player_a_id = $2 OR player_b_id = $2)
+               AND status = 'active'""",
+            match_id, player_id)
+    else:
+        async with db.execute(
+            """SELECT * FROM spark_matches WHERE id = ?
+               AND (player_a_id = ? OR player_b_id = ?)
+               AND status = 'active'""",
+            (match_id, player_id, player_id)
+        ) as cur:
+            match = await cur.fetchone()
+
+    if not match:
+        raise HTTPException(status_code=404, detail="Active match not found.")
+
+    other_id = match["player_b_id"] if match["player_a_id"] == player_id else match["player_a_id"]
+    now      = datetime.now(timezone.utc).isoformat()
+
+    if is_postgres():
+        msg_id = await db.fetchval(
+            """INSERT INTO spark_messages (match_id, sender_id, body, sent_at)
+               VALUES ($1, $2, $3, $4) RETURNING id""",
+            match_id, player_id, text, now)
+    else:
+        async with db.execute(
+            """INSERT INTO spark_messages (match_id, sender_id, body, sent_at)
+               VALUES (?, ?, ?, ?)""",
+            (match_id, player_id, text, now)
+        ) as cur:
+            msg_id = cur.lastrowid
+        await db.commit()
+
+    # Notify the other player
+    await push_notification(
+        player_id=other_id, app_source="spark",
+        title=f"{player['display_name']} sent you a message ⚡",
+        body=text[:80] + ("…" if len(text) > 80 else ""),
+        priority="normal", db=db)
+
+    return {
+        "status":   "sent",
+        "message":  {"id": msg_id, "match_id": match_id, "sender_id": player_id,
+                     "body": text, "sent_at": now, "is_read": 0}
+    }
