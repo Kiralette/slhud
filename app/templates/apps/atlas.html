@@ -322,6 +322,7 @@
       <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Add location</div>
       <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Share a spot with the community or save it privately.</div>
     </div>
+    <input type="hidden" id="add-parcel-photo-uuid" value="">
     <div style="padding-top:12px;">
       <div class="at-field">
         <label class="at-label">Display name</label>
@@ -657,17 +658,41 @@
   }
 
   // ── Add location sheet ────────────────────────────────────────────────────
-  function openAddSheet() {
+  async function openAddSheet() {
     _addParent = 'places'; _addSub = ''; _addVis = 'public';
     renderSubPills('places');
+
+    // Reset all fields first
     ['add-name','add-region','add-parcel','add-desc','add-marketplace','add-instagram','add-flickr','add-primfeed']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
+    // Open the sheet immediately so the player sees it right away
     document.getElementById('add-overlay').style.display = 'block';
     document.getElementById('add-sheet').classList.add('open');
+
+    // Fetch last known location from atlas heartbeat cache and pre-populate
+    try {
+      const res  = await fetch(`/atlas/current-location?token=${TOKEN}`);
+      const loc  = await res.json();
+      if (loc && loc.region_name) {
+        const nameEl   = document.getElementById('add-name');
+        const regionEl = document.getElementById('add-region');
+        const parcelEl = document.getElementById('add-parcel');
+        if (regionEl) regionEl.value = loc.region_name;
+        if (parcelEl) parcelEl.value = loc.parcel_name || '';
+        // Only pre-fill display name if still blank — parcel name is the best default
+        if (nameEl && !nameEl.value) nameEl.value = loc.suggested_name || loc.parcel_name || '';
+        // Store the parcel photo UUID in a hidden field so submitLocation() can send it
+        document.getElementById('add-parcel-photo-uuid').value = loc.parcel_photo_uuid || '';
+      }
+    } catch(e) {
+      // Silently ignore — player can fill in manually
+    }
   }
   function closeAddSheet() {
     document.getElementById('add-sheet').classList.remove('open');
     document.getElementById('add-overlay').style.display = 'none';
+    document.getElementById('add-parcel-photo-uuid').value = '';
   }
 
   function selectParent(btn, val) {
@@ -701,12 +726,14 @@
     const name   = document.getElementById('add-name').value.trim();
     const region = document.getElementById('add-region').value.trim();
     const parcel = document.getElementById('add-parcel').value.trim();
+    const parcelPhotoUuid = document.getElementById('add-parcel-photo-uuid').value.trim() || null;
     if (!name || !region || !parcel) { toast('Name, region, and parcel are required'); return; }
     try {
       const res = await fetch('/atlas/locations', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           token: TOKEN, name, region_name: region, parcel_name: parcel,
+          parcel_photo_uuid: parcelPhotoUuid,
           description:     document.getElementById('add-desc').value.trim() || null,
           parent_category: _addParent, sub_category: _addSub, visibility: _addVis,
           marketplace_url: document.getElementById('add-marketplace').value.trim() || null,
