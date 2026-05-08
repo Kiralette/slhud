@@ -194,22 +194,26 @@ async def _save_daily_reset(player_id: int, profile: dict, db):
 
 async def _get_blocked_ids(player_id: int, db) -> set:
     """Get all player IDs this player has blocked or been blocked by."""
-    if is_postgres():
-        rows = await db.fetch(
-            """SELECT blocker_id, blocked_id FROM blocks
-               WHERE blocker_id = $1 OR blocked_id = $1""", player_id)
-    else:
-        async with db.execute(
-            """SELECT blocker_id, blocked_id FROM blocks
-               WHERE blocker_id = ? OR blocked_id = ?""", (player_id, player_id)
-        ) as cur:
-            rows = await cur.fetchall()
-    blocked = set()
-    for r in rows:
-        blocked.add(r["blocker_id"])
-        blocked.add(r["blocked_id"])
-    blocked.discard(player_id)
-    return blocked
+    try:
+        if is_postgres():
+            rows = await db.fetch(
+                """SELECT blocker_id, blocked_id FROM blocks
+                   WHERE blocker_id = $1 OR blocked_id = $1""", player_id)
+        else:
+            async with db.execute(
+                """SELECT blocker_id, blocked_id FROM blocks
+                   WHERE blocker_id = ? OR blocked_id = ?""", (player_id, player_id)
+            ) as cur:
+                rows = await cur.fetchall()
+        blocked = set()
+        for r in rows:
+            blocked.add(r["blocker_id"])
+            blocked.add(r["blocked_id"])
+        blocked.discard(player_id)
+        return blocked
+    except Exception:
+        # Table may not exist yet — return empty set so discover still works
+        return set()
 
 
 async def _check_match(player_id: int, target_id: int, db) -> bool:

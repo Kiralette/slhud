@@ -607,6 +607,15 @@ async def _init_sqlite():
                 created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS blocks (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                blocker_id  INTEGER NOT NULL REFERENCES players(id),
+                blocked_id  INTEGER NOT NULL REFERENCES players(id),
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(blocker_id, blocked_id)
+            )
+        """)
         await db.commit()
 
         # ── Calendar RSVP table (SQLite) ───────────────────────────────────────
@@ -1250,6 +1259,15 @@ async def _init_postgres():
                 notes           TEXT    DEFAULT NULL,
                 status          TEXT    NOT NULL DEFAULT 'pending',
                 created_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS blocks (
+                id          SERIAL PRIMARY KEY,
+                blocker_id  INTEGER NOT NULL REFERENCES players(id),
+                blocked_id  INTEGER NOT NULL REFERENCES players(id),
+                created_at  TEXT    NOT NULL DEFAULT (now()::text),
+                UNIQUE(blocker_id, blocked_id)
             )
         """)
 
