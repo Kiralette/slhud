@@ -205,8 +205,24 @@
   }
   .sp-shop-btn:active { background: var(--gold); color: var(--bg); }
 
-  /* Filters */
-  .sp-filter-section { padding: 0 18px 12px; }
+  /* ── Filter sheet ── */
+  .sp-filter-sheet-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(28,24,20,0.45); z-index: 400;
+    backdrop-filter: blur(2px);
+  }
+  .sp-filter-sheet-overlay.open { display: block; }
+  .sp-filter-sheet {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 500px;
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    border-top: 0.5px solid var(--border);
+    padding: 0 0 48px; z-index: 401;
+    max-height: 88vh; overflow-y: auto;
+    transition: transform .35s cubic-bezier(.32,1,.6,1);
+  }
+  .sp-filter-sheet.open { transform: translateX(-50%) translateY(0); }
+  .sp-filter-section { padding: 0 18px 18px; }
 
   .scroll-pad { height: 40px; }
 </style>
@@ -230,14 +246,20 @@
   <button class="tab active" onclick="showSpTab('discover')">Discover</button>
   <button class="tab" onclick="showSpTab('matches')">Matches</button>
   <button class="tab" onclick="showSpTab('profile')">My Profile</button>
-  <button class="tab" onclick="showSpTab('filters')">Filters</button>
 </div>
 
   <!-- ── DISCOVER ── -->
   <div id="sp-tab-discover" class="tab-panel active">
-    <div class="sp-counter">
-      <span id="sp-likes-count">{{ spark_profile.daily_likes_remaining or 10 }}</span> likes left today
-      · <span id="sp-super-count">{{ spark_profile.daily_superlikes_remaining or 1 }}</span> superlike
+    <div class="sp-counter" style="display:flex;align-items:center;justify-content:center;gap:12px;">
+      <span style="display:flex;align-items:center;gap:4px;">
+        <span style="font-size:16px;">♥</span><span id="sp-likes-count">{{ spark_profile.daily_likes_remaining or 10 }}</span>
+      </span>
+      <span style="color:var(--bg3);">·</span>
+      <span style="display:flex;align-items:center;gap:4px;">
+        <span style="font-size:16px;">⚡</span><span id="sp-super-count">{{ spark_profile.daily_superlikes_remaining or 1 }}</span>
+      </span>
+      <span style="color:var(--bg3);">·</span>
+      <button onclick="openFiltersSheet()" style="background:none;border:0.5px solid var(--border2);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--ink3);cursor:pointer;font-family:inherit;letter-spacing:.04em;">⚙ Filters</button>
     </div>
 
     {% if not spark_profile.is_active %}
@@ -447,73 +469,6 @@
     <div class="scroll-pad"></div>
   </div>
 
-  <!-- ── FILTERS ── -->
-  <div id="sp-tab-filters" class="tab-panel">
-    <div class="sp-section-head" style="padding-top:14px;">Discovery filters</div>
-    <div style="padding:4px 18px 8px;font-size:12px;color:var(--ink4);">Leave blank to see everyone.</div>
-
-    <div class="sp-filter-section">
-      <label class="sp-label">Gender</label>
-      <div class="sp-pill-group">
-        {% set fg = (spark_profile.filter_gender or '').split(',') %}
-        {% for g in ['women','men','nonbinary','everyone'] %}
-        <button class="sp-pill {% if g in fg %}selected{% endif %}"
-          onclick="spFilterToggle(this,'filter_gender','{{ g }}')">
-          {{ g | capitalize }}
-        </button>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="sp-filter-section">
-      <label class="sp-label">Orientation</label>
-      <div class="sp-pill-group">
-        {% set fo = (spark_profile.filter_orientation or '').split(',') %}
-        {% for o in orientation_options %}
-        <button class="sp-pill {% if o in fo %}selected{% endif %}"
-          onclick="spFilterToggle(this,'filter_orientation','{{ o }}')">
-          {{ o | replace('_',' ') | capitalize }}
-        </button>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="sp-filter-section">
-      <label class="sp-label">Looking for</label>
-      <div class="sp-pill-group">
-        {% set fl = (spark_profile.filter_looking_for or '').split(',') %}
-        {% for lf in looking_for_options + ['all'] %}
-        <button class="sp-pill {% if lf in fl %}selected{% endif %}"
-          onclick="spFilterToggle(this,'filter_looking_for','{{ lf }}')">
-          {{ lf | capitalize }}
-        </button>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="sp-filter-section">
-      <label class="sp-label">Age range</label>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <select class="sp-input" id="sp-age-min" style="flex:1;">
-          <option value="">No min</option>
-          {% for ag in ['18-21','22-25','26-30','31-35','36-40','40+'] %}
-          <option value="{{ ag }}" {% if spark_profile.filter_age_min == ag %}selected{% endif %}>{{ ag }}</option>
-          {% endfor %}
-        </select>
-        <span style="color:var(--ink4);">to</span>
-        <select class="sp-input" id="sp-age-max" style="flex:1;">
-          <option value="">No max</option>
-          {% for ag in ['18-21','22-25','26-30','31-35','36-40','40+'] %}
-          <option value="{{ ag }}" {% if spark_profile.filter_age_max == ag %}selected{% endif %}>{{ ag }}</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-
-    <button class="sp-save-btn" onclick="saveFilters()">Apply filters</button>
-    <div class="scroll-pad"></div>
-  </div>
-
 {% endblock %}
 
 {% block extra_script %}
@@ -529,7 +484,7 @@
     document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
     document.getElementById('sp-tab-' + id)?.classList.add('active');
-    const tabs = ['discover','matches','profile','filters'];
+    const tabs = ['discover','matches','profile'];
     const idx  = tabs.indexOf(id);
     document.querySelectorAll('.tab')[idx]?.classList.add('active');
     if (id === 'discover') loadCards();
@@ -787,7 +742,85 @@
     } catch(e) { toast('Connection error'); }
   }
 
-  // ── Save filters ──────────────────────────────────────────────────────────
+  // ── Filters sheet ─────────────────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div class="sp-filter-sheet-overlay" id="filters-overlay" onclick="closeFiltersSheet()"></div>
+<div class="sp-filter-sheet" id="filters-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="padding:14px 18px 12px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-family:var(--font-head);font-size:30px;font-weight:400;color:var(--ink);">Filters</div>
+    <div style="font-size:19px;color:var(--ink4);">Leave blank to see everyone.</div>
+  </div>
+
+  <div style="padding:20px 18px 0;">
+    <div style="font-size:14px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;">Gender</div>
+    <div class="sp-pill-group" id="filter-gender-group">
+      ${['Women','Men','Nonbinary','Everyone'].map(g =>
+        `<button class="sp-pill" data-key="filter_gender" data-val="${g.toLowerCase()}" onclick="spFilterToggle(this,'filter_gender','${g.toLowerCase()}')">${g}</button>`
+      ).join('')}
+    </div>
+  </div>
+
+  <div class="sp-filter-section" style="padding-top:18px;">
+    <div style="font-size:14px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;">Looking for</div>
+    <div class="sp-pill-group" id="filter-looking-group">
+      ${['Friendship','Dating','Relationship','All'].map(lf =>
+        `<button class="sp-pill" data-key="filter_looking_for" data-val="${lf.toLowerCase()}" onclick="spFilterToggle(this,'filter_looking_for','${lf.toLowerCase()}')">${lf}</button>`
+      ).join('')}
+    </div>
+  </div>
+
+  <div class="sp-filter-section" style="padding-top:18px;">
+    <div style="font-size:14px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--ink4);margin-bottom:10px;">Age range</div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <select class="sp-input" id="sp-age-min" style="flex:1;">
+        <option value="">No min</option>
+        ${['18-21','22-25','26-30','31-35','36-40','40+'].map(ag => `<option value="${ag}">${ag}</option>`).join('')}
+      </select>
+      <span style="color:var(--ink4);font-size:17px;">to</span>
+      <select class="sp-input" id="sp-age-max" style="flex:1;">
+        <option value="">No max</option>
+        ${['18-21','22-25','26-30','31-35','36-40','40+'].map(ag => `<option value="${ag}">${ag}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+
+  <div style="padding:20px 18px 0;">
+    <button class="sp-save-btn" style="margin:0;width:100%;font-size:22px;font-weight:500;padding:14px;border-radius:var(--radius);" onclick="saveFilters()">Apply filters</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  function openFiltersSheet() {
+    // Restore saved filter selections
+    const genderVals = (filterData.filter_gender || '{{ spark_profile.filter_gender or "" }}').split(',').filter(Boolean);
+    const lookingVals = (filterData.filter_looking_for || '{{ spark_profile.filter_looking_for or "" }}').split(',').filter(Boolean);
+    document.querySelectorAll('#filter-gender-group .sp-pill').forEach(b => {
+      b.classList.toggle('selected', genderVals.includes(b.dataset.val));
+    });
+    document.querySelectorAll('#filter-looking-group .sp-pill').forEach(b => {
+      b.classList.toggle('selected', lookingVals.includes(b.dataset.val));
+    });
+    const ageMin = filterData.filter_age_min || '{{ spark_profile.filter_age_min or "" }}';
+    const ageMax = filterData.filter_age_max || '{{ spark_profile.filter_age_max or "" }}';
+    const minEl = document.getElementById('sp-age-min');
+    const maxEl = document.getElementById('sp-age-max');
+    if (minEl) minEl.value = ageMin;
+    if (maxEl) maxEl.value = ageMax;
+
+    document.getElementById('filters-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('filters-sheet').classList.add('open'), 10);
+  }
+
+  function closeFiltersSheet() {
+    document.getElementById('filters-sheet').classList.remove('open');
+    document.getElementById('filters-overlay').classList.remove('open');
+  }
+
+  // ── Save filters ───────────────────────────────────────────────────────────
   async function saveFilters() {
     const body = {
       token: TOKEN,
@@ -800,7 +833,7 @@
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify(body)
       });
-      if (res.ok) { toast('Filters saved ✓'); showSpTab('discover'); }
+      if (res.ok) { closeFiltersSheet(); toast('Filters saved ✓'); loadCards(); }
       else { toast('Could not save filters'); }
     } catch(e) { toast('Connection error'); }
   }
