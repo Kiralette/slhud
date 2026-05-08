@@ -320,9 +320,14 @@
     <!-- Gender identity -->
     <div class="sp-field">
       <label class="sp-label">Gender identity</label>
-      <input class="sp-input" type="text" id="sp-gender-id" maxlength="60"
-        placeholder="e.g. woman, nonbinary, trans man…"
-        value="{{ spark_profile.gender_identity or '' }}">
+      <div class="sp-pill-group">
+        {% for g in ['Women','Men','Nonbinary'] %}
+        <button class="sp-pill {% if spark_profile.gender_identity == g.lower() %}selected{% endif %}"
+          onclick="spPick(this,'gender_identity','{{ g.lower() }}')" data-key="gender_identity" data-val="{{ g.lower() }}">
+          {{ g }}
+        </button>
+        {% endfor %}
+      </div>
     </div>
 
     <!-- Looking for -->
@@ -762,7 +767,7 @@
     const body = {
       token: TOKEN,
       bio:             document.getElementById('sp-bio')?.value.trim() || null,
-      gender_identity: document.getElementById('sp-gender-id')?.value.trim() || null,
+      gender_identity: profileData.gender_identity ?? ('{{ spark_profile.gender_identity or '' }}') || null,
       prompt_1_question: document.getElementById('sp-prompt-1-q')?.value || null,
       prompt_1_answer:   document.getElementById('sp-prompt-1-a')?.value.trim() || null,
       prompt_2_question: document.getElementById('sp-prompt-2-q')?.value || null,
