@@ -3,19 +3,10 @@
 
 {% block extra_style %}
 <style>
-  /* ── Tabs ── */
-  .sp-tabs {
-    display: flex; border-bottom: 1px solid var(--bg4);
-    background: var(--bg); padding: 0 18px;
-  }
-  .sp-tab {
-    flex: 1; padding: 12px 0; font-size: 12px; font-weight: 600;
-    letter-spacing: .06em; text-transform: uppercase;
-    color: var(--ink4); background: none; border: none;
-    cursor: pointer; border-bottom: 2px solid transparent;
-    margin-bottom: -1px; transition: color .15s, border-color .15s;
-  }
-  .sp-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+  /* ── Tabs — use base .tabs/.tab system ── */
+  .tabs { overflow-x: auto; justify-content: flex-start; scrollbar-width: none; gap: 2px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 0 0 auto; white-space: nowrap; }
 
   /* ── Card stack ── */
   .sp-stack {
@@ -24,8 +15,8 @@
   }
   .sp-card {
     position: absolute; inset: 0;
-    background: var(--bg2); border-radius: 20px;
-    border: 1px solid var(--bg4);
+    background: var(--bg); border-radius: 20px;
+    border: 0.5px solid var(--border2);
     box-shadow: 0 4px 24px rgba(28,24,20,.10);
     overflow: hidden; cursor: grab;
     transition: transform .18s, opacity .18s;
@@ -100,7 +91,7 @@
   /* ── Matches ── */
   .sp-match-row {
     display: flex; align-items: center; gap: 12px;
-    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    padding: 12px 18px; border-bottom: 0.5px solid var(--border);
     cursor: pointer;
   }
   .sp-match-row:last-child { border-bottom: none; }
@@ -140,22 +131,22 @@
   }
   .sp-input {
     width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
-    border: 1px solid var(--bg4); background: var(--bg2);
+    border: 0.5px solid var(--border2); background: var(--bg);
     font-size: 14px; color: var(--ink); font-family: inherit;
     box-sizing: border-box;
   }
-  .sp-input:focus { outline: none; border-color: var(--ink3); }
+  .sp-input:focus { outline: none; border-color: var(--gold); }
   .sp-textarea {
     width: 100%; padding: 11px 13px; border-radius: var(--radius-sm);
-    border: 1px solid var(--bg4); background: var(--bg2);
+    border: 0.5px solid var(--border2); background: var(--bg);
     font-size: 13px; color: var(--ink); font-family: inherit;
     resize: vertical; min-height: 80px; box-sizing: border-box;
   }
-  .sp-textarea:focus { outline: none; border-color: var(--ink3); }
+  .sp-textarea:focus { outline: none; border-color: var(--gold); }
   .sp-pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
   .sp-pill {
     padding: 6px 13px; border-radius: 20px;
-    border: 1px solid var(--bg4); background: var(--bg2);
+    border: 0.5px solid var(--border2); background: var(--bg);
     font-size: 12px; color: var(--ink3); cursor: pointer;
     font-family: inherit; transition: all .12s;
   }
@@ -170,7 +161,7 @@
   .sp-save-btn:active { background: var(--ink2); }
   .sp-save-btn.secondary {
     background: var(--bg2); color: var(--ink);
-    border: 1px solid var(--bg4); margin-top: 0;
+    border: 0.5px solid var(--border2); margin-top: 0;
   }
 
   /* Active toggle */
@@ -178,8 +169,8 @@
     margin: 14px 18px 0;
     padding: 12px 16px;
     border-radius: var(--radius);
-    border: 1px solid var(--bg4);
-    background: var(--bg2);
+    border: 0.5px solid var(--border2);
+    background: var(--bg);
     display: flex; align-items: center; gap: 12px;
   }
   .sp-toggle {
@@ -198,7 +189,7 @@
   /* Lumen shop */
   .sp-shop-card {
     margin: 0 18px 10px;
-    background: var(--bg2); border: 1px solid var(--bg4);
+    background: var(--bg); border: 0.5px solid var(--border2);
     border-radius: var(--radius); padding: 14px 16px;
     display: flex; align-items: center; gap: 12px;
   }
@@ -222,29 +213,28 @@
 {% endblock %}
 
 {% block content %}
-<div class="app-scale">
 
-  <!-- Header -->
-  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;">
-    <div>
-      <div style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin-bottom:2px;">Dating</div>
-      <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);line-height:1;">Spark ⚡</div>
-    </div>
-    {% if match_count > 0 %}
-    <div style="background:var(--rose);color:#fff;border-radius:12px;padding:4px 10px;font-size:12px;font-weight:700;">{{ match_count }} match{{ 'es' if match_count != 1 }}</div>
-    {% endif %}
+<!-- TOPBAR — no lumen (dating app) -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-eyebrow">Dating</div>
+    <div class="topbar-title">Spark ⚡</div>
   </div>
+  {% if match_count > 0 %}
+  <div style="background:var(--rose);color:#fff;border-radius:12px;padding:4px 10px;font-size:12px;font-weight:700;">{{ match_count }} match{{ 'es' if match_count != 1 }}</div>
+  {% endif %}
+</div>
 
-  <!-- Tabs -->
-  <div class="sp-tabs">
-    <button class="sp-tab active" onclick="showSpTab('discover')">Discover</button>
-    <button class="sp-tab" onclick="showSpTab('matches')">Matches</button>
-    <button class="sp-tab" onclick="showSpTab('profile')">My Profile</button>
-    <button class="sp-tab" onclick="showSpTab('filters')">Filters</button>
-  </div>
+<!-- TABS — base system -->
+<div class="tabs">
+  <button class="tab active" onclick="showSpTab('discover')">Discover</button>
+  <button class="tab" onclick="showSpTab('matches')">Matches</button>
+  <button class="tab" onclick="showSpTab('profile')">My Profile</button>
+  <button class="tab" onclick="showSpTab('filters')">Filters</button>
+</div>
 
   <!-- ── DISCOVER ── -->
-  <div id="sp-tab-discover" class="sp-tab-content">
+  <div id="sp-tab-discover" class="tab-panel active">
     <div class="sp-counter">
       <span id="sp-likes-count">{{ spark_profile.daily_likes_remaining or 10 }}</span> likes left today
       · <span id="sp-super-count">{{ spark_profile.daily_superlikes_remaining or 1 }}</span> superlike
@@ -275,10 +265,10 @@
   </div>
 
   <!-- ── MATCHES ── -->
-  <div id="sp-tab-matches" class="sp-tab-content" style="display:none;">
+  <div id="sp-tab-matches" class="tab-panel">
     {% if matches %}
     <div style="padding:12px 18px 4px;font-size:11px;color:var(--ink4);">{{ match_count }} match{{ 'es' if match_count != 1 }} — tap to message</div>
-    <div style="margin:0 18px 14px;background:var(--bg);border-radius:var(--radius);border:1px solid var(--bg4);overflow:hidden;">
+    <div style="margin:0 18px 14px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border2);overflow:hidden;">
       {% for m in matches %}
       <div class="sp-match-row">
         <div class="sp-match-avatar" {% if m.profile_pic_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ m.profile_pic_uuid }}/2')"{% endif %}>
@@ -305,7 +295,7 @@
   </div>
 
   <!-- ── MY PROFILE ── -->
-  <div id="sp-tab-profile" class="sp-tab-content" style="display:none;">
+  <div id="sp-tab-profile" class="tab-panel">
 
     <!-- Active toggle -->
     <div class="sp-active-banner">
@@ -458,7 +448,7 @@
   </div>
 
   <!-- ── FILTERS ── -->
-  <div id="sp-tab-filters" class="sp-tab-content" style="display:none;">
+  <div id="sp-tab-filters" class="tab-panel">
     <div class="sp-section-head" style="padding-top:14px;">Discovery filters</div>
     <div style="padding:4px 18px 8px;font-size:12px;color:var(--ink4);">Leave blank to see everyone.</div>
 
@@ -524,7 +514,6 @@
     <div class="scroll-pad"></div>
   </div>
 
-</div>
 {% endblock %}
 
 {% block extra_script %}
@@ -537,12 +526,12 @@
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
   function showSpTab(id) {
-    document.querySelectorAll('.sp-tab-content').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.sp-tab').forEach(el => el.classList.remove('active'));
-    document.getElementById('sp-tab-' + id).style.display = 'block';
+    document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById('sp-tab-' + id)?.classList.add('active');
     const tabs = ['discover','matches','profile','filters'];
     const idx  = tabs.indexOf(id);
-    document.querySelectorAll('.sp-tab')[idx]?.classList.add('active');
+    document.querySelectorAll('.tab')[idx]?.classList.add('active');
     if (id === 'discover') loadCards();
   }
 
@@ -870,7 +859,7 @@
 <div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:999;" id="report-overlay" onclick="closeReportSheet()"></div>
 <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:1000;max-height:60vh;overflow-y:auto;" id="report-sheet">
   <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
-  <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+  <div style="padding:12px 18px 8px;border-bottom:0.5px solid var(--border);">
     <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Report profile</div>
     <div style="font-size:12px;color:var(--ink4);margin-top:2px;" id="report-target-name"></div>
   </div>
