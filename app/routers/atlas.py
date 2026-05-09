@@ -96,6 +96,7 @@ class AddLocation(BaseModel):
     instagram_url: str | None = None
     flickr_url: str | None = None
     primfeed_url: str | None = None
+    website_url: str | None = None
 
 
 class UpdateLocation(BaseModel):
@@ -110,6 +111,7 @@ class UpdateLocation(BaseModel):
     instagram_url: str | None = None
     flickr_url: str | None = None
     primfeed_url: str | None = None
+    website_url: str | None = None
 
 
 class AddReview(BaseModel):
@@ -273,27 +275,27 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
                (player_id, region_name, parcel_name, parcel_photo_uuid,
                 x, y, z, name, description, parent_category, sub_category,
                 visibility, slurl, marketplace_url, instagram_url,
-                flickr_url, primfeed_url, created_at, updated_at)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+                flickr_url, primfeed_url, website_url, created_at, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
                RETURNING id""",
             player_id, region, parcel, body.parcel_photo_uuid,
             body.x, body.y, body.z, name, body.description,
             parent, sub, vis, slurl,
             body.marketplace_url, body.instagram_url,
-            body.flickr_url, body.primfeed_url, now, now)
+            body.flickr_url, body.primfeed_url, body.website_url, now, now)
     else:
         async with db.execute(
             """INSERT INTO atlas_locations
                (player_id, region_name, parcel_name, parcel_photo_uuid,
                 x, y, z, name, description, parent_category, sub_category,
                 visibility, slurl, marketplace_url, instagram_url,
-                flickr_url, primfeed_url, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                flickr_url, primfeed_url, website_url, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (player_id, region, parcel, body.parcel_photo_uuid,
              body.x, body.y, body.z, name, body.description,
              parent, sub, vis, slurl,
              body.marketplace_url, body.instagram_url,
-             body.flickr_url, body.primfeed_url, now, now)
+             body.flickr_url, body.primfeed_url, body.website_url, now, now)
         ) as cur:
             loc_id = cur.lastrowid
         await db.commit()
@@ -513,6 +515,7 @@ async def update_location(location_id: int, body: UpdateLocation, db=Depends(get
     if body.instagram_url is not None:    fields["instagram_url"]     = body.instagram_url
     if body.flickr_url is not None:       fields["flickr_url"]        = body.flickr_url
     if body.primfeed_url is not None:     fields["primfeed_url"]      = body.primfeed_url
+    if body.website_url is not None:      fields["website_url"]       = body.website_url
     fields["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     if is_postgres():

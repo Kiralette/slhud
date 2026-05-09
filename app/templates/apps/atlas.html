@@ -379,6 +379,10 @@
         <label class="at-label">Primfeed</label>
         <input class="at-input" id="add-primfeed" type="url" placeholder="https://primfeed.com/…">
       </div>
+      <div class="at-field">
+        <label class="at-label">Website</label>
+        <input class="at-input" id="add-website" type="url" placeholder="https://…">
+      </div>
       <button class="at-save-btn" onclick="submitLocation()">Add to Atlas</button>
       <div style="height:16px;"></div>
     </div>
@@ -530,10 +534,11 @@
 
     const links = [];
     if (loc.slurl)           links.push(`<a class="at-link-btn" href="${loc.slurl}">📍 Teleport</a>`);
-    if (loc.marketplace_url) links.push(`<a class="at-link-btn" href="${loc.marketplace_url}" target="_blank">🛍 Marketplace</a>`);
-    if (loc.instagram_url)   links.push(`<a class="at-link-btn" href="${loc.instagram_url}" target="_blank">📸 Instagram</a>`);
-    if (loc.flickr_url)      links.push(`<a class="at-link-btn" href="${loc.flickr_url}" target="_blank">🖼 Flickr</a>`);
-    if (loc.primfeed_url)    links.push(`<a class="at-link-btn" href="${loc.primfeed_url}" target="_blank">✦ Primfeed</a>`);
+    if (loc.marketplace_url) links.push(`<a class="at-link-btn" href="${loc.marketplace_url}">🛍 Marketplace</a>`);
+    if (loc.instagram_url)   links.push(`<a class="at-link-btn" href="${loc.instagram_url}">📸 Instagram</a>`);
+    if (loc.flickr_url)      links.push(`<a class="at-link-btn" href="${loc.flickr_url}">🖼 Flickr</a>`);
+    if (loc.primfeed_url)    links.push(`<a class="at-link-btn" href="${loc.primfeed_url}">✦ Primfeed</a>`);
+    if (loc.website_url)     links.push(`<a class="at-link-btn" href="${loc.website_url}">🌐 Website</a>`);
 
     const reviewsHtml = revs.length
       ? revs.map(r => `
@@ -666,7 +671,7 @@
     renderSubPills('places');
 
     // Reset all fields first
-    ['add-name','add-region','add-parcel','add-desc','add-marketplace','add-instagram','add-flickr','add-primfeed']
+    ['add-name','add-region','add-parcel','add-desc','add-marketplace','add-instagram','add-flickr','add-primfeed','add-website']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
     // Open the sheet immediately so the player sees it right away
@@ -752,6 +757,7 @@
           instagram_url:   document.getElementById('add-instagram').value.trim() || null,
           flickr_url:      document.getElementById('add-flickr').value.trim() || null,
           primfeed_url:    document.getElementById('add-primfeed').value.trim() || null,
+          website_url:     document.getElementById('add-website').value.trim() || null,
         })
       });
       const d = await res.json();
