@@ -707,6 +707,8 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "atlas_saves",
             "atlas_reviews",
             "atlas_locations",
+            # ── Location ────────────────────────────────────────────
+            "player_location",
             # ── Blocks ─────────────────────────────────────────────
             "blocks",
             # ── Calendar RSVPs ──────────────────────────────────────
