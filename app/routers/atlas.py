@@ -245,24 +245,22 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
     slurl  = _build_slurl(region, body.x, body.y, body.z)
     now    = datetime.now(timezone.utc).isoformat()
 
-    # Deduplicate: same landing-point SLURL + same display name = same place.
-    # This correctly handles multiple distinct parcels inside one region
-    # (each has a unique slurl) while still collapsing genuine duplicates.
-    # A parcel A and parcel B in the same region will have different SLURLs
-    # because their landing-point coords differ, so they stay separate entries.
+    # Deduplicate: same region + parcel name = same physical place.
+    # Display name is intentionally excluded — players may customise it
+    # for private listings, so it's not a reliable uniqueness signal.
     if vis in ("public", "friends"):
         if is_postgres():
             existing = await db.fetchrow(
                 """SELECT id FROM atlas_locations
-                   WHERE slurl = $1 AND name = $2
+                   WHERE region_name = $1 AND parcel_name = $2
                    AND visibility IN ('public','friends')""",
-                slurl, name)
+                region, parcel)
         else:
             async with db.execute(
                 """SELECT id FROM atlas_locations
-                   WHERE slurl = ? AND name = ?
+                   WHERE region_name = ? AND parcel_name = ?
                    AND visibility IN ('public','friends')""",
-                (slurl, name)
+                (region, parcel)
             ) as cur:
                 existing = await cur.fetchone()
 
