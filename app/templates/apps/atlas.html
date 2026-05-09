@@ -323,6 +323,9 @@
       <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Share a spot with the community or save it privately.</div>
     </div>
     <input type="hidden" id="add-parcel-photo-uuid" value="">
+    <input type="hidden" id="add-x" value="0">
+    <input type="hidden" id="add-y" value="0">
+    <input type="hidden" id="add-z" value="0">
     <div style="padding-top:12px;">
       <div class="at-field">
         <label class="at-label">Display name</label>
@@ -684,6 +687,9 @@
         if (nameEl && !nameEl.value) nameEl.value = loc.suggested_name || loc.parcel_name || '';
         // Store the parcel photo UUID in a hidden field so submitLocation() can send it
         document.getElementById('add-parcel-photo-uuid').value = loc.parcel_photo_uuid || '';
+        document.getElementById('add-x').value = loc.x || 0;
+        document.getElementById('add-y').value = loc.y || 0;
+        document.getElementById('add-z').value = loc.z || 0;
       }
     } catch(e) {
       // Silently ignore — player can fill in manually
@@ -693,6 +699,9 @@
     document.getElementById('add-sheet').classList.remove('open');
     document.getElementById('add-overlay').style.display = 'none';
     document.getElementById('add-parcel-photo-uuid').value = '';
+    document.getElementById('add-x').value = 0;
+    document.getElementById('add-y').value = 0;
+    document.getElementById('add-z').value = 0;
   }
 
   function selectParent(btn, val) {
@@ -733,6 +742,9 @@
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           token: TOKEN, name, region_name: region, parcel_name: parcel,
+          x: parseFloat(document.getElementById('add-x').value) || 0,
+          y: parseFloat(document.getElementById('add-y').value) || 0,
+          z: parseFloat(document.getElementById('add-z').value) || 0,
           parcel_photo_uuid: parcelPhotoUuid,
           description:     document.getElementById('add-desc').value.trim() || null,
           parent_category: _addParent, sub_category: _addSub, visibility: _addVis,
