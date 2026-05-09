@@ -268,7 +268,7 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
                 flickr_url, primfeed_url, created_at, updated_at)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
                RETURNING id""",
-            player_id, region, parcel, photo_uuid,
+            player_id, region, parcel, body.parcel_photo_uuid,
             body.x, body.y, body.z, name, body.description,
             parent, sub, vis, slurl,
             body.marketplace_url, body.instagram_url,
@@ -281,7 +281,7 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
                 visibility, slurl, marketplace_url, instagram_url,
                 flickr_url, primfeed_url, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (player_id, region, parcel, photo_uuid,
+            (player_id, region, parcel, body.parcel_photo_uuid,
              body.x, body.y, body.z, name, body.description,
              parent, sub, vis, slurl,
              body.marketplace_url, body.instagram_url,
