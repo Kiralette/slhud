@@ -97,6 +97,14 @@
     cursor: pointer; font-family: inherit; text-decoration: none;
     display: inline-flex; align-items: center; gap: 4px;
   }
+  .at-url-row {
+    font-size: 12px; color: var(--ink3); padding: 5px 0;
+    display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap;
+    border-bottom: 0.5px solid var(--border); word-break: break-all;
+  }
+  .at-url-row:last-child { border-bottom: none; }
+  .at-url-label { font-weight: 600; white-space: nowrap; color: var(--ink2); }
+  .at-url-text  { color: var(--ink4); font-family: monospace; font-size: 11px; }
   .at-review { padding: 12px 18px; border-bottom: 0.5px solid var(--border); }
   .at-review:last-child { border-bottom: none; }
   .at-review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -534,11 +542,11 @@
 
     const links = [];
     if (loc.slurl)           links.push(`<a class="at-link-btn" href="${loc.slurl}">📍 Teleport</a>`);
-    if (loc.marketplace_url) links.push(`<a class="at-link-btn" href="${loc.marketplace_url}">🛍 Marketplace</a>`);
-    if (loc.instagram_url)   links.push(`<a class="at-link-btn" href="${loc.instagram_url}">📸 Instagram</a>`);
-    if (loc.flickr_url)      links.push(`<a class="at-link-btn" href="${loc.flickr_url}">🖼 Flickr</a>`);
-    if (loc.primfeed_url)    links.push(`<a class="at-link-btn" href="${loc.primfeed_url}">✦ Primfeed</a>`);
-    if (loc.website_url)     links.push(`<a class="at-link-btn" href="${loc.website_url}">🌐 Website</a>`);
+    if (loc.marketplace_url) links.push(`<div class="at-url-row">🛍 <span class="at-url-label">Marketplace:</span> <span class="at-url-text">${loc.marketplace_url}</span></div>`);
+    if (loc.instagram_url)   links.push(`<div class="at-url-row">📸 <span class="at-url-label">Instagram:</span> <span class="at-url-text">${loc.instagram_url}</span></div>`);
+    if (loc.flickr_url)      links.push(`<div class="at-url-row">🖼 <span class="at-url-label">Flickr:</span> <span class="at-url-text">${loc.flickr_url}</span></div>`);
+    if (loc.primfeed_url)    links.push(`<div class="at-url-row">✦ <span class="at-url-label">Primfeed:</span> <span class="at-url-text">${loc.primfeed_url}</span></div>`);
+    if (loc.website_url)     links.push(`<div class="at-url-row">🌐 <span class="at-url-label">Website:</span> <span class="at-url-text">${loc.website_url}</span></div>`);
 
     const reviewsHtml = revs.length
       ? revs.map(r => `
