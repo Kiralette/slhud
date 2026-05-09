@@ -699,7 +699,6 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "healthcare_appointments",
             "healthcare_profiles",
             # ── Spark / dating ──────────────────────────────────────
-            "spark_matches",
             "spark_reports",
             "spark_interests",
             "spark_profiles",
@@ -716,6 +715,7 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
         ]:
             await db.execute(f"DELETE FROM {tbl} WHERE player_id = $1", pid)
         # Tables with non-standard FK column names:
+        await db.execute("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", pid)
         await db.execute("DELETE FROM messages WHERE sender_id = $1", pid)
         await db.execute("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid)
         await db.execute("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid)
@@ -739,7 +739,7 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "healthcare_medications", "healthcare_appointments",
             "healthcare_profiles",
             # Spark
-            "spark_matches", "spark_reports", "spark_interests", "spark_profiles",
+            "spark_reports", "spark_interests", "spark_profiles",
             # Atlas
             "atlas_helpful_votes", "atlas_checkins", "atlas_saves",
             "atlas_reviews", "atlas_locations",
@@ -752,8 +752,9 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             except Exception:
                 pass
         try:
-            await db.execute("DELETE FROM follows WHERE follower_id = ? OR following_id = ?", (player_id, player_id))
-            await db.execute("DELETE FROM message_threads WHERE player_a_id = ? OR player_b_id = ?", (player_id, player_id))
+            await db.execute("DELETE FROM spark_matches WHERE player_a_id = ? OR player_b_id = ?", (pid, pid))
+            await db.execute("DELETE FROM follows WHERE follower_id = ? OR following_id = ?", (pid, pid))
+            await db.execute("DELETE FROM message_threads WHERE player_a_id = ? OR player_b_id = ?", (pid, pid))
         except Exception:
             pass
         await db.execute("DELETE FROM players WHERE id = ?", (player_id,))
