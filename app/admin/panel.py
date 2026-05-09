@@ -713,12 +713,21 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             # ── Calendar RSVPs ──────────────────────────────────────
             "calendar_rsvps",
         ]:
-            await db.execute(f"DELETE FROM {tbl} WHERE player_id = $1", pid)
+            try:
+                await db.execute(f"DELETE FROM {tbl} WHERE player_id = $1", pid)
+            except Exception:
+                pass
         # Tables with non-standard FK column names:
-        await db.execute("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", pid)
-        await db.execute("DELETE FROM messages WHERE sender_id = $1", pid)
-        await db.execute("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid)
-        await db.execute("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid)
+        for _stmt, _args in [
+            ("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", [pid]),
+            ("DELETE FROM messages WHERE sender_id = $1", [pid]),
+            ("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", [pid]),
+            ("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", [pid]),
+        ]:
+            try:
+                await db.execute(_stmt, *_args)
+            except Exception:
+                pass
         await db.execute("DELETE FROM players WHERE id = $1", pid)
     else:
         # SQLite: PRAGMA foreign_keys is off by default so order matters less,
