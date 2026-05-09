@@ -188,6 +188,9 @@ async def admin_home(request: Request, db=Depends(get_db)):
       <a href="/admin/spark-reports?secret={secret}" style="display:inline-block;margin-top:10px;padding:8px 16px;background:#d47070;color:#fff;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">
         ⚡ Spark Reports {'<span style="background:#fff;color:#d47070;border-radius:10px;padding:1px 7px;font-size:12px;margin-left:6px;">' + str(pending_reports) + '</span>' if pending_reports else ''}
       </a>
+      <a href="/admin/atlas-locations?secret={secret}" style="display:inline-block;margin-top:10px;padding:8px 16px;background:#2a4a5a;color:#7ec8e3;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">
+        🗺️ Atlas Locations
+      </a>
     </div>
     <h2>Players</h2>
     <table>
@@ -891,3 +894,129 @@ async def update_spark_report(
         await db.commit()
 
     return RedirectResponse(f"/admin/spark-reports?secret={secret}", status_code=303)
+
+
+# ── ATLAS LOCATIONS ───────────────────────────────────────────────────────────
+
+@router.get("/atlas-locations", response_class=HTMLResponse)
+async def atlas_locations_list(request: Request, db=Depends(get_db)):
+    """
+    Admin view of all Atlas locations regardless of privacy setting.
+    Allows deletion of any location (public, friends, or private).
+    """
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT al.id, al.name, al.region_name, al.parcel_name,
+                      al.visibility, al.sub_category, al.slurl,
+                      al.checkin_count, al.save_count, al.review_count,
+                      al.average_stars, al.created_at,
+                      p.display_name AS owner_name, p.id AS owner_id
+               FROM atlas_locations al
+               JOIN players p ON p.id = al.player_id
+               ORDER BY al.created_at DESC
+               LIMIT 200""")
+    else:
+        async with db.execute(
+            """SELECT al.id, al.name, al.region_name, al.parcel_name,
+                      al.visibility, al.sub_category, al.slurl,
+                      al.checkin_count, al.save_count, al.review_count,
+                      al.average_stars, al.created_at,
+                      p.display_name AS owner_name, p.id AS owner_id
+               FROM atlas_locations al
+               JOIN players p ON p.id = al.player_id
+               ORDER BY al.created_at DESC
+               LIMIT 200"""
+        ) as cur:
+            rows = await cur.fetchall()
+
+    VIS_COLOR = {
+        "public":  ("#1a3a1a", "#4caf50"),
+        "friends": ("#2a2a10", "#ffeb3b"),
+        "private": ("#2a1a1a", "#e57373"),
+    }
+
+    rows_html = ""
+    for r in rows:
+        vis = r["visibility"]
+        bg, fg = VIS_COLOR.get(vis, ("#222", "#aaa"))
+        badge = f'<span class="badge" style="background:{bg};color:{fg};">{vis}</span>'
+        stars = f'{float(r["average_stars"]):.1f} ★ ({r["review_count"]})' if r["review_count"] else "—"
+        safe_name = str(r["name"]).replace("'", "\\'").replace('"', '&quot;')
+        rows_html += f"""
+        <tr>
+          <td style="color:#666;font-size:0.75rem;">{r['id']}</td>
+          <td><strong>{r['name']}</strong><br>
+              <span style="font-size:0.72rem;color:#888;">{r['parcel_name']} · {r['region_name']}</span></td>
+          <td>{badge}</td>
+          <td style="font-size:0.75rem;">{r['sub_category'].replace('_',' ')}</td>
+          <td><a href="/admin/player/{r['owner_id']}?secret={secret}" style="font-size:0.82rem;">{r['owner_name']}</a></td>
+          <td style="font-size:0.75rem;">{r['checkin_count']} ci · {r['save_count']} saves</td>
+          <td style="font-size:0.75rem;">{stars}</td>
+          <td style="font-size:0.72rem;color:#666;">{str(r['created_at'])[:10]}</td>
+          <td>
+            <form class="inline" method="post"
+                  action="/admin/atlas-location/{r['id']}/delete?secret={secret}"
+                  onsubmit="return confirm('Delete &quot;{safe_name}&quot;? This removes all saves, reviews, and checkins and cannot be undone.');">
+              <button type="submit" class="btn-red" style="padding:4px 10px;font-size:0.75rem;">Delete</button>
+            </form>
+          </td>
+        </tr>"""
+
+    if not rows_html:
+        rows_html = "<tr><td colspan='9' style='color:#666;'>No Atlas locations found.</td></tr>"
+
+    html = f"""<!DOCTYPE html><html><head><title>Atlas Locations — Admin</title>{admin_style()}</head><body>
+    <div class="nav"><a href="/admin?secret={secret}">← Back to admin</a></div>
+    <h1>🗺️ Atlas Locations</h1>
+    <div class="subtitle">All locations — public, friends-only, and private. Admin delete bypasses privacy.</div>
+    <table>
+      <tr>
+        <th>ID</th><th>Name / Location</th><th>Visibility</th><th>Category</th>
+        <th>Owner</th><th>Activity</th><th>Rating</th><th>Added</th><th></th>
+      </tr>
+      {rows_html}
+    </table>
+    </body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/atlas-location/{location_id}/delete")
+async def admin_delete_atlas_location(location_id: int, request: Request, db=Depends(get_db)):
+    """
+    Admin-only hard delete of any Atlas location regardless of privacy or owner.
+    Cascades to saves, reviews, helpful votes, and checkins.
+    """
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+
+    # Cascade-delete dependents first, then the location itself.
+    if is_postgres():
+        await db.execute(
+            "DELETE FROM atlas_helpful_votes WHERE review_id IN "
+            "(SELECT id FROM atlas_reviews WHERE location_id = $1)", location_id)
+        await db.execute(
+            "DELETE FROM atlas_reviews WHERE location_id = $1", location_id)
+        await db.execute(
+            "DELETE FROM atlas_saves WHERE location_id = $1", location_id)
+        await db.execute(
+            "DELETE FROM atlas_checkins WHERE location_id = $1", location_id)
+        await db.execute(
+            "DELETE FROM atlas_locations WHERE id = $1", location_id)
+    else:
+        await db.execute(
+            "DELETE FROM atlas_helpful_votes WHERE review_id IN "
+            "(SELECT id FROM atlas_reviews WHERE location_id = ?)", (location_id,))
+        await db.execute(
+            "DELETE FROM atlas_reviews WHERE location_id = ?", (location_id,))
+        await db.execute(
+            "DELETE FROM atlas_saves WHERE location_id = ?", (location_id,))
+        await db.execute(
+            "DELETE FROM atlas_checkins WHERE location_id = ?", (location_id,))
+        await db.execute(
+            "DELETE FROM atlas_locations WHERE id = ?", (location_id,))
+        await db.commit()
+
+    return RedirectResponse(f"/admin/atlas-locations?secret={secret}", status_code=303)

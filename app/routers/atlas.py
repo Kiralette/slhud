@@ -80,6 +80,10 @@ class AddLocation(BaseModel):
     region_name: str
     parcel_name: str
     parcel_photo_uuid: str | None = None
+    # x/y/z must be the parcel's landing point coordinates, not region centre.
+    # In LSL: llGetParcelDetails(llGetPos(), [PARCEL_DETAILS_LANDING_POINT])
+    # gives the exact teleport target; fall back to llGetPos() only when
+    # PARCEL_DETAILS_LANDING_POINT returns ZERO_VECTOR.
     x: float = 0
     y: float = 0
     z: float = 0
@@ -239,20 +243,24 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
     slurl  = _build_slurl(region, body.x, body.y, body.z)
     now    = datetime.now(timezone.utc).isoformat()
 
-    # For public/friends — check if region+parcel already exists
+    # Deduplicate: same landing-point SLURL + same display name = same place.
+    # This correctly handles multiple distinct parcels inside one region
+    # (each has a unique slurl) while still collapsing genuine duplicates.
+    # A parcel A and parcel B in the same region will have different SLURLs
+    # because their landing-point coords differ, so they stay separate entries.
     if vis in ("public", "friends"):
         if is_postgres():
             existing = await db.fetchrow(
                 """SELECT id FROM atlas_locations
-                   WHERE region_name = $1 AND parcel_name = $2
+                   WHERE slurl = $1 AND name = $2
                    AND visibility IN ('public','friends')""",
-                region, parcel)
+                slurl, name)
         else:
             async with db.execute(
                 """SELECT id FROM atlas_locations
-                   WHERE region_name = ? AND parcel_name = ?
+                   WHERE slurl = ? AND name = ?
                    AND visibility IN ('public','friends')""",
-                (region, parcel)
+                (slurl, name)
             ) as cur:
                 existing = await cur.fetchone()
 
@@ -831,6 +839,9 @@ class AtlasHeartbeat(BaseModel):
     parcel_name: str
     parcel_uuid: str | None = None
     parcel_photo_uuid: str | None = None
+    # Send the parcel landing point here, not the agent's current position.
+    # In LSL: llGetParcelDetails(llGetPos(), [PARCEL_DETAILS_LANDING_POINT])
+    # Returns ZERO_VECTOR when no landing point is set — fall back to llGetPos().
     x: float = 0
     y: float = 0
     z: float = 0
