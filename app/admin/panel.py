@@ -676,6 +676,7 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "calendar_events",
             "player_occurrences",
             "flare_stats",
+            "flare_profiles",
             "workout_plans",
             "subscriptions",
             "proximity_log",
@@ -690,6 +691,29 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "player_stats",
             "player_settings",
             "posts",                  # after post_engagements
+            # ── Healthcare ──────────────────────────────────────────
+            "healthcare_lab_results",
+            "healthcare_vaccinations",
+            "healthcare_referrals",
+            "healthcare_conditions",
+            "healthcare_medications",
+            "healthcare_appointments",
+            "healthcare_profiles",
+            # ── Spark / dating ──────────────────────────────────────
+            "spark_matches",
+            "spark_reports",
+            "spark_interests",
+            "spark_profiles",
+            # ── Atlas / locations ───────────────────────────────────
+            "atlas_helpful_votes",
+            "atlas_checkins",
+            "atlas_saves",
+            "atlas_reviews",
+            "atlas_locations",
+            # ── Blocks ─────────────────────────────────────────────
+            "blocks",
+            # ── Calendar RSVPs ──────────────────────────────────────
+            "calendar_rsvps",
         ]:
             await db.execute(f"DELETE FROM {tbl} WHERE player_id = $1", pid)
         # Tables with non-standard FK column names:
@@ -706,10 +730,22 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "employment", "streaming_sessions", "transactions", "wallets",
             "needs", "skills", "vibes", "vibe_log", "occurrence_vibe_log",
             "player_traits", "player_achievements", "posts", "flare_stats",
-            "calendar_events", "cycle_log", "cycle_phase_log", "intimacy_log",
-            "ttc_conception_checks", "player_occurrences", "notifications",
-            "event_log", "player_profiles", "player_stats", "player_settings",
-            "workout_plans", "subscriptions",
+            "flare_profiles", "calendar_events", "cycle_log", "cycle_phase_log",
+            "intimacy_log", "ttc_conception_checks", "player_occurrences",
+            "notifications", "event_log", "player_profiles", "player_stats",
+            "player_settings", "workout_plans", "subscriptions",
+            # Healthcare
+            "healthcare_lab_results", "healthcare_vaccinations",
+            "healthcare_referrals", "healthcare_conditions",
+            "healthcare_medications", "healthcare_appointments",
+            "healthcare_profiles",
+            # Spark
+            "spark_matches", "spark_reports", "spark_interests", "spark_profiles",
+            # Atlas
+            "atlas_helpful_votes", "atlas_checkins", "atlas_saves",
+            "atlas_reviews", "atlas_locations",
+            # Blocks / calendar RSVPs
+            "blocks", "calendar_rsvps",
         ]
         for table in child_tables:
             try:
