@@ -22,6 +22,8 @@ Endpoints:
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from pydantic import BaseModel
 from datetime import datetime, timezone
+import re
+import httpx
 
 from app.database import get_db, is_postgres
 from app.services.notifications import push_notification
@@ -150,6 +152,43 @@ def _build_slurl(region_name: str, x: float, y: float, z: float) -> str:
     return f"secondlife://{region_encoded}/{int(x)}/{int(y)}/{int(z)}"
 
 
+async def _fetch_parcel_picture_uuid(parcel_uuid: str) -> str | None:
+    """
+    Fetches the parcel page from world.secondlife.com/place/{uuid}
+    and extracts the picture-service UUID.
+
+    Does NOT modify any other parcel data.
+    """
+
+    if not parcel_uuid:
+        return None
+
+    try:
+        url = f"https://world.secondlife.com/place/{parcel_uuid}"
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(
+                url,
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
+
+        html = response.text
+
+        match = re.search(
+            r'https://picture-service\.secondlife\.com/([a-f0-9\-]+)/',
+            html,
+            re.IGNORECASE
+        )
+
+        if not match:
+            return None
+
+        return match.group(1)
+
+    except Exception:
+        return None
+
+
 async def _recalculate_stars(location_id: int, db):
     if is_postgres():
         row = await db.fetchrow(
@@ -229,7 +268,7 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
                 flickr_url, primfeed_url, created_at, updated_at)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
                RETURNING id""",
-            player_id, region, parcel, body.parcel_photo_uuid,
+            player_id, region, parcel, photo_uuid,
             body.x, body.y, body.z, name, body.description,
             parent, sub, vis, slurl,
             body.marketplace_url, body.instagram_url,
@@ -242,7 +281,7 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
                 visibility, slurl, marketplace_url, instagram_url,
                 flickr_url, primfeed_url, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (player_id, region, parcel, body.parcel_photo_uuid,
+            (player_id, region, parcel, photo_uuid,
              body.x, body.y, body.z, name, body.description,
              parent, sub, vis, slurl,
              body.marketplace_url, body.instagram_url,
@@ -790,6 +829,7 @@ async def my_locations(token: str, db=Depends(get_db)):
 class AtlasHeartbeat(BaseModel):
     region_name: str
     parcel_name: str
+    parcel_uuid: str | None = None
     parcel_photo_uuid: str | None = None
     x: float = 0
     y: float = 0
@@ -818,8 +858,18 @@ async def atlas_heartbeat(
     player_id = player["id"]
     region    = body.region_name.strip()[:120]
     parcel    = body.parcel_name.strip()[:120]
-    slurl     = _build_slurl(region, body.x, body.y, body.z)
-    now       = datetime.now(timezone.utc).isoformat()
+    slurl = _build_slurl(region, body.x, body.y, body.z)
+    now   = datetime.now(timezone.utc).isoformat()
+
+    # Preserve HUD-provided image UUID if present.
+    # Otherwise attempt automatic scrape from parcel UUID.
+    photo_uuid = body.parcel_photo_uuid
+
+    if not photo_uuid and body.parcel_uuid:
+        scraped_uuid = await _fetch_parcel_picture_uuid(body.parcel_uuid)
+
+        if scraped_uuid:
+            photo_uuid = scraped_uuid
 
     if is_postgres():
         await db.execute(
@@ -835,7 +885,7 @@ async def atlas_heartbeat(
                  z                 = EXCLUDED.z,
                  slurl             = EXCLUDED.slurl,
                  updated_at        = EXCLUDED.updated_at""",
-            player_id, region, parcel, body.parcel_photo_uuid,
+            player_id, region, parcel, photo_uuid,
             body.x, body.y, body.z, slurl, now)
     else:
         await db.execute(
@@ -851,7 +901,7 @@ async def atlas_heartbeat(
                  z                 = excluded.z,
                  slurl             = excluded.slurl,
                  updated_at        = excluded.updated_at""",
-            (player_id, region, parcel, body.parcel_photo_uuid,
+            (player_id, region, parcel, photo_uuid,
              body.x, body.y, body.z, slurl, now))
         await db.commit()
 
