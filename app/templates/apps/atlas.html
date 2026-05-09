@@ -204,7 +204,7 @@
       {% if trending %}
         {% for loc in trending %}
         <div class="at-card" onclick="openDetail({{ loc.id }})">
-          <div class="at-card-photo" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+          <div class="at-card-photo" {% if loc.parcel_photo_uuid %}style="background-image:url('https://picture-service.secondlife.com/{{ loc.parcel_photo_uuid }}/256x192.jpg')"{% endif %}>
             {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
             <div class="at-card-cat">{{ loc.sub_category | replace('_',' ') }}</div>
           </div>
@@ -239,7 +239,7 @@
     <div style="margin:0 18px 14px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border2);overflow:hidden;">
       {% for loc in want_to_go %}
       <div class="at-list-row" onclick="openDetail({{ loc.id }})">
-        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://picture-service.secondlife.com/{{ loc.parcel_photo_uuid }}/256x192.jpg')"{% endif %}>
           {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
         </div>
         <div style="flex:1;">
@@ -259,7 +259,7 @@
     <div style="margin:0 18px 14px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border2);overflow:hidden;">
       {% for loc in been_there %}
       <div class="at-list-row" onclick="openDetail({{ loc.id }})">
-        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://picture-service.secondlife.com/{{ loc.parcel_photo_uuid }}/256x192.jpg')"{% endif %}>
           {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
         </div>
         <div style="flex:1;">
@@ -282,7 +282,7 @@
     <div style="margin:12px 18px;background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border2);overflow:hidden;">
       {% for loc in my_locations %}
       <div class="at-list-row" onclick="openDetail({{ loc.id }})">
-        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://secondlife.com/app/image/{{ loc.parcel_photo_uuid }}/2')"{% endif %}>
+        <div class="at-list-thumb" {% if loc.parcel_photo_uuid %}style="background-image:url('https://picture-service.secondlife.com/{{ loc.parcel_photo_uuid }}/256x192.jpg')"{% endif %}>
           {% if not loc.parcel_photo_uuid %}🏙️{% endif %}
         </div>
         <div style="flex:1;">
@@ -473,7 +473,7 @@
       }
       list.innerHTML = locs.map(loc => `
         <div class="at-card" onclick="openDetail(${loc.id})">
-          <div class="at-card-photo" ${loc.parcel_photo_uuid ? `style="background-image:url('https://secondlife.com/app/image/${loc.parcel_photo_uuid}/2')"` : ''}>
+          <div class="at-card-photo" ${loc.parcel_photo_uuid ? `style="background-image:url('https://picture-service.secondlife.com/${loc.parcel_photo_uuid}/256x192.jpg')"` : ''}>
             ${!loc.parcel_photo_uuid ? '🏙️' : ''}
             <div class="at-card-cat">${(loc.sub_category||'').replace(/_/g,' ')}</div>
           </div>
@@ -548,7 +548,7 @@
       : '<div style="padding:16px 18px;color:var(--ink4);font-size:13px;">No reviews yet. Be the first!</div>';
 
     document.getElementById('detail-content').innerHTML = `
-      <div class="at-sheet-photo" ${loc.parcel_photo_uuid ? `style="background-image:url('https://secondlife.com/app/image/${loc.parcel_photo_uuid}/2')"` : ''}>
+      <div class="at-sheet-photo" ${loc.parcel_photo_uuid ? `style="background-image:url('https://picture-service.secondlife.com/${loc.parcel_photo_uuid}/256x192.jpg')"` : ''}>
         ${!loc.parcel_photo_uuid ? '🏙️' : ''}
       </div>
       <div class="at-sheet-header">

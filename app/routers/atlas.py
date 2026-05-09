@@ -858,6 +858,50 @@ async def atlas_heartbeat(
     return {"ok": True}
 
 
+# ── POST /atlas/location-pic ──────────────────────────────────────────────────
+
+class LocationPic(BaseModel):
+    parcel_picture_uuid: str
+
+
+@router.post("/location-pic")
+async def location_pic(
+    body: LocationPic,
+    authorization: str | None = Header(None),
+    db=Depends(get_db)
+):
+    """
+    Called by LSL after scraping the parcel picture UUID from world.secondlife.com/place/.
+    Updates player_location.parcel_photo_uuid with the real picture-service UUID.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Authorization header.")
+    token = authorization.split(" ", 1)[1].strip()
+
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    now = datetime.now(timezone.utc).isoformat()
+
+    if is_postgres():
+        await db.execute(
+            """UPDATE player_location
+               SET parcel_photo_uuid = $1, updated_at = $2
+               WHERE player_id = $3""",
+            body.parcel_picture_uuid, now, player_id)
+    else:
+        await db.execute(
+            """UPDATE player_location
+               SET parcel_photo_uuid = ?, updated_at = ?
+               WHERE player_id = ?""",
+            (body.parcel_picture_uuid, now, player_id))
+        await db.commit()
+
+    return {"ok": True}
+
+
 # ── GET /atlas/current-location ───────────────────────────────────────────────
 
 @router.get("/current-location")
