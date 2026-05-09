@@ -90,7 +90,9 @@
     padding: 12px 18px 6px; font-size: 11px; font-weight: 600;
     letter-spacing: .1em; text-transform: uppercase; color: var(--ink4);
   }
-  .at-links { display: flex; gap: 8px; padding: 8px 18px 12px; flex-wrap: wrap; }
+  .at-links { padding: 10px 18px 14px; border-bottom: 0.5px solid var(--border); }
+  .at-links-teleport { display: flex; justify-content: center; margin-bottom: 10px; }
+  .at-links-urls { display: flex; flex-direction: column; gap: 0; }
   .at-link-btn {
     padding: 7px 12px; border-radius: 20px; border: 0.5px solid var(--border2);
     background: var(--bg2); font-size: 12px; font-weight: 600; color: var(--ink3);
@@ -541,12 +543,12 @@
       : 'No reviews yet';
 
     const links = [];
-    if (loc.slurl)           links.push(`<a class="at-link-btn" href="${loc.slurl}">📍 Teleport</a>`);
-    if (loc.marketplace_url) links.push(`<div class="at-url-row">🛍 <span class="at-url-label">Marketplace:</span> <span class="at-url-text">${loc.marketplace_url}</span></div>`);
-    if (loc.instagram_url)   links.push(`<div class="at-url-row">📸 <span class="at-url-label">Instagram:</span> <span class="at-url-text">${loc.instagram_url}</span></div>`);
-    if (loc.flickr_url)      links.push(`<div class="at-url-row">🖼 <span class="at-url-label">Flickr:</span> <span class="at-url-text">${loc.flickr_url}</span></div>`);
-    if (loc.primfeed_url)    links.push(`<div class="at-url-row">✦ <span class="at-url-label">Primfeed:</span> <span class="at-url-text">${loc.primfeed_url}</span></div>`);
-    if (loc.website_url)     links.push(`<div class="at-url-row">🌐 <span class="at-url-label">Website:</span> <span class="at-url-text">${loc.website_url}</span></div>`);
+    const urlLinks = [];
+    if (loc.marketplace_url) urlLinks.push(`<div class="at-url-row">🛍 <span class="at-url-label">Marketplace:</span> <span class="at-url-text">${loc.marketplace_url}</span></div>`);
+    if (loc.instagram_url)   urlLinks.push(`<div class="at-url-row">📸 <span class="at-url-label">Instagram:</span> <span class="at-url-text">${loc.instagram_url}</span></div>`);
+    if (loc.flickr_url)      urlLinks.push(`<div class="at-url-row">🖼 <span class="at-url-label">Flickr:</span> <span class="at-url-text">${loc.flickr_url}</span></div>`);
+    if (loc.primfeed_url)    urlLinks.push(`<div class="at-url-row">✦ <span class="at-url-label">Primfeed:</span> <span class="at-url-text">${loc.primfeed_url}</span></div>`);
+    if (loc.website_url)     urlLinks.push(`<div class="at-url-row">🌐 <span class="at-url-label">Website:</span> <span class="at-url-text">${loc.website_url}</span></div>`);
 
     const reviewsHtml = revs.length
       ? revs.map(r => `
@@ -586,7 +588,11 @@
           ${my ? '✏️ Edit review' : '★ Review'}
         </button>
       </div>
-      ${links.length ? `<div class="at-links">${links.join('')}</div>` : ''}
+      ${(loc.slurl || loc.marketplace_url || loc.instagram_url || loc.flickr_url || loc.primfeed_url || loc.website_url) ? `
+        <div class="at-links">
+          ${loc.slurl ? `<div class="at-links-teleport"><a class="at-link-btn" href="${loc.slurl}">📍 Teleport</a></div>` : ''}
+          ${urlLinks.length ? `<div class="at-links-urls">${urlLinks.join('')}</div>` : ''}
+        </div>` : ''}
       ${loc.description ? `<div style="padding:12px 18px;font-size:13px;color:var(--ink2);line-height:1.6;border-bottom:0.5px solid var(--border);">${loc.description}</div>` : ''}
       <div class="at-section-head">Reviews</div>
       ${reviewsHtml}
