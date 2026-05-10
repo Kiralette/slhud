@@ -50,6 +50,7 @@ def _days_since(ts_str: str) -> float:
 
 
 async def _get_wallet_balance(db, player_id: int, pg: bool) -> float:
+    await _ensure_wallet(db, player_id, pg)
     if pg:
         row = await db.fetchrow("SELECT balance FROM wallets WHERE player_id=$1", player_id)
     else:
@@ -73,6 +74,7 @@ async def _ensure_wallet(db, player_id: int, pg: bool):
                VALUES (?, 500.0, 0.0, 0.0)""",
             (player_id,)
         )
+        await db.commit()
 
 
 async def _debit_wallet(db, player_id: int, amount: float, tx_type: str, description: str, pg: bool):
