@@ -847,7 +847,7 @@ async def send_transfer(
         title=f"✦{req.amount:.0f} received",
         body=f"From {player['display_name']}{note_preview}",
         priority="normal",
-        action_url="/apps/vault",
+        action_url="/app/vault",
         db=db,
     )
 
