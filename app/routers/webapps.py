@@ -453,7 +453,7 @@ async def vault(
 
     topup_tiers = cfg.get("economy", {}).get("lumen_topup_rates", [])
 
-    return templates.TemplateResponse(request, "apps/vault.html", {
+    response = templates.TemplateResponse(request, "apps/vault.html", {
         "token":        token,
         "player":       player,
         "wallet":       wallet,
@@ -465,6 +465,10 @@ async def vault(
         "assets":       assets,
         "transfers":    transfers,
     })
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 # ── SIP ───────────────────────────────────────────────────────────────────────

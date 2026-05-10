@@ -2,6 +2,9 @@
 {% block title %}Vault · SL HUD{% endblock %}
 
 {% block extra_style %}
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
   /* ── Balance hero ──────────────────────────────────────────────────────── */
   .balance-hero {
@@ -821,6 +824,21 @@
 
 {% block extra_script %}
 <script>
+  // ── Cache-busting reload ───────────────────────────────────────────────────
+  function freshReload() {
+    var url = new URL(window.location.href);
+    url.searchParams.set('t', Date.now());
+    window.location.replace(url.toString());
+  }
+  // Force fresh load on first open if no timestamp param
+  (function() {
+    var url = new URL(window.location.href);
+    if (!url.searchParams.get('t')) {
+      url.searchParams.set('t', Date.now());
+      window.location.replace(url.toString());
+    }
+  })();
+
   const TOKEN = '{{ token }}';
   const WALLET_BALANCE = {{ wallet.balance }};
 
@@ -868,7 +886,7 @@
       if (!res.ok) { toast(data.detail || 'Error'); return; }
       toast('Pot created! 🏦');
       closeModal('modal-new-pot');
-      setTimeout(function() { location.reload(); }, 600);
+      setTimeout(function() { freshReload(); }, 600);
     } catch(e) { toast('Connection error'); }
     finally { btn.disabled = false; btn.textContent = 'Create Pot'; }
   }
@@ -897,7 +915,7 @@
       if (!res.ok) { toast(data.detail || 'Error'); return; }
       toast('✦' + data.deposited.toFixed(0) + ' saved!');
       closeModal('modal-deposit');
-      setTimeout(function() { location.reload(); }, 600);
+      setTimeout(function() { freshReload(); }, 600);
     } catch(e) { toast('Connection error'); }
     finally { btn.disabled = false; btn.textContent = 'Deposit'; }
   }
@@ -942,7 +960,7 @@
       if (!res.ok) { toast(data.detail || 'Error'); return; }
       toast('Withdrew ✦' + data.net_credited.toFixed(0));
       closeModal('modal-withdraw');
-      setTimeout(function() { location.reload(); }, 600);
+      setTimeout(function() { freshReload(); }, 600);
     } catch(e) { toast('Connection error'); }
     finally { btn.disabled = false; btn.textContent = 'Withdraw'; }
   }
@@ -958,7 +976,7 @@
       const data = await res.json();
       if (!res.ok) { toast(data.detail || 'Error'); return; }
       toast('Pot closed. ✦' + data.returned.toFixed(0) + ' returned.');
-      setTimeout(function() { location.reload(); }, 700);
+      setTimeout(function() { freshReload(); }, 700);
     } catch(e) { toast('Connection error'); }
   }
 
@@ -987,7 +1005,7 @@
       if (!res.ok) { toast(data.detail || 'Error'); return; }
       toast('Switched to ' + data.bank_name + '!');
       closeModal('modal-bank-switch');
-      setTimeout(function() { location.reload(); }, 700);
+      setTimeout(function() { freshReload(); }, 700);
     } catch(e) { toast('Connection error'); }
     finally { btn.disabled = false; btn.textContent = 'Switch Bank'; }
   }
@@ -1051,7 +1069,7 @@
         toast('Sold ' + _tradeShares + ' ' + _tradeTicker + ' · ' + gl);
       }
       closeModal('modal-trade');
-      setTimeout(function() { location.reload(); }, 700);
+      setTimeout(function() { freshReload(); }, 700);
     } catch(e) { toast('Connection error'); }
     finally { btn.disabled = false; btn.textContent = _tradeMode === 'buy' ? 'Buy Shares' : 'Sell Shares'; }
   }
@@ -1080,7 +1098,7 @@
       document.getElementById('send-amount').value = '0';
       document.getElementById('send-uuid').value = '';
       document.getElementById('send-note').value = '';
-      setTimeout(function() { location.reload(); }, 800);
+      setTimeout(function() { freshReload(); }, 800);
     } catch(e) { toast('Connection error'); }
     finally { btn.disabled = false; btn.textContent = 'Send Lumens'; }
   }
