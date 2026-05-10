@@ -1669,10 +1669,8 @@ async def _init_postgres():
                 created_at          TEXT    NOT NULL DEFAULT (now()::text)
             )
         """)
-    finally:
-        await conn.close()
 
-        # ── Vault — Bank Accounts (PostgreSQL) ────────────────────────────────
+# ── Vault — Bank Accounts (PostgreSQL) ────────────────────────────────
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS vault_accounts (
                 id              SERIAL PRIMARY KEY,
@@ -1776,4 +1774,5 @@ async def _init_postgres():
                 created_at      TEXT    NOT NULL DEFAULT (now()::text)
             )
         """)
-
+    finally:
+        await conn.close()
