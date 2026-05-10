@@ -400,6 +400,7 @@
     <button class="category-chip" onclick="filterTx('pot_deposit', this)">Saved</button>
     <button class="category-chip" onclick="filterTx('investment_buy', this)">Invested</button>
     <button class="category-chip" onclick="filterTx('transfer_out', this)">Sent</button>
+    <button class="category-chip" onclick="filterTx('transfer_in', this)">Received</button>
   </div>
 
   <div id="tx-list">
@@ -419,7 +420,6 @@
         {% elif tx.type == 'transfer_out' %}↗️
         {% elif tx.type == 'transfer_in' %}↙️
         {% else %}✦{% endif %}
-      </div>
       <div class="tx-body">
         <div class="tx-desc">{{ tx.description }}</div>
         <div class="tx-time">{{ tx.time_ago }}</div>

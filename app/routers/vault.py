@@ -29,6 +29,7 @@ from typing import Optional
 from app.database import get_db, is_postgres
 from app.services.auth import get_current_player
 from app.services.investments import BANKS, run_price_tick
+from app.services.notifications import push_notification
 
 router = APIRouter(prefix="/vault", tags=["vault"])
 
@@ -57,8 +58,26 @@ async def _get_wallet_balance(db, player_id: int, pg: bool) -> float:
     return float(row["balance"]) if row else 0.0
 
 
+async def _ensure_wallet(db, player_id: int, pg: bool):
+    """Create a wallet row for this player if one doesn't exist yet."""
+    if pg:
+        await db.execute(
+            """INSERT INTO wallets (player_id, balance, total_earned, total_spent)
+               VALUES ($1, 500.0, 0.0, 0.0)
+               ON CONFLICT (player_id) DO NOTHING""",
+            player_id
+        )
+    else:
+        await db.execute(
+            """INSERT OR IGNORE INTO wallets (player_id, balance, total_earned, total_spent)
+               VALUES (?, 500.0, 0.0, 0.0)""",
+            (player_id,)
+        )
+
+
 async def _debit_wallet(db, player_id: int, amount: float, tx_type: str, description: str, pg: bool):
     now = _now()
+    await _ensure_wallet(db, player_id, pg)
     if pg:
         await db.execute(
             "UPDATE wallets SET balance=balance-$1, total_spent=total_spent+$1, last_updated=$2 WHERE player_id=$3",
@@ -81,6 +100,7 @@ async def _debit_wallet(db, player_id: int, amount: float, tx_type: str, descrip
 
 async def _credit_wallet(db, player_id: int, amount: float, tx_type: str, description: str, pg: bool):
     now = _now()
+    await _ensure_wallet(db, player_id, pg)
     if pg:
         await db.execute(
             "UPDATE wallets SET balance=balance+$1, total_earned=total_earned+$1, last_updated=$2 WHERE player_id=$3",
@@ -816,6 +836,18 @@ async def send_transfer(
             (player["id"], recipient["id"], req.amount, req.note, now)
         )
         await db.commit()
+
+    # Notify recipient
+    note_preview = f" — {req.note}" if req.note else ""
+    await push_notification(
+        player_id=recipient["id"],
+        app_source="vault",
+        title=f"✦{req.amount:.0f} received",
+        body=f"From {player['display_name']}{note_preview}",
+        priority="normal",
+        action_url="/apps/vault",
+        db=db,
+    )
 
     return {
         "ok": True,
