@@ -3,6 +3,7 @@
 
 {% block extra_style %}
 <style>
+  /* ── Balance hero ──────────────────────────────────────────────────────── */
   .balance-hero {
     padding: 26px 18px 20px;
     text-align: center;
@@ -20,42 +21,24 @@
     color: var(--ink); line-height: 1;
     letter-spacing: -0.01em;
   }
-  .balance-amount .sym {
-    font-size: 28px; color: var(--gold);
-    vertical-align: super; line-height: 1;
-    margin-right: 2px;
-  }
-  .balance-meta {
-    display: flex; justify-content: center; gap: 24px;
-    margin-top: 14px;
-  }
+  .balance-amount .sym { font-size: 28px; color: var(--gold); vertical-align: super; line-height: 1; margin-right: 2px; }
+  .balance-meta { display: flex; justify-content: center; gap: 24px; margin-top: 14px; }
   .balance-meta-item { text-align: center; }
-  .balance-meta-val {
-    font-size: 14px; font-weight: 500; color: var(--ink2);
-  }
+  .balance-meta-val { font-size: 14px; font-weight: 500; color: var(--ink2); }
   .balance-meta-val.earned { color: var(--green); }
   .balance-meta-val.spent  { color: var(--rose); }
-  .balance-meta-label {
-    font-size: 9px; color: var(--ink4);
-    letter-spacing: 0.06em; text-transform: uppercase;
-    margin-top: 2px;
-  }
-
-  .week-bar {
-    display: flex; margin: 12px 18px 0;
-    background: var(--bg3); border-radius: 99px;
-    overflow: hidden; height: 3px;
-  }
+  .balance-meta-label { font-size: 9px; color: var(--ink4); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+  .week-bar { display: flex; margin: 12px 18px 0; background: var(--bg3); border-radius: 99px; overflow: hidden; height: 3px; }
   .week-bar-earned { background: var(--green); height: 100%; }
-  .week-bar-spent  { background: var(--rose);  height: 100%; opacity: 0.6; }
+  .week-bar-spent  { background: var(--rose); height: 100%; opacity: 0.6; }
 
+  /* ── Tx history ────────────────────────────────────────────────────────── */
   .tx-filter-row {
     display: flex; padding: 8px 18px;
     overflow-x: auto; scrollbar-width: none; gap: 6px;
     border-bottom: 0.5px solid var(--border);
   }
   .tx-filter-row::-webkit-scrollbar { display: none; }
-
   .tx-entry {
     display: flex; align-items: center; gap: 12px;
     padding: 12px 18px; border-bottom: 0.5px solid var(--border);
@@ -72,45 +55,280 @@
   .tx-icon.debit  { background: var(--rose-light); }
   .tx-icon.sub    { background: var(--gold-light); }
   .tx-body { flex: 1; min-width: 0; }
-  .tx-desc { font-size: 12px; color: var(--ink); font-weight: 400;
-             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-desc { font-size: 12px; color: var(--ink); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tx-time { font-size: 10px; color: var(--ink4); margin-top: 2px; }
   .tx-amount { font-size: 13px; font-weight: 600; flex-shrink: 0; text-align: right; }
   .tx-amount.credit { color: var(--green); }
   .tx-amount.debit  { color: var(--rose); }
 
-  .topup-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 8px; padding: 0 18px 18px;
+  /* ── Bank selector ─────────────────────────────────────────────────────── */
+  .bank-banner {
+    margin: 14px 18px 0;
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 14px 15px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow);
   }
+  .bank-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .bank-banner-body { flex: 1; min-width: 0; }
+  .bank-banner-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .bank-banner-tag  { font-size: 11px; color: var(--ink4); margin-top: 1px; }
+  .bank-stats { display: flex; gap: 16px; margin-top: 8px; }
+  .bank-stat-val   { font-size: 13px; font-weight: 600; color: var(--green); }
+  .bank-stat-label { font-size: 9px; color: var(--ink4); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1px; }
+
+  .bank-cards-row {
+    display: flex; gap: 8px; padding: 12px 18px 4px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .bank-cards-row::-webkit-scrollbar { display: none; }
+  .bank-card {
+    flex-shrink: 0; width: 148px;
+    border: 0.5px solid var(--border); border-radius: var(--radius);
+    padding: 13px 13px 11px; background: var(--bg);
+    box-shadow: var(--shadow); cursor: pointer; transition: all .15s;
+    position: relative;
+  }
+  .bank-card.active { border-color: var(--gold2); background: var(--gold-light); }
+  .bank-card:active { transform: scale(.98); }
+  .bank-card-dot { width: 8px; height: 8px; border-radius: 50%; margin-bottom: 9px; }
+  .bank-card-name { font-size: 11px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .bank-card-tag  { font-size: 10px; color: var(--ink4); margin-top: 2px; line-height: 1.4; }
+  .bank-card-rate { font-size: 16px; font-weight: 600; color: var(--green); margin-top: 8px; }
+  .bank-card-rate-label { font-size: 9px; color: var(--ink4); letter-spacing: 0.06em; text-transform: uppercase; }
+  .bank-card-fee  { font-size: 9px; color: var(--ink4); margin-top: 5px; }
+  .bank-card-cap  { font-size: 9px; color: var(--amber); margin-top: 2px; }
+  .bank-card-badge {
+    position: absolute; top: 9px; right: 9px;
+    background: var(--gold); color: white;
+    font-size: 7px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 99px;
+  }
+  .bank-switch-note { margin: 4px 18px 14px; font-size: 10px; color: var(--ink4); }
+
+  /* ── Savings pots ──────────────────────────────────────────────────────── */
+  .pot-card {
+    margin: 0 18px 8px;
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 14px 15px;
+    box-shadow: var(--shadow);
+  }
+  .pot-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pot-emoji { font-size: 22px; line-height: 1; }
+  .pot-name { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; }
+  .pot-balance { font-size: 15px; font-weight: 600; color: var(--ink); font-family: var(--font-head); }
+  .pot-balance .sym { color: var(--gold); font-size: 12px; }
+  .pot-progress-track { height: 3px; background: var(--bg4); border-radius: 99px; overflow: hidden; margin-bottom: 6px; }
+  .pot-progress-fill  { height: 100%; border-radius: 99px; background: var(--green); transition: width .5s; }
+  .pot-meta { display: flex; justify-content: space-between; align-items: center; }
+  .pot-goal-text { font-size: 10px; color: var(--ink4); }
+  .pot-pct  { font-size: 10px; color: var(--green); font-weight: 600; }
+  .pot-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .pot-btn {
+    flex: 1; padding: 7px 0; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.07em; text-transform: uppercase; border-radius: 99px;
+    border: 0.5px solid var(--border2); background: var(--bg2);
+    color: var(--ink2); cursor: pointer; font-family: var(--font);
+    transition: all .15s;
+  }
+  .pot-btn:active { background: var(--bg3); }
+  .pot-btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .pot-btn.primary:active { background: var(--ink2); }
+  .pot-btn.danger { color: var(--rose); border-color: var(--rose-light); }
+
+  .new-pot-btn {
+    margin: 4px 18px 18px;
+    width: calc(100% - 36px); padding: 11px 0;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    border-radius: var(--radius-sm); border: 0.5px dashed var(--border2);
+    background: transparent; color: var(--ink4); cursor: pointer; font-family: var(--font);
+    transition: all .15s; display: block;
+  }
+  .new-pot-btn:active { background: var(--bg2); color: var(--ink); }
+
+  /* ── Modal sheet ───────────────────────────────────────────────────────── */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(28,24,20,0.45); z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .modal-backdrop.open { display: flex; align-items: flex-end; justify-content: center; }
+  .modal-sheet {
+    background: var(--bg); border-radius: 18px 18px 0 0;
+    padding: 20px 18px 36px; width: 100%; max-width: 500px;
+    max-height: 85vh; overflow-y: auto;
+    animation: slide-up .22s cubic-bezier(.32,1,.56,1);
+  }
+  @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 36px; height: 3px; background: var(--bg4); border-radius: 99px; margin: 0 auto 18px; }
+  .modal-title { font-family: var(--font-head); font-size: 22px; font-style: italic; color: var(--ink); margin-bottom: 16px; }
+  .modal-field { margin-bottom: 13px; }
+  .modal-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink4); margin-bottom: 6px; display: block; }
+  .modal-input {
+    width: 100%; padding: 10px 13px; font-size: 14px;
+    background: var(--bg2); border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm); color: var(--ink);
+    font-family: var(--font); outline: none; transition: border .15s;
+  }
+  .modal-input:focus { border-color: var(--gold2); background: var(--bg); }
+  .modal-row { display: flex; gap: 8px; }
+  .modal-row .modal-field { flex: 1; }
+  .modal-submit {
+    width: 100%; margin-top: 6px; padding: 12px 0;
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; font-family: var(--font); transition: background .15s;
+  }
+  .modal-submit:active { background: var(--ink2); }
+  .modal-submit:disabled { background: var(--ink4); cursor: not-allowed; }
+  .modal-cancel {
+    width: 100%; margin-top: 8px; padding: 10px 0;
+    background: none; border: none; font-size: 12px; color: var(--ink4);
+    cursor: pointer; font-family: var(--font); letter-spacing: 0.06em;
+  }
+  .modal-amount-display {
+    font-family: var(--font-head); font-size: 38px; font-weight: 300;
+    color: var(--ink); text-align: center; padding: 8px 0 16px;
+  }
+  .modal-amount-display .sym { color: var(--gold); font-size: 22px; vertical-align: super; }
+  .modal-note { font-size: 11px; color: var(--ink4); text-align: center; margin-bottom: 12px; line-height: 1.6; }
+  .modal-note.warn { color: var(--rose); }
+
+  /* ── Market / invest ───────────────────────────────────────────────────── */
+  .portfolio-hero {
+    margin: 14px 18px 0;
+    background: var(--bg); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 16px 15px;
+    box-shadow: var(--shadow);
+  }
+  .portfolio-hero-label { font-size: 9px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink4); margin-bottom: 5px; }
+  .portfolio-hero-val {
+    font-family: var(--font-head); font-size: 36px; font-weight: 300; color: var(--ink); line-height: 1;
+  }
+  .portfolio-hero-val .sym { font-size: 20px; color: var(--gold); vertical-align: super; }
+  .portfolio-gl { margin-top: 8px; font-size: 12px; font-weight: 600; }
+  .portfolio-gl.pos { color: var(--green); }
+  .portfolio-gl.neg { color: var(--rose); }
+  .portfolio-gl.flat { color: var(--ink4); }
+
+  .market-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; border-bottom: 0.5px solid var(--border);
+    cursor: pointer; transition: background .12s;
+  }
+  .market-row:last-child { border-bottom: none; }
+  .market-row:active { background: var(--bg2); }
+  .market-ticker-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+    background: var(--bg3); color: var(--ink2);
+    border-radius: 4px; padding: 3px 6px; flex-shrink: 0; min-width: 46px; text-align: center;
+  }
+  .market-body { flex: 1; min-width: 0; }
+  .market-name { font-size: 12px; color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .market-sector { font-size: 10px; color: var(--ink4); margin-top: 1px; }
+  .market-right { text-align: right; flex-shrink: 0; }
+  .market-price { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .market-change { font-size: 10px; font-weight: 600; margin-top: 2px; }
+  .market-change.up   { color: var(--green); }
+  .market-change.down { color: var(--rose); }
+  .market-change.flat { color: var(--ink4); }
+
+  .market-section-label {
+    padding: 12px 18px 4px;
+    font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink4); border-bottom: 0.5px solid var(--border);
+  }
+
+  /* ── Trade modal specifics ─────────────────────────────────────────────── */
+  .trade-asset-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  }
+  .trade-ticker { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; background: var(--bg3); color: var(--ink2); padding: 4px 9px; border-radius: 5px; }
+  .trade-name { font-size: 14px; font-weight: 500; color: var(--ink); flex: 1; }
+  .trade-price { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .trade-tabs { display: flex; gap: 0; margin-bottom: 16px; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); overflow: hidden; }
+  .trade-tab {
+    flex: 1; padding: 8px 0; text-align: center;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    border: none; background: none; cursor: pointer; font-family: var(--font);
+    color: var(--ink4); transition: all .15s;
+  }
+  .trade-tab.active.buy  { background: var(--green-light); color: var(--green); }
+  .trade-tab.active.sell { background: var(--rose-light); color: var(--rose); }
+  .shares-stepper { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .stepper-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: 0.5px solid var(--border2);
+    background: var(--bg2); font-size: 18px; color: var(--ink);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font); flex-shrink: 0; transition: background .12s;
+  }
+  .stepper-btn:active { background: var(--bg4); }
+  .stepper-val { flex: 1; text-align: center; font-size: 22px; font-weight: 600; font-family: var(--font-head); color: var(--ink); }
+  .stepper-label { font-size: 10px; color: var(--ink4); text-align: center; }
+  .trade-cost-line {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-top: 0.5px solid var(--border);
+    font-size: 12px; color: var(--ink3);
+  }
+  .trade-cost-val { font-size: 14px; font-weight: 600; color: var(--ink); }
+
+  /* ── P2P Send ──────────────────────────────────────────────────────────── */
+  .send-hero {
+    padding: 24px 18px 16px; text-align: center; border-bottom: 0.5px solid var(--border);
+  }
+  .send-hero-label { font-size: 9px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink4); margin-bottom: 8px; }
+  .send-amount-input-wrap {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .send-sym { font-family: var(--font-head); font-size: 28px; color: var(--gold); line-height: 1; }
+  .send-amount-input {
+    font-family: var(--font-head); font-size: 52px; font-weight: 300;
+    color: var(--ink); background: none; border: none; outline: none;
+    width: 160px; text-align: center; line-height: 1;
+  }
+  .send-recent-row {
+    display: flex; gap: 8px; padding: 10px 18px 6px;
+    overflow-x: auto; scrollbar-width: none;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .send-recent-row::-webkit-scrollbar { display: none; }
+  .transfer-entry {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; border-bottom: 0.5px solid var(--border);
+  }
+  .transfer-entry:last-child { border-bottom: none; }
+  .transfer-icon {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
+  .transfer-icon.out { background: var(--rose-light); }
+  .transfer-icon.in  { background: var(--green-light); }
+  .transfer-body { flex: 1; min-width: 0; }
+  .transfer-name { font-size: 12px; color: var(--ink); font-weight: 500; }
+  .transfer-note { font-size: 10px; color: var(--ink4); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .transfer-right { text-align: right; flex-shrink: 0; }
+  .transfer-amount { font-size: 13px; font-weight: 600; }
+  .transfer-amount.out { color: var(--rose); }
+  .transfer-amount.in  { color: var(--green); }
+  .transfer-time { font-size: 10px; color: var(--ink4); margin-top: 2px; }
+
+  /* ── Top-up ────────────────────────────────────────────────────────────── */
+  .topup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 18px 18px; }
   .topup-card {
     background: var(--bg); border: 0.5px solid var(--border);
     border-radius: var(--radius); padding: 14px 13px;
     text-align: center; box-shadow: var(--shadow);
-    cursor: pointer; transition: all .15s;
-    text-decoration: none; display: block;
+    cursor: pointer; transition: all .15s; text-decoration: none; display: block;
   }
   .topup-card:active { background: var(--bg2); transform: scale(.98); }
   .topup-l { font-size: 11px; color: var(--ink3); font-weight: 400; margin-bottom: 4px; }
   .topup-arrow { font-size: 10px; color: var(--ink4); margin: 4px 0; }
-  .topup-lumens {
-    font-family: var(--font-head); font-size: 22px; font-weight: 400;
-    color: var(--ink);
-  }
+  .topup-lumens { font-family: var(--font-head); font-size: 22px; font-weight: 400; color: var(--ink); }
   .topup-lumens .sym { color: var(--gold); }
-  .topup-badge {
-    display: inline-block; margin-top: 6px;
-    font-size: 8px; font-weight: 600;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--gold); border: 0.5px solid var(--gold2);
-    border-radius: 99px; padding: 2px 8px;
-  }
-  .topup-note {
-    margin: 8px 18px 16px; padding: 12px 14px;
-    background: var(--bg2); border-radius: var(--radius-sm);
-    font-size: 11px; color: var(--ink3); line-height: 1.7;
-    border: 0.5px solid var(--border);
-  }
+  .topup-badge { display: inline-block; margin-top: 6px; font-size: 8px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 0.5px solid var(--gold2); border-radius: 99px; padding: 2px 8px; }
+  .topup-note { margin: 8px 18px 16px; padding: 12px 14px; background: var(--bg2); border-radius: var(--radius-sm); font-size: 11px; color: var(--ink3); line-height: 1.7; border: 0.5px solid var(--border); }
 </style>
 {% endblock %}
 
@@ -162,19 +380,26 @@
 <!-- Tabs -->
 <div class="tabs">
   <button class="tab active" data-tab="tab-history" onclick="showTab('tab-history')">History</button>
-  <button class="tab"        data-tab="tab-topup"   onclick="showTab('tab-topup')">Top Up</button>
+  <button class="tab" data-tab="tab-save"    onclick="showTab('tab-save')">Save</button>
+  <button class="tab" data-tab="tab-invest"  onclick="showTab('tab-invest')">Invest</button>
+  <button class="tab" data-tab="tab-send"    onclick="showTab('tab-send')">Send</button>
+  <button class="tab" data-tab="tab-topup"   onclick="showTab('tab-topup')">Top Up</button>
 </div>
 
-<!-- ── HISTORY TAB ─────────────────────────────────────── -->
-<div id="tab-history" class="tab-panel active">
 
-  <!-- Filter chips -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- HISTORY TAB                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-history" class="tab-panel active">
   <div class="tx-filter-row">
     <button class="category-chip active" onclick="filterTx('all', this)">All</button>
     <button class="category-chip" onclick="filterTx('topup', this)">Top-ups</button>
     <button class="category-chip" onclick="filterTx('purchase', this)">Purchases</button>
     <button class="category-chip" onclick="filterTx('shift', this)">Shifts</button>
     <button class="category-chip" onclick="filterTx('subscription', this)">Subscriptions</button>
+    <button class="category-chip" onclick="filterTx('pot_deposit', this)">Saved</button>
+    <button class="category-chip" onclick="filterTx('investment_buy', this)">Invested</button>
+    <button class="category-chip" onclick="filterTx('transfer_out', this)">Sent</button>
   </div>
 
   <div id="tx-list">
@@ -186,9 +411,13 @@
       <div class="tx-icon {{ type_class }}">
         {% if tx.type == 'topup' %}💳
         {% elif tx.type == 'purchase' %}🛒
-        {% elif tx.type == 'shift' or tx.type == 'odd_job' %}💼
+        {% elif tx.type in ['shift', 'odd_job'] %}💼
         {% elif tx.type == 'subscription' %}📅
         {% elif tx.type == 'robbery' %}😱
+        {% elif tx.type in ['pot_deposit', 'pot_withdrawal', 'pot_closed'] %}🏦
+        {% elif tx.type in ['investment_buy', 'investment_sell'] %}📈
+        {% elif tx.type == 'transfer_out' %}↗️
+        {% elif tx.type == 'transfer_in' %}↙️
         {% else %}✦{% endif %}
       </div>
       <div class="tx-body">
@@ -208,23 +437,218 @@
     </div>
   {% endif %}
   </div>
+  <div class="scroll-pad"></div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SAVE TAB                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-save" class="tab-panel">
+
+  <!-- Bank banner -->
+  {% set bank_info = {
+    'luminos_trust':    {'name':'Luminos Trust',     'tag':'Safe, steady, established.', 'color':'#4a7fb5', 'rate':'0.8%', 'fee':'None', 'cap': none},
+    'meridian_private': {'name':'Meridian Private',  'tag':'High yield. Exclusive.',      'color':'#9a7c4e', 'rate':'1.8%', 'fee':'2% early', 'cap': none},
+    'cove_community':   {'name':'Cove Community',    'tag':'People first. Always.',       'color':'#5a9e6f', 'rate':'1.2%', 'fee':'None', 'cap': '✦2,000/pot'}
+  } %}
+  {% set bk = bank_info[bank_key] if bank_key in bank_info else bank_info['luminos_trust'] %}
+
+  <div class="bank-banner" style="margin-top:14px;">
+    <div class="bank-dot" style="background:{{ bk.color }};"></div>
+    <div class="bank-banner-body">
+      <div class="bank-banner-name">{{ bk.name }}</div>
+      <div class="bank-banner-tag">{{ bk.tag }}</div>
+      <div class="bank-stats">
+        <div>
+          <div class="bank-stat-val">{{ bk.rate }}<span style="font-size:9px;font-weight:400;color:var(--ink4);">/wk</span></div>
+          <div class="bank-stat-label">Interest</div>
+        </div>
+        <div>
+          <div class="bank-stat-val" style="color:{% if bk.fee == 'None' %}var(--green){% else %}var(--amber){% endif %};">{{ bk.fee }}</div>
+          <div class="bank-stat-label">Withdrawal fee</div>
+        </div>
+        {% if bk.cap %}
+        <div>
+          <div class="bank-stat-val" style="color:var(--amber);">{{ bk.cap }}</div>
+          <div class="bank-stat-label">Pot cap</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    <button class="item-btn" onclick="openBankSwitchModal()" style="flex-shrink:0;">Switch</button>
+  </div>
+
+  <!-- Pots -->
+  <div class="section-head" style="padding-bottom:4px;">
+    <div class="section-head-title">Your Pots</div>
+  </div>
+
+  {% if pots %}
+    {% for pot in pots %}
+    <div class="pot-card" id="pot-{{ pot.id }}">
+      <div class="pot-card-head">
+        <div class="pot-emoji">{{ pot.emoji }}</div>
+        <div class="pot-name">{{ pot.name }}</div>
+        <div class="pot-balance"><span class="sym">✦</span>{{ "%.0f"|format(pot.balance) }}</div>
+      </div>
+      {% if pot.goal_amount %}
+      <div class="pot-progress-track">
+        <div class="pot-progress-fill" style="width:{{ [pot.progress_pct or 0, 100]|min }}%;"></div>
+      </div>
+      <div class="pot-meta">
+        <div class="pot-goal-text">
+          Goal: ✦{{ "%.0f"|format(pot.goal_amount) }}
+          {% if pot.deadline %} · {{ pot.deadline }}{% endif %}
+        </div>
+        <div class="pot-pct">{{ pot.progress_pct or 0 }}%</div>
+      </div>
+      {% endif %}
+      <div class="pot-actions">
+        <button class="pot-btn primary" onclick="openDepositModal({{ pot.id }}, '{{ pot.name }}')">Deposit</button>
+        <button class="pot-btn" onclick="openWithdrawModal({{ pot.id }}, '{{ pot.name }}', {{ pot.balance }}, {{ pot.goal_amount or 0 }})">Withdraw</button>
+        <button class="pot-btn danger" onclick="closePot({{ pot.id }}, '{{ pot.name }}', {{ pot.balance }})">Close</button>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty" style="padding:32px 18px;">
+      <div class="empty-icon">🏦</div>
+      <div class="empty-title">No pots yet</div>
+      <div class="empty-text">Create a savings pot and start<br>building toward a goal.</div>
+    </div>
+  {% endif %}
+
+  <button class="new-pot-btn" onclick="openNewPotModal()">+ New Savings Pot</button>
+  <div class="scroll-pad"></div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- INVEST TAB                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-invest" class="tab-panel">
+
+  <!-- Portfolio summary -->
+  {% if portfolio.market_value > 0 %}
+  <div class="portfolio-hero stagger">
+    <div class="portfolio-hero-label">Portfolio Value</div>
+    <div class="portfolio-hero-val"><span class="sym">✦</span>{{ "%.2f"|format(portfolio.market_value) }}</div>
+    <div class="portfolio-gl {% if portfolio.gain_loss > 0 %}pos{% elif portfolio.gain_loss < 0 %}neg{% else %}flat{% endif %}">
+      {% if portfolio.gain_loss > 0 %}▲{% elif portfolio.gain_loss < 0 %}▼{% else %}—{% endif %}
+      ✦{{ "%.2f"|format(portfolio.gain_loss|abs) }}
+      ({{ "%.1f"|format(portfolio.gain_loss_pct|abs) }}%)
+      {% if portfolio.gain_loss >= 0 %} total gain{% else %} total loss{% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="portfolio-hero stagger" style="text-align:center;">
+    <div class="portfolio-hero-label">Portfolio Value</div>
+    <div class="portfolio-hero-val" style="color:var(--ink4);">✦0</div>
+    <div style="font-size:11px;color:var(--ink4);margin-top:6px;">Buy your first shares below to get started.</div>
+  </div>
+  {% endif %}
+
+  <!-- Market ticker -->
+  <div class="market-section-label">Live Market</div>
+
+  {% if assets %}
+    {% for asset in assets %}
+    <div class="market-row" onclick="openTradeModal('{{ asset.ticker }}', '{{ asset.name }}', {{ asset.current_price }}, {{ asset.change_pct }})">
+      <div class="market-ticker-badge">{{ asset.ticker }}</div>
+      <div class="market-body">
+        <div class="market-name">{{ asset.name }}</div>
+        <div class="market-sector">{{ asset.sector | replace('_', ' ') | title }}</div>
+      </div>
+      <div class="market-right">
+        <div class="market-price">✦{{ "%.2f"|format(asset.current_price) }}</div>
+        <div class="market-change {% if asset.change_pct > 0 %}up{% elif asset.change_pct < 0 %}down{% else %}flat{% endif %}">
+          {% if asset.change_pct > 0 %}▲{% elif asset.change_pct < 0 %}▼{% else %}—{% endif %}
+          {{ "%.2f"|format(asset.change_pct|abs) }}%
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">📈</div>
+      <div class="empty-title">Market loading…</div>
+      <div class="empty-text">Asset prices update every 30 minutes.</div>
+    </div>
+  {% endif %}
 
   <div class="scroll-pad"></div>
 </div>
 
-<!-- ── TOP UP TAB ──────────────────────────────────────── -->
-<div id="tab-topup" class="tab-panel">
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SEND TAB                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-send" class="tab-panel">
+
+  <div class="send-hero">
+    <div class="send-hero-label">Amount to Send</div>
+    <div class="send-amount-input-wrap">
+      <div class="send-sym">✦</div>
+      <input type="number" class="send-amount-input" id="send-amount" value="0" min="1" step="1" oninput="updateSendCost()">
+    </div>
+  </div>
+
+  <div style="padding:14px 18px 10px;">
+    <div class="modal-field">
+      <label class="modal-label">Recipient Avatar UUID</label>
+      <input type="text" class="modal-input" id="send-uuid" placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Note (optional)</label>
+      <input type="text" class="modal-input" id="send-note" placeholder="splitting rent 💛" maxlength="100">
+    </div>
+    <button class="modal-submit" id="send-btn" onclick="doTransfer()">Send Lumens</button>
+  </div>
+
+  {% if transfers %}
+  <div class="market-section-label" style="margin-top:4px;">Recent Transfers</div>
+  {% for t in transfers %}
+  <div class="transfer-entry">
+    <div class="transfer-icon {{ t.direction }}">
+      {{ '↗' if t.direction == 'out' else '↙' }}
+    </div>
+    <div class="transfer-body">
+      <div class="transfer-name">{{ t.other_party }}</div>
+      {% if t.note %}<div class="transfer-note">{{ t.note }}</div>{% endif %}
+    </div>
+    <div class="transfer-right">
+      <div class="transfer-amount {{ t.direction }}">
+        {{ '−' if t.direction == 'out' else '+' }}✦{{ "%.0f"|format(t.amount) }}
+      </div>
+      <div class="transfer-time">{{ t.time_ago }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="empty" style="padding:28px 18px;">
+    <div class="empty-icon">↗️</div>
+    <div class="empty-title">No transfers yet</div>
+    <div class="empty-text">Send Lumens to any player<br>using their avatar UUID.</div>
+  </div>
+  {% endif %}
+
+  <div class="scroll-pad"></div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TOP UP TAB                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-topup" class="tab-panel">
   <div class="section-head">
     <div class="section-head-title">Top Up Lumens</div>
     <div class="section-head-sub">Purchase L$ in Second Life and exchange for Lumens</div>
   </div>
-
   <div class="topup-note">
     Visit the <strong>Lumen Exchange</strong> vendor in-world to top up.
     Select a tier below to see what you'll receive.
   </div>
-
   <div class="topup-grid stagger">
     {% set badges = ['', '', 'Popular', 'Best Value'] %}
     {% for tier in topup_tiers %}
@@ -238,28 +662,422 @@
     </div>
     {% endfor %}
   </div>
-
   <div class="topup-note">
     💡 Lumens are the in-world currency of this HUD. They cannot be exchanged back to L$.
   </div>
-
   <div class="scroll-pad"></div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- MODALS                                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- New Pot Modal -->
+<div class="modal-backdrop" id="modal-new-pot">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">New Savings Pot</div>
+    <div class="modal-row">
+      <div class="modal-field" style="max-width:64px;">
+        <label class="modal-label">Emoji</label>
+        <input type="text" class="modal-input" id="pot-emoji" value="🏦" maxlength="2" style="text-align:center;font-size:22px;padding:6px;">
+      </div>
+      <div class="modal-field" style="flex:1;">
+        <label class="modal-label">Name</label>
+        <input type="text" class="modal-input" id="pot-name" placeholder="New apartment" maxlength="40">
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label class="modal-label">Goal (✦, optional)</label>
+        <input type="number" class="modal-input" id="pot-goal" placeholder="500" min="1">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Deadline (optional)</label>
+        <input type="date" class="modal-input" id="pot-deadline">
+      </div>
+    </div>
+    <button class="modal-submit" id="new-pot-submit" onclick="submitNewPot()">Create Pot</button>
+    <button class="modal-cancel" onclick="closeModal('modal-new-pot')">Cancel</button>
+  </div>
+</div>
+
+<!-- Deposit Modal -->
+<div class="modal-backdrop" id="modal-deposit">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="deposit-title">Deposit</div>
+    <div class="modal-amount-display">
+      <span class="sym">✦</span><span id="deposit-display">0</span>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Amount</label>
+      <input type="number" class="modal-input" id="deposit-amount" placeholder="100" min="1" oninput="document.getElementById('deposit-display').textContent=this.value||'0'">
+    </div>
+    <div class="modal-note">Available: ✦<span id="deposit-available">{{ "%.0f"|format(wallet.balance) }}</span></div>
+    <button class="modal-submit" id="deposit-submit" onclick="submitDeposit()">Deposit</button>
+    <button class="modal-cancel" onclick="closeModal('modal-deposit')">Cancel</button>
+  </div>
+</div>
+
+<!-- Withdraw Modal -->
+<div class="modal-backdrop" id="modal-withdraw">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="withdraw-title">Withdraw</div>
+    <div class="modal-amount-display">
+      <span class="sym">✦</span><span id="withdraw-display">0</span>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Amount</label>
+      <input type="number" class="modal-input" id="withdraw-amount" placeholder="50" min="1" oninput="onWithdrawInput()">
+    </div>
+    <div class="modal-note" id="withdraw-fee-note"></div>
+    <button class="modal-submit" id="withdraw-submit" onclick="submitWithdraw()">Withdraw</button>
+    <button class="modal-cancel" onclick="closeModal('modal-withdraw')">Cancel</button>
+  </div>
+</div>
+
+<!-- Bank Switch Modal -->
+<div class="modal-backdrop" id="modal-bank-switch">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Switch Bank</div>
+    <div class="modal-note" style="text-align:left;margin-bottom:14px;">
+      You can switch banks once every 30 days. Your existing pots are unaffected — interest accrues at the new rate going forward.
+    </div>
+    <div class="bank-cards-row" style="padding:0;margin-bottom:16px;gap:8px;display:flex;flex-direction:column;">
+      {% set banks = [
+        {'key':'luminos_trust',    'name':'Luminos Trust',    'tag':'Safe, steady, established.', 'color':'#4a7fb5', 'rate':'0.8%/wk', 'fee':'No withdrawal fee',           'cap': ''},
+        {'key':'meridian_private', 'name':'Meridian Private', 'tag':'High yield. Exclusive.',      'color':'#9a7c4e', 'rate':'1.8%/wk', 'fee':'2% early withdrawal fee',      'cap': ''},
+        {'key':'cove_community',   'name':'Cove Community',   'tag':'People first. Always.',       'color':'#5a9e6f', 'rate':'1.2%/wk', 'fee':'No withdrawal fee',           'cap': '✦2,000 max per pot'}
+      ] %}
+      {% for b in banks %}
+      <div style="border:0.5px solid var(--border{% if b.key == bank_key %}2{% endif %});border-radius:var(--radius);padding:13px 14px;background:{% if b.key == bank_key %}var(--gold-light){% else %}var(--bg){% endif %};cursor:{% if b.key == bank_key %}default{% else %}pointer{% endif %};" onclick="selectBank('{{ b.key }}', this)">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:{{ b.color }};flex-shrink:0;"></div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);flex:1;">{{ b.name }}</div>
+          {% if b.key == bank_key %}<div style="font-size:9px;color:var(--gold);font-weight:700;letter-spacing:.06em;">CURRENT</div>{% endif %}
+        </div>
+        <div style="font-size:11px;color:var(--ink4);margin-bottom:6px;">{{ b.tag }}</div>
+        <div style="display:flex;gap:14px;font-size:11px;">
+          <div style="color:var(--green);font-weight:600;">{{ b.rate }}</div>
+          <div style="color:var(--ink3);">{{ b.fee }}</div>
+          {% if b.cap %}<div style="color:var(--amber);">{{ b.cap }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <input type="hidden" id="selected-bank-key" value="{{ bank_key }}">
+    <button class="modal-submit" id="bank-switch-submit" onclick="submitBankSwitch()">Switch Bank</button>
+    <button class="modal-cancel" onclick="closeModal('modal-bank-switch')">Cancel</button>
+  </div>
+</div>
+
+<!-- Trade Modal -->
+<div class="modal-backdrop" id="modal-trade">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="trade-asset-header">
+      <div class="trade-ticker" id="trade-ticker-badge">LMNS</div>
+      <div class="trade-name" id="trade-asset-name">Asset Name</div>
+      <div class="trade-price">✦<span id="trade-current-price">0.00</span></div>
+    </div>
+    <div class="trade-tabs">
+      <button class="trade-tab active buy" id="trade-tab-buy" onclick="setTradeMode('buy')">Buy</button>
+      <button class="trade-tab sell" id="trade-tab-sell" onclick="setTradeMode('sell')">Sell</button>
+    </div>
+    <div class="shares-stepper">
+      <button class="stepper-btn" onclick="adjustShares(-1)">−</button>
+      <div>
+        <div class="stepper-val" id="trade-shares">1</div>
+        <div class="stepper-label">shares</div>
+      </div>
+      <button class="stepper-btn" onclick="adjustShares(1)">+</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="pot-btn" onclick="setSharesQuick(1)">1</button>
+      <button class="pot-btn" onclick="setSharesQuick(5)">5</button>
+      <button class="pot-btn" onclick="setSharesQuick(10)">10</button>
+      <button class="pot-btn" onclick="setSharesQuick(25)">25</button>
+    </div>
+    <div class="trade-cost-line">
+      <span id="trade-cost-label">Total Cost</span>
+      <span class="trade-cost-val">✦<span id="trade-total">0.00</span></span>
+    </div>
+    <button class="modal-submit" id="trade-submit" onclick="submitTrade()" style="margin-top:14px;">Buy Shares</button>
+    <button class="modal-cancel" onclick="closeModal('modal-trade')">Cancel</button>
+  </div>
 </div>
 
 {% endblock %}
 
+
 {% block extra_script %}
 <script>
-  function filterTx(type, btn) {
-    document.querySelectorAll('.tx-filter-row .category-chip').forEach(c => c.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tx-entry').forEach(el => {
-      if (type === 'all' || el.dataset.type === type) {
-        el.style.display = '';
-      } else {
-        el.style.display = 'none';
-      }
+  const TOKEN = '{{ token }}';
+  const WALLET_BALANCE = {{ wallet.balance }};
+
+  // ── Modal helpers ──────────────────────────────────────────────────────────
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      if (e.target === el) closeModal(el.id);
     });
+  });
+
+  // ── Tx filter ──────────────────────────────────────────────────────────────
+  function filterTx(type, btn) {
+    document.querySelectorAll('.tx-filter-row .category-chip').forEach(function(c) { c.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.tx-entry').forEach(function(el) {
+      el.style.display = (type === 'all' || el.dataset.type === type) ? '' : 'none';
+    });
+  }
+
+  // ── New pot ────────────────────────────────────────────────────────────────
+  function openNewPotModal() { openModal('modal-new-pot'); }
+  async function submitNewPot() {
+    const btn = document.getElementById('new-pot-submit');
+    const name = document.getElementById('pot-name').value.trim();
+    const emoji = document.getElementById('pot-emoji').value.trim() || '🏦';
+    const goal = document.getElementById('pot-goal').value || null;
+    const deadline = document.getElementById('pot-deadline').value || null;
+    if (!name) { toast('Give your pot a name.'); return; }
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/vault/pots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ name, emoji, goal_amount: goal ? parseFloat(goal) : null, deadline })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Error'); return; }
+      toast('Pot created! 🏦');
+      closeModal('modal-new-pot');
+      setTimeout(function() { location.reload(); }, 600);
+    } catch(e) { toast('Connection error'); }
+    finally { btn.disabled = false; btn.textContent = 'Create Pot'; }
+  }
+
+  // ── Deposit ────────────────────────────────────────────────────────────────
+  let _depositPotId = null;
+  function openDepositModal(potId, potName) {
+    _depositPotId = potId;
+    document.getElementById('deposit-title').textContent = 'Deposit into ' + potName;
+    document.getElementById('deposit-amount').value = '';
+    document.getElementById('deposit-display').textContent = '0';
+    openModal('modal-deposit');
+  }
+  async function submitDeposit() {
+    const btn = document.getElementById('deposit-submit');
+    const amount = parseFloat(document.getElementById('deposit-amount').value);
+    if (!amount || amount <= 0) { toast('Enter a valid amount.'); return; }
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/vault/pots/' + _depositPotId + '/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Error'); return; }
+      toast('✦' + data.deposited.toFixed(0) + ' saved!');
+      closeModal('modal-deposit');
+      setTimeout(function() { location.reload(); }, 600);
+    } catch(e) { toast('Connection error'); }
+    finally { btn.disabled = false; btn.textContent = 'Deposit'; }
+  }
+
+  // ── Withdraw ───────────────────────────────────────────────────────────────
+  let _withdrawPotId = null, _withdrawPotBalance = 0, _withdrawGoal = 0;
+  const BANK_KEY = '{{ bank_key }}';
+  function openWithdrawModal(potId, potName, balance, goal) {
+    _withdrawPotId = potId; _withdrawPotBalance = balance; _withdrawGoal = goal;
+    document.getElementById('withdraw-title').textContent = 'Withdraw from ' + potName;
+    document.getElementById('withdraw-amount').value = '';
+    document.getElementById('withdraw-display').textContent = '0';
+    document.getElementById('withdraw-fee-note').textContent = 'Available: ✦' + balance.toFixed(0);
+    document.getElementById('withdraw-fee-note').className = 'modal-note';
+    openModal('modal-withdraw');
+  }
+  function onWithdrawInput() {
+    const amt = parseFloat(document.getElementById('withdraw-amount').value) || 0;
+    document.getElementById('withdraw-display').textContent = amt.toFixed(0);
+    let note = 'Available: ✦' + _withdrawPotBalance.toFixed(0);
+    let cls = 'modal-note';
+    if (BANK_KEY === 'meridian_private' && _withdrawGoal > 0 && _withdrawPotBalance < _withdrawGoal) {
+      const fee = amt * 0.02;
+      note = '2% early withdrawal fee applies — ✦' + fee.toFixed(2) + ' will be deducted.';
+      cls = 'modal-note warn';
+    }
+    document.getElementById('withdraw-fee-note').textContent = note;
+    document.getElementById('withdraw-fee-note').className = cls;
+  }
+  async function submitWithdraw() {
+    const btn = document.getElementById('withdraw-submit');
+    const amount = parseFloat(document.getElementById('withdraw-amount').value);
+    if (!amount || amount <= 0) { toast('Enter a valid amount.'); return; }
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/vault/pots/' + _withdrawPotId + '/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Error'); return; }
+      toast('Withdrew ✦' + data.net_credited.toFixed(0));
+      closeModal('modal-withdraw');
+      setTimeout(function() { location.reload(); }, 600);
+    } catch(e) { toast('Connection error'); }
+    finally { btn.disabled = false; btn.textContent = 'Withdraw'; }
+  }
+
+  // ── Close pot ──────────────────────────────────────────────────────────────
+  async function closePot(potId, potName, balance) {
+    if (!confirm('Close "' + potName + '"? ' + (balance > 0 ? '✦' + balance.toFixed(0) + ' will be returned to your wallet.' : 'Pot is empty.'))) return;
+    try {
+      const res = await fetch('/vault/pots/' + potId, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + TOKEN }
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Error'); return; }
+      toast('Pot closed. ✦' + data.returned.toFixed(0) + ' returned.');
+      setTimeout(function() { location.reload(); }, 700);
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Bank switch ────────────────────────────────────────────────────────────
+  function openBankSwitchModal() { openModal('modal-bank-switch'); }
+  function selectBank(key, el) {
+    document.getElementById('selected-bank-key').value = key;
+    document.querySelectorAll('#modal-bank-switch [onclick^="selectBank"]').forEach(function(card) {
+      card.style.background = 'var(--bg)';
+      card.style.borderColor = 'var(--border)';
+    });
+    el.style.background = 'var(--gold-light)';
+    el.style.borderColor = 'var(--border2)';
+  }
+  async function submitBankSwitch() {
+    const btn = document.getElementById('bank-switch-submit');
+    const bank_key = document.getElementById('selected-bank-key').value;
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/vault/account/bank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ bank_key })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Error'); return; }
+      toast('Switched to ' + data.bank_name + '!');
+      closeModal('modal-bank-switch');
+      setTimeout(function() { location.reload(); }, 700);
+    } catch(e) { toast('Connection error'); }
+    finally { btn.disabled = false; btn.textContent = 'Switch Bank'; }
+  }
+
+  // ── Trade ──────────────────────────────────────────────────────────────────
+  let _tradeTicker = '', _tradePrice = 0, _tradeMode = 'buy', _tradeShares = 1;
+  function openTradeModal(ticker, name, price, changePct) {
+    _tradeTicker = ticker; _tradePrice = price; _tradeMode = 'buy'; _tradeShares = 1;
+    document.getElementById('trade-ticker-badge').textContent = ticker;
+    document.getElementById('trade-asset-name').textContent = name;
+    document.getElementById('trade-current-price').textContent = price.toFixed(2);
+    setTradeMode('buy');
+    updateTradeTotal();
+    openModal('modal-trade');
+  }
+  function setTradeMode(mode) {
+    _tradeMode = mode;
+    var buyTab  = document.getElementById('trade-tab-buy');
+    var sellTab = document.getElementById('trade-tab-sell');
+    var submitBtn = document.getElementById('trade-submit');
+    var costLabel = document.getElementById('trade-cost-label');
+    buyTab.classList.toggle('active', mode === 'buy');
+    buyTab.classList.toggle('buy', mode === 'buy');
+    sellTab.classList.toggle('active', mode === 'sell');
+    sellTab.classList.toggle('sell', mode === 'sell');
+    submitBtn.textContent = mode === 'buy' ? 'Buy Shares' : 'Sell Shares';
+    submitBtn.style.background = mode === 'buy' ? 'var(--ink)' : 'var(--rose)';
+    costLabel.textContent = mode === 'buy' ? 'Total Cost' : 'Total Proceeds';
+    updateTradeTotal();
+  }
+  function adjustShares(delta) {
+    _tradeShares = Math.max(1, _tradeShares + delta);
+    document.getElementById('trade-shares').textContent = _tradeShares;
+    updateTradeTotal();
+  }
+  function setSharesQuick(n) {
+    _tradeShares = n;
+    document.getElementById('trade-shares').textContent = n;
+    updateTradeTotal();
+  }
+  function updateTradeTotal() {
+    var total = (_tradeShares * _tradePrice).toFixed(2);
+    document.getElementById('trade-total').textContent = total;
+  }
+  async function submitTrade() {
+    const btn = document.getElementById('trade-submit');
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const endpoint = _tradeMode === 'buy' ? '/vault/market/buy' : '/vault/market/sell';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ ticker: _tradeTicker, shares: _tradeShares })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Error'); return; }
+      if (_tradeMode === 'buy') {
+        toast('Bought ' + _tradeShares + ' ' + _tradeTicker + ' for ✦' + data.total_cost.toFixed(2));
+      } else {
+        const gl = data.gain_loss >= 0 ? '+✦' + data.gain_loss.toFixed(2) : '−✦' + Math.abs(data.gain_loss).toFixed(2);
+        toast('Sold ' + _tradeShares + ' ' + _tradeTicker + ' · ' + gl);
+      }
+      closeModal('modal-trade');
+      setTimeout(function() { location.reload(); }, 700);
+    } catch(e) { toast('Connection error'); }
+    finally { btn.disabled = false; btn.textContent = _tradeMode === 'buy' ? 'Buy Shares' : 'Sell Shares'; }
+  }
+
+  // ── P2P Send ───────────────────────────────────────────────────────────────
+  function updateSendCost() {
+    // live display handled by input value itself
+  }
+  async function doTransfer() {
+    const btn = document.getElementById('send-btn');
+    const amount = parseFloat(document.getElementById('send-amount').value);
+    const uuid   = document.getElementById('send-uuid').value.trim();
+    const note   = document.getElementById('send-note').value.trim() || null;
+    if (!amount || amount <= 0) { toast('Enter an amount.'); return; }
+    if (!uuid) { toast('Enter a recipient UUID.'); return; }
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const res = await fetch('/vault/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ recipient_uuid: uuid, amount, note })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Error'); return; }
+      toast('✦' + amount.toFixed(0) + ' sent to ' + data.sent_to + ' 💛');
+      document.getElementById('send-amount').value = '0';
+      document.getElementById('send-uuid').value = '';
+      document.getElementById('send-note').value = '';
+      setTimeout(function() { location.reload(); }, 800);
+    } catch(e) { toast('Connection error'); }
+    finally { btn.disabled = false; btn.textContent = 'Send Lumens'; }
   }
 </script>
 {% endblock %}

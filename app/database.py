@@ -824,6 +824,112 @@ async def _init_sqlite():
                 UNIQUE(review_id, player_id)
             )
         """)
+
+        # ── Vault — Bank Accounts ─────────────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_accounts (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id       INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                bank_key        TEXT    NOT NULL DEFAULT 'luminos_trust',
+                switched_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        # ── Vault — Savings Pots ──────────────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_pots (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id        INTEGER NOT NULL REFERENCES players(id),
+                name             TEXT    NOT NULL DEFAULT 'My Pot',
+                emoji            TEXT    NOT NULL DEFAULT '🏦',
+                goal_amount      REAL    DEFAULT NULL,
+                balance          REAL    NOT NULL DEFAULT 0.0,
+                deadline         TEXT    DEFAULT NULL,
+                is_locked        INTEGER NOT NULL DEFAULT 0,
+                created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+                last_interest_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        # ── Vault — Pot Transactions ──────────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_pot_transactions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                pot_id      INTEGER NOT NULL REFERENCES vault_pots(id) ON DELETE CASCADE,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                type        TEXT    NOT NULL,
+                amount      REAL    NOT NULL,
+                fee         REAL    NOT NULL DEFAULT 0.0,
+                note        TEXT    DEFAULT NULL,
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        # ── Vault — Investable Assets ─────────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_assets (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker          TEXT    NOT NULL UNIQUE,
+                name            TEXT    NOT NULL,
+                sector          TEXT    NOT NULL,
+                description     TEXT    NOT NULL DEFAULT '',
+                current_price   REAL    NOT NULL DEFAULT 10.0,
+                prev_price      REAL    NOT NULL DEFAULT 10.0,
+                base_price      REAL    NOT NULL DEFAULT 10.0,
+                volatility      REAL    NOT NULL DEFAULT 0.05,
+                last_updated    TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        # ── Vault — Asset Price History ───────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_asset_prices (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                asset_id    INTEGER NOT NULL REFERENCES vault_assets(id),
+                price       REAL    NOT NULL,
+                recorded_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        # ── Vault — Player Holdings ───────────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_holdings (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                asset_id    INTEGER NOT NULL REFERENCES vault_assets(id),
+                shares      REAL    NOT NULL DEFAULT 0.0,
+                avg_cost    REAL    NOT NULL DEFAULT 0.0,
+                UNIQUE(player_id, asset_id)
+            )
+        """)
+
+        # ── Vault — Orders (buy/sell history) ─────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_orders (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                asset_id        INTEGER NOT NULL REFERENCES vault_assets(id),
+                order_type      TEXT    NOT NULL,
+                shares          REAL    NOT NULL,
+                price_at_order  REAL    NOT NULL,
+                total_value     REAL    NOT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
+        # ── Vault — P2P Transfers ─────────────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS vault_transfers (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender_id       INTEGER NOT NULL REFERENCES players(id),
+                recipient_id    INTEGER NOT NULL REFERENCES players(id),
+                amount          REAL    NOT NULL,
+                note            TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+
         await db.commit()
         print("   Database tables ready (SQLite)")
 
@@ -1565,3 +1671,109 @@ async def _init_postgres():
         """)
     finally:
         await conn.close()
+
+        # ── Vault — Bank Accounts (PostgreSQL) ────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_accounts (
+                id              SERIAL PRIMARY KEY,
+                player_id       INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                bank_key        TEXT    NOT NULL DEFAULT 'luminos_trust',
+                switched_at     TEXT    NOT NULL DEFAULT (now()::text),
+                created_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Vault — Savings Pots (PostgreSQL) ─────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_pots (
+                id               SERIAL PRIMARY KEY,
+                player_id        INTEGER NOT NULL REFERENCES players(id),
+                name             TEXT    NOT NULL DEFAULT 'My Pot',
+                emoji            TEXT    NOT NULL DEFAULT '🏦',
+                goal_amount      REAL    DEFAULT NULL,
+                balance          REAL    NOT NULL DEFAULT 0.0,
+                deadline         TEXT    DEFAULT NULL,
+                is_locked        INTEGER NOT NULL DEFAULT 0,
+                created_at       TEXT    NOT NULL DEFAULT (now()::text),
+                last_interest_at TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Vault — Pot Transactions (PostgreSQL) ──────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_pot_transactions (
+                id          SERIAL PRIMARY KEY,
+                pot_id      INTEGER NOT NULL REFERENCES vault_pots(id) ON DELETE CASCADE,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                type        TEXT    NOT NULL,
+                amount      REAL    NOT NULL,
+                fee         REAL    NOT NULL DEFAULT 0.0,
+                note        TEXT    DEFAULT NULL,
+                created_at  TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Vault — Investable Assets (PostgreSQL) ────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_assets (
+                id              SERIAL PRIMARY KEY,
+                ticker          TEXT    NOT NULL UNIQUE,
+                name            TEXT    NOT NULL,
+                sector          TEXT    NOT NULL,
+                description     TEXT    NOT NULL DEFAULT '',
+                current_price   REAL    NOT NULL DEFAULT 10.0,
+                prev_price      REAL    NOT NULL DEFAULT 10.0,
+                base_price      REAL    NOT NULL DEFAULT 10.0,
+                volatility      REAL    NOT NULL DEFAULT 0.05,
+                last_updated    TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Vault — Asset Price History (PostgreSQL) ───────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_asset_prices (
+                id          SERIAL PRIMARY KEY,
+                asset_id    INTEGER NOT NULL REFERENCES vault_assets(id),
+                price       REAL    NOT NULL,
+                recorded_at TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Vault — Player Holdings (PostgreSQL) ───────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_holdings (
+                id          SERIAL PRIMARY KEY,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                asset_id    INTEGER NOT NULL REFERENCES vault_assets(id),
+                shares      REAL    NOT NULL DEFAULT 0.0,
+                avg_cost    REAL    NOT NULL DEFAULT 0.0,
+                UNIQUE(player_id, asset_id)
+            )
+        """)
+
+        # ── Vault — Orders (PostgreSQL) ────────────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_orders (
+                id              SERIAL PRIMARY KEY,
+                player_id       INTEGER NOT NULL REFERENCES players(id),
+                asset_id        INTEGER NOT NULL REFERENCES vault_assets(id),
+                order_type      TEXT    NOT NULL,
+                shares          REAL    NOT NULL,
+                price_at_order  REAL    NOT NULL,
+                total_value     REAL    NOT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Vault — P2P Transfers (PostgreSQL) ────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS vault_transfers (
+                id              SERIAL PRIMARY KEY,
+                sender_id       INTEGER NOT NULL REFERENCES players(id),
+                recipient_id    INTEGER NOT NULL REFERENCES players(id),
+                amount          REAL    NOT NULL,
+                note            TEXT    DEFAULT NULL,
+                created_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+

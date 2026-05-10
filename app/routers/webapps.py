@@ -266,6 +266,7 @@ async def vault(
     cfg = get_config()
 
     if is_postgres():
+        # ── Wallet ────────────────────────────────────────────────────────────
         wallet_row = await db.fetchrow(
             "SELECT * FROM wallets WHERE player_id = $1", player_id)
         tx_rows = await db.fetch(
@@ -280,10 +281,45 @@ async def vault(
                WHERE player_id = $1
                  AND timestamp >= (now() - interval '7 days')::text""",
             player_id)
+
+        # ── Bank account ──────────────────────────────────────────────────────
+        account_row = await db.fetchrow(
+            "SELECT bank_key FROM vault_accounts WHERE player_id = $1", player_id)
+
+        # ── Savings pots ──────────────────────────────────────────────────────
+        pot_rows = await db.fetch(
+            "SELECT id, name, emoji, balance, goal_amount, deadline FROM vault_pots WHERE player_id=$1 ORDER BY created_at ASC",
+            player_id)
+
+        # ── Portfolio summary ─────────────────────────────────────────────────
+        portfolio_row = await db.fetchrow(
+            """SELECT COALESCE(SUM(vh.shares * va.current_price), 0) AS market_value,
+                      COALESCE(SUM(vh.shares * vh.avg_cost), 0) AS cost_basis
+               FROM vault_holdings vh
+               JOIN vault_assets va ON va.id = vh.asset_id
+               WHERE vh.player_id = $1 AND vh.shares > 0""",
+            player_id)
+
+        # ── Market ticker (all assets) ────────────────────────────────────────
+        asset_rows = await db.fetch(
+            "SELECT ticker, name, current_price, prev_price, sector FROM vault_assets ORDER BY ticker ASC")
+
+        # ── Recent transfers ──────────────────────────────────────────────────
+        transfer_rows = await db.fetch(
+            """SELECT vt.amount, vt.note, vt.created_at,
+                      sp.display_name AS sender_name,
+                      rp.display_name AS recipient_name,
+                      vt.sender_id
+               FROM vault_transfers vt
+               JOIN players sp ON sp.id = vt.sender_id
+               JOIN players rp ON rp.id = vt.recipient_id
+               WHERE vt.sender_id=$1 OR vt.recipient_id=$1
+               ORDER BY vt.created_at DESC LIMIT 20""",
+            player_id)
+
     else:
-        async with db.execute(
-            "SELECT * FROM wallets WHERE player_id = ?", (player_id,)
-        ) as cur:
+        # ── Wallet ────────────────────────────────────────────────────────────
+        async with db.execute("SELECT * FROM wallets WHERE player_id = ?", (player_id,)) as cur:
             wallet_row = await cur.fetchone()
         async with db.execute(
             """SELECT amount, type, description, timestamp
@@ -302,6 +338,52 @@ async def vault(
         ) as cur:
             weekly = await cur.fetchone()
 
+        # ── Bank account ──────────────────────────────────────────────────────
+        async with db.execute(
+            "SELECT bank_key FROM vault_accounts WHERE player_id = ?", (player_id,)
+        ) as cur:
+            account_row = await cur.fetchone()
+
+        # ── Savings pots ──────────────────────────────────────────────────────
+        async with db.execute(
+            "SELECT id, name, emoji, balance, goal_amount, deadline FROM vault_pots WHERE player_id=? ORDER BY created_at ASC",
+            (player_id,)
+        ) as cur:
+            pot_rows = await cur.fetchall()
+
+        # ── Portfolio summary ─────────────────────────────────────────────────
+        async with db.execute(
+            """SELECT COALESCE(SUM(vh.shares * va.current_price), 0) AS market_value,
+                      COALESCE(SUM(vh.shares * vh.avg_cost), 0) AS cost_basis
+               FROM vault_holdings vh
+               JOIN vault_assets va ON va.id = vh.asset_id
+               WHERE vh.player_id = ? AND vh.shares > 0""",
+            (player_id,)
+        ) as cur:
+            portfolio_row = await cur.fetchone()
+
+        # ── Market ticker ─────────────────────────────────────────────────────
+        async with db.execute(
+            "SELECT ticker, name, current_price, prev_price, sector FROM vault_assets ORDER BY ticker ASC"
+        ) as cur:
+            asset_rows = await cur.fetchall()
+
+        # ── Recent transfers ──────────────────────────────────────────────────
+        async with db.execute(
+            """SELECT vt.amount, vt.note, vt.created_at,
+                      sp.display_name AS sender_name,
+                      rp.display_name AS recipient_name,
+                      vt.sender_id
+               FROM vault_transfers vt
+               JOIN players sp ON sp.id = vt.sender_id
+               JOIN players rp ON rp.id = vt.recipient_id
+               WHERE vt.sender_id=? OR vt.recipient_id=?
+               ORDER BY vt.created_at DESC LIMIT 20""",
+            (player_id, player_id)
+        ) as cur:
+            transfer_rows = await cur.fetchall()
+
+    # ── Shape data for template ───────────────────────────────────────────────
     wallet = {
         "balance":       float(wallet_row["balance"]) if wallet_row else 500.0,
         "total_earned":  float(wallet_row["total_earned"]) if wallet_row else 0.0,
@@ -320,14 +402,68 @@ async def vault(
         for r in tx_rows
     ]
 
+    bank_key = account_row["bank_key"] if account_row else "luminos_trust"
+
+    pots = [
+        {
+            "id":          r["id"],
+            "name":        r["name"],
+            "emoji":       r["emoji"],
+            "balance":     round(float(r["balance"]), 2),
+            "goal_amount": float(r["goal_amount"]) if r["goal_amount"] else None,
+            "deadline":    r["deadline"],
+            "progress_pct": round(float(r["balance"]) / float(r["goal_amount"]) * 100, 1)
+                            if r["goal_amount"] and float(r["goal_amount"]) > 0 else None,
+        }
+        for r in pot_rows
+    ]
+
+    market_value  = float(portfolio_row["market_value"])  if portfolio_row else 0.0
+    cost_basis    = float(portfolio_row["cost_basis"])     if portfolio_row else 0.0
+    portfolio = {
+        "market_value":    round(market_value, 2),
+        "cost_basis":      round(cost_basis, 2),
+        "gain_loss":       round(market_value - cost_basis, 2),
+        "gain_loss_pct":   round((market_value - cost_basis) / cost_basis * 100, 2) if cost_basis else 0.0,
+    }
+
+    assets = [
+        {
+            "ticker":        r["ticker"],
+            "name":          r["name"],
+            "sector":        r["sector"],
+            "current_price": round(float(r["current_price"]), 4),
+            "prev_price":    round(float(r["prev_price"]), 4),
+            "change_pct":    round((float(r["current_price"]) - float(r["prev_price"])) / float(r["prev_price"]) * 100, 2)
+                             if float(r["prev_price"]) else 0.0,
+        }
+        for r in asset_rows
+    ]
+
+    transfers = [
+        {
+            "direction":   "out" if r["sender_id"] == player_id else "in",
+            "other_party": r["recipient_name"] if r["sender_id"] == player_id else r["sender_name"],
+            "amount":      float(r["amount"]),
+            "note":        r["note"],
+            "time_ago":    time_ago(r["created_at"]),
+        }
+        for r in transfer_rows
+    ]
+
     topup_tiers = cfg.get("economy", {}).get("lumen_topup_rates", [])
 
     return templates.TemplateResponse(request, "apps/vault.html", {
-"token":        token,
+        "token":        token,
         "player":       player,
         "wallet":       wallet,
         "transactions": transactions,
         "topup_tiers":  topup_tiers,
+        "bank_key":     bank_key,
+        "pots":         pots,
+        "portfolio":    portfolio,
+        "assets":       assets,
+        "transfers":    transfers,
     })
 
 
