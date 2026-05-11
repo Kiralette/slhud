@@ -127,6 +127,19 @@
       {% if target_profile.zodiac %}<span>· {{ target_profile.zodiac | title }}</span>{% endif %}
       {% if post_streak > 0 %}<span>· 🔥 {{ post_streak }}-day streak</span>{% endif %}
     </div>
+    {% if target_profile.relationship_status and target_profile.relationship_status != 'not_specified' %}
+    {% set rs_labels = {
+      'single': '💔 Single',
+      'taken': '💗 In a relationship',
+      'its_complicated': '💜 It\'s complicated',
+      'open': '💛 Open relationship',
+      'engaged': '💍 Engaged',
+      'married': '💒 Married'
+    } %}
+    <div style="font-size:12px;color:var(--ink4);margin-top:5px;">
+      {{ rs_labels.get(target_profile.relationship_status, '') }}
+    </div>
+    {% endif %}
   </div>
   {% if not is_own_profile %}
   <button class="follow-btn {% if viewer_following %}following{% endif %}"

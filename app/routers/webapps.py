@@ -2453,7 +2453,7 @@ async def public_player_profile(
 
     if is_postgres():
         stats_row = await db.fetchrow("SELECT * FROM flare_stats WHERE player_id = $1", target_id)
-        target_profile_row = await db.fetchrow("SELECT pronouns, age_group, zodiac FROM player_profiles WHERE player_id = $1", target_id)
+        target_profile_row = await db.fetchrow("SELECT pronouns, age_group, zodiac, relationship_status FROM player_profiles WHERE player_id = $1", target_id)
         posts_rows = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
@@ -2474,7 +2474,7 @@ async def public_player_profile(
     else:
         async with db.execute("SELECT * FROM flare_stats WHERE player_id = ?", (target_id,)) as cur:
             stats_row = await cur.fetchone()
-        async with db.execute("SELECT pronouns, age_group, zodiac FROM player_profiles WHERE player_id = ?", (target_id,)) as cur:
+        async with db.execute("SELECT pronouns, age_group, zodiac, relationship_status FROM player_profiles WHERE player_id = ?", (target_id,)) as cur:
             target_profile_row = await cur.fetchone()
         async with db.execute(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
