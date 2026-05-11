@@ -5,7 +5,7 @@ Vault API — savings pots, investments, P2P transfers, bank selection.
 
 Endpoints:
   GET  /vault/account          — player's bank + account summary
-  POST /vault/account/bank     — choose or switch bank (30-day cooldown)
+  POST /vault/account/bank     — choose or switch bank (7-day cooldown)
   GET  /vault/pots             — all savings pots
   POST /vault/pots             — create a pot
   POST /vault/pots/{pot_id}/deposit   — deposit lumens into pot
@@ -192,7 +192,7 @@ async def get_vault_account(
     bank_key = account["bank_key"]
     bank = BANKS.get(bank_key, BANKS["luminos_trust"])
     days_since_switch = _days_since(account["switched_at"])
-    can_switch_in_days = max(0, 30 - days_since_switch)
+    can_switch_in_days = max(0, 7 - days_since_switch)
 
     # Pot count + total saved
     if pg:
@@ -248,8 +248,8 @@ async def switch_bank(
     if account["bank_key"] == req.bank_key:
         raise HTTPException(400, "Already with that bank.")
     days_since = _days_since(account["switched_at"])
-    if days_since < 30:
-        raise HTTPException(400, f"Bank switch cooldown active. {round(30-days_since,1)} days remaining.")
+    if days_since < 7:
+        raise HTTPException(400, f"Bank switch cooldown active. {round(7-days_since,1)} days remaining.")
     now = _now()
     if pg:
         await db.execute(
