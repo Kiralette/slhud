@@ -675,9 +675,16 @@
   </div>
   <div class="scroll-pad"></div>
 </div>
+{% endblock %}
 
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
+{% block extra_script %}
+<script>
+
+  // Inject modals outside app-scale to avoid transform stacking context
+  (function() {
+    var tmp = document.createElement('div');
+    tmp.innerHTML = `<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- MODALS                                                                  -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
@@ -817,13 +824,9 @@
     <button class="modal-submit" id="trade-submit" onclick="submitTrade()" style="margin-top:14px;">Buy Shares</button>
     <button class="modal-cancel" onclick="closeModal('modal-trade')">Cancel</button>
   </div>
-</div>
-
-{% endblock %}
-
-
-{% block extra_script %}
-<script>
+</div>`;
+    while (tmp.firstChild) document.body.appendChild(tmp.firstChild);
+  })();
   // ── Cache-busting reload ───────────────────────────────────────────────────
   function freshReload() {
     var url = new URL(window.location.href);
