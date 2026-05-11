@@ -265,7 +265,50 @@ async def add_location(body: AddLocation, db=Depends(get_db)):
                 existing = await cur.fetchone()
 
         if existing:
-            return {"status": "existing", "location_id": existing["id"], "created": False}
+            loc_id = existing["id"]
+            # Merge any new links/photo that the original listing is missing
+            if is_postgres():
+                orig = await db.fetchrow(
+                    """SELECT parcel_photo_uuid, marketplace_url, instagram_url,
+                              flickr_url, primfeed_url, description
+                       FROM atlas_locations WHERE id = $1""", loc_id)
+            else:
+                async with db.execute(
+                    """SELECT parcel_photo_uuid, marketplace_url, instagram_url,
+                              flickr_url, primfeed_url, description
+                       FROM atlas_locations WHERE id = ?""", (loc_id,)
+                ) as cur:
+                    orig = await cur.fetchone()
+
+            # Only fill in fields that are currently NULL/empty on the original
+            merge = {}
+            for field, new_val in [
+                ("parcel_photo_uuid", body.parcel_photo_uuid),
+                ("marketplace_url",   body.marketplace_url),
+                ("instagram_url",     body.instagram_url),
+                ("flickr_url",        body.flickr_url),
+                ("primfeed_url",      body.primfeed_url),
+                ("description",       body.description),
+            ]:
+                if new_val and not orig[field]:
+                    merge[field] = new_val
+
+            if merge:
+                merge["updated_at"] = now
+                if is_postgres():
+                    sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(merge))
+                    await db.execute(
+                        f"UPDATE atlas_locations SET {sets} WHERE id = $1",
+                        loc_id, *merge.values())
+                else:
+                    sets = ", ".join(f"{k} = ?" for k in merge)
+                    await db.execute(
+                        f"UPDATE atlas_locations SET {sets} WHERE id = ?",
+                        (*merge.values(), loc_id))
+                    await db.commit()
+
+            return {"status": "existing", "location_id": loc_id, "created": False,
+                    "merged_fields": list(merge.keys())}
 
     if is_postgres():
         loc_id = await db.fetchval(

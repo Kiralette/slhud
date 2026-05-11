@@ -1005,6 +1005,8 @@ async def atlas_locations_list(request: Request, db=Depends(get_db)):
           <td style="font-size:0.75rem;">{stars}</td>
           <td style="font-size:0.72rem;color:#666;">{str(r['created_at'])[:10]}</td>
           <td>
+            <a href="/admin/atlas-location/{r['id']}/edit?secret={secret}"
+               style="display:inline-block;padding:4px 10px;font-size:0.75rem;background:#2a3a2a;color:#4caf50;border-radius:4px;text-decoration:none;margin-right:4px;">Edit</a>
             <form class="inline" method="post"
                   action="/admin/atlas-location/{r['id']}/delete?secret={secret}"
                   onsubmit="return confirm('Delete &quot;{safe_name}&quot;? This removes all saves, reviews, and checkins and cannot be undone.');">
@@ -1068,3 +1070,188 @@ async def admin_delete_atlas_location(location_id: int, request: Request, db=Dep
         await db.commit()
 
     return RedirectResponse(f"/admin/atlas-locations?secret={secret}", status_code=303)
+
+
+@router.get("/atlas-location/{location_id}/edit", response_class=HTMLResponse)
+async def admin_edit_atlas_location_form(location_id: int, request: Request, db=Depends(get_db)):
+    """Admin edit form for any Atlas location."""
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+
+    if is_postgres():
+        loc = await db.fetchrow(
+            """SELECT al.*, p.display_name AS owner_name
+               FROM atlas_locations al
+               JOIN players p ON p.id = al.player_id
+               WHERE al.id = $1""", location_id)
+    else:
+        async with db.execute(
+            """SELECT al.*, p.display_name AS owner_name
+               FROM atlas_locations al
+               JOIN players p ON p.id = al.player_id
+               WHERE al.id = ?""", (location_id,)
+        ) as cur:
+            loc = await cur.fetchone()
+
+    if not loc:
+        return HTMLResponse("<h2>Location not found.</h2>", status_code=404)
+
+    loc = dict(loc)
+
+    PARENT_CATS = ["places", "shopping"]
+    SUB_CATS = {
+        "places":   ["social_hangout","nightlife_club","art_gallery","nature_scenic",
+                     "roleplay_community","adult","other"],
+        "shopping": ["mainstore","shopping_event","cosmetics_makeup","skin","shape_body",
+                     "hair","clothing_fashion","accessories_jewelry","furniture_decor",
+                     "animations_ao","mesh_body_head","homes_land","other_shopping"],
+    }
+    VIS_OPTS = ["public", "friends", "private"]
+
+    def sel(val, opt): return "selected" if val == opt else ""
+    def checked(val, opt): return "checked" if val == opt else ""
+
+    # Build sub-category options for current parent
+    all_subs = SUB_CATS.get(loc["parent_category"], []) + \
+               [s for subs in SUB_CATS.values() for s in subs
+                if s not in SUB_CATS.get(loc["parent_category"], [])]
+    sub_opts = "".join(
+        f'<option value="{s}" {sel(loc["sub_category"], s)}>{s.replace("_"," ")}</option>'
+        for subs in [SUB_CATS.get(loc["parent_category"], []),
+                     [s for g in SUB_CATS.values() for s in g if s not in SUB_CATS.get(loc["parent_category"],[])]]
+        for s in subs
+    )
+    parent_opts = "".join(
+        f'<option value="{p}" {sel(loc["parent_category"], p)}>{p}</option>'
+        for p in PARENT_CATS)
+    vis_opts = "".join(
+        f'<option value="{v}" {sel(loc["visibility"], v)}>{v}</option>'
+        for v in VIS_OPTS)
+
+    def field(label, id_, val, type_="text", placeholder=""):
+        v = str(val or "").replace('"', '&quot;')
+        return f"""
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:0.8rem;color:#aaa;margin-bottom:4px;">{label}</label>
+          <input type="{type_}" name="{id_}" id="{id_}" value="{v}"
+                 placeholder="{placeholder}"
+                 style="width:100%;padding:8px 10px;background:#1a1a1a;border:1px solid #333;
+                        border-radius:6px;color:#f0f0f0;font-size:0.9rem;box-sizing:border-box;">
+        </div>"""
+
+    def textarea(label, id_, val):
+        v = str(val or "").replace("</", "<\\/")
+        return f"""
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:0.8rem;color:#aaa;margin-bottom:4px;">{label}</label>
+          <textarea name="{id_}" rows="3"
+                    style="width:100%;padding:8px 10px;background:#1a1a1a;border:1px solid #333;
+                           border-radius:6px;color:#f0f0f0;font-size:0.9rem;box-sizing:border-box;
+                           resize:vertical;">{v}</textarea>
+        </div>"""
+
+    success = request.query_params.get("saved", "")
+    banner  = '<div style="background:#1a3a1a;color:#4caf50;padding:10px 14px;border-radius:6px;margin-bottom:16px;">✓ Saved successfully.</div>' if success else ""
+
+    html = f"""<!DOCTYPE html><html><head><title>Edit Atlas Location — Admin</title>{admin_style()}</head>
+<body>
+<div class="nav"><a href="/admin/atlas-locations?secret={secret}">← Back to Atlas locations</a></div>
+<h1>🗺️ Edit Location #{location_id}</h1>
+<div class="subtitle">Owner: <a href="/admin/player/{loc['player_id']}?secret={secret}">{loc['owner_name']}</a>
+  &nbsp;·&nbsp; Added: {str(loc['created_at'])[:10]}
+  &nbsp;·&nbsp; {loc['checkin_count']} check-ins · {loc['save_count']} saves · {loc['review_count']} reviews
+</div>
+{banner}
+<form method="post" action="/admin/atlas-location/{location_id}/edit?secret={secret}">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px;">
+    <div>
+      <h2 style="font-size:1rem;color:#ccc;margin:0 0 12px;">Core details</h2>
+      {field("Display name", "name", loc["name"])}
+      {field("Region name", "region_name", loc["region_name"])}
+      {field("Parcel name", "parcel_name", loc["parcel_name"])}
+      {textarea("Description", "description", loc["description"])}
+      {field("Parcel photo UUID", "parcel_photo_uuid", loc["parcel_photo_uuid"], placeholder="SL image UUID")}
+    </div>
+    <div>
+      <h2 style="font-size:1rem;color:#ccc;margin:0 0 12px;">Category & visibility</h2>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.8rem;color:#aaa;margin-bottom:4px;">Parent category</label>
+        <select name="parent_category" style="width:100%;padding:8px 10px;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#f0f0f0;">
+          {parent_opts}
+        </select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.8rem;color:#aaa;margin-bottom:4px;">Sub-category</label>
+        <select name="sub_category" style="width:100%;padding:8px 10px;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#f0f0f0;">
+          {sub_opts}
+        </select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.8rem;color:#aaa;margin-bottom:4px;">Visibility</label>
+        <select name="visibility" style="width:100%;padding:8px 10px;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#f0f0f0;">
+          {vis_opts}
+        </select>
+      </div>
+      <h2 style="font-size:1rem;color:#ccc;margin:16px 0 12px;">Links</h2>
+      {field("Marketplace URL", "marketplace_url", loc["marketplace_url"], type_="url")}
+      {field("Instagram URL", "instagram_url", loc["instagram_url"], type_="url")}
+      {field("Flickr URL", "flickr_url", loc["flickr_url"], type_="url")}
+      {field("Primfeed URL", "primfeed_url", loc["primfeed_url"], type_="url")}
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:8px;">
+    <button type="submit" style="padding:10px 24px;background:#4caf50;color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:0.9rem;">Save changes</button>
+    <a href="/admin/atlas-locations?secret={secret}"
+       style="padding:10px 18px;background:#2a2a2a;color:#aaa;border-radius:6px;text-decoration:none;font-size:0.9rem;">Cancel</a>
+    <form method="post" action="/admin/atlas-location/{location_id}/delete?secret={secret}" style="margin:0;"
+          onsubmit="return confirm('Delete this location? Cannot be undone.');">
+      <button type="submit" class="btn-red" style="padding:10px 18px;">Delete location</button>
+    </form>
+  </div>
+</form>
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/atlas-location/{location_id}/edit")
+async def admin_edit_atlas_location_save(location_id: int, request: Request, db=Depends(get_db)):
+    """Save admin edits to any Atlas location."""
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    form   = await request.form()
+    from datetime import datetime, timezone
+
+    VALID_PARENT = ["places", "shopping"]
+    VALID_VIS    = ["public", "friends", "private"]
+
+    fields = {}
+    for f in ("name", "region_name", "parcel_name", "description",
+              "parcel_photo_uuid", "marketplace_url", "instagram_url",
+              "flickr_url", "primfeed_url"):
+        v = form.get(f, "").strip() or None
+        fields[f] = v
+
+    if form.get("parent_category") in VALID_PARENT:
+        fields["parent_category"] = form["parent_category"]
+    if form.get("sub_category"):
+        fields["sub_category"] = form["sub_category"].strip()
+    if form.get("visibility") in VALID_VIS:
+        fields["visibility"] = form["visibility"]
+
+    fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    if is_postgres():
+        sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields))
+        await db.execute(
+            f"UPDATE atlas_locations SET {sets} WHERE id = $1",
+            location_id, *fields.values())
+    else:
+        sets = ", ".join(f"{k} = ?" for k in fields)
+        await db.execute(
+            f"UPDATE atlas_locations SET {sets} WHERE id = ?",
+            (*fields.values(), location_id))
+        await db.commit()
+
+    return RedirectResponse(
+        f"/admin/atlas-location/{location_id}/edit?secret={secret}&saved=1",
+        status_code=303)
