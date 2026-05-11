@@ -24,6 +24,7 @@ from datetime import datetime, date, timedelta, timezone
 
 from app.config import get_config
 from app.database import is_postgres
+from app.services._db_helper import service_db
 from app.services.notifications import push_notification
 
 
@@ -35,7 +36,13 @@ async def run_calendar_reminders(db=None):
     Also checks for period predictions within 2 days.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_calendar_reminders(db)
         return
+    await _run_calendar_reminders(db)
+
+
+async def _run_calendar_reminders(db):
 
     cfg = get_config()
     window_hours = cfg.get("calendar", {}).get("reminder_window_hours", 24)
@@ -118,7 +125,13 @@ async def run_holiday_vibe_engine(db=None):
     Fire notification to all active players if it's a holiday.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_holiday_vibe_engine(db)
         return
+    await _run_holiday_vibe_engine(db)
+
+
+async def _run_holiday_vibe_engine(db):
 
     cfg      = get_config()
     holidays = cfg.get("holidays", {})
@@ -178,7 +191,13 @@ async def run_cycle_prediction_update(db=None):
     for all players with 2+ completed cycles.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_cycle_prediction_update(db)
         return
+    await _run_cycle_prediction_update(db)
+
+
+async def _run_cycle_prediction_update(db):
 
     # Get all distinct player IDs with cycle data
     if is_postgres():
@@ -305,7 +324,13 @@ async def run_pregnancy_progression(db=None):
     Applies/removes fatigue and nesting vibes per player opt-in.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_pregnancy_progression(db)
         return
+    await _run_pregnancy_progression(db)
+
+
+async def _run_pregnancy_progression(db):
 
     import json
     today = date.today()
@@ -459,7 +484,13 @@ async def run_period_vibe_engine(db=None):
     Fire post-cycle vibes on day 1 and day 3 after period ends.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_period_vibe_engine(db)
         return
+    await _run_period_vibe_engine(db)
+
+
+async def _run_period_vibe_engine(db):
 
     import random
     today     = date.today()
@@ -640,7 +671,13 @@ async def run_phase_vibe_engine(db=None):
     Also fires ttc_stress vibe if TTC > 3 months.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_phase_vibe_engine(db)
         return
+    await _run_phase_vibe_engine(db)
+
+
+async def _run_phase_vibe_engine(db):
 
     today = date.today()
 
@@ -817,7 +854,13 @@ async def run_ttc_conception_checks(db=None):
     whose fertile window just closed. Delegates to the cycle router logic.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_ttc_conception_checks(db)
         return
+    await _run_ttc_conception_checks(db)
+
+
+async def _run_ttc_conception_checks(db):
 
     today = date.today()
 
@@ -949,7 +992,13 @@ async def run_ivf_stage_progression(db=None):
     Fires a notification when the stage advances.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_ivf_stage_progression(db)
         return
+    await _run_ivf_stage_progression(db)
+
+
+async def _run_ivf_stage_progression(db):
 
     today = date.today()
 

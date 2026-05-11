@@ -12,6 +12,7 @@ Handles:
 from datetime import datetime, timezone, time
 from app.config import get_config
 from app.database import is_postgres
+from app.services._db_helper import service_db
 
 
 # ── Score questionnaire answers ───────────────────────────────────────────────
@@ -230,7 +231,13 @@ async def run_trait_vibe_engine(db=None):
     and fires appropriate vibes.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_trait_vibe_engine(db)
         return
+    await _run_trait_vibe_engine(db)
+
+
+async def _run_trait_vibe_engine(db):
 
     import random
     cfg = get_config()

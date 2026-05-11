@@ -11,13 +11,20 @@ Runs: daily midnight SLT
 import random
 from app.config import get_config
 from app.database import is_postgres
+from app.services._db_helper import service_db
 from app.services.notifications import push_notification
 from app.services.achievements import increment_stat
 
 
 async def run_unexpected_event_engine(db=None):
     if db is None:
+        async with service_db() as db:
+            await _run_unexpected_event_engine(db)
         return
+    await _run_unexpected_event_engine(db)
+
+
+async def _run_unexpected_event_engine(db):
 
     cfg       = get_config()
     ue_cfg    = cfg.get("unexpected_events", {})

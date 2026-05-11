@@ -10,6 +10,7 @@ Healthcare service — daily scheduled jobs.
 from datetime import date, timedelta
 
 from app.database import is_postgres
+from app.services._db_helper import service_db
 from app.services.notifications import push_notification
 
 
@@ -21,7 +22,13 @@ async def run_medication_reminders(db=None):
     Notify players whose medication runs out within their refill_reminder_days window.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_medication_reminders(db)
         return
+    await _run_medication_reminders(db)
+
+
+async def _run_medication_reminders(db):
 
     today = date.today()
 
@@ -79,7 +86,13 @@ async def run_appointment_reminders(db=None):
     Daily: remind players of appointments scheduled for tomorrow.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_appointment_reminders(db)
         return
+    await _run_appointment_reminders(db)
+
+
+async def _run_appointment_reminders(db):
 
     tomorrow = (date.today() + timedelta(days=1)).isoformat()
 
@@ -118,7 +131,13 @@ async def run_missed_appointment_check(db=None):
     Daily: mark any scheduled appointments whose date has passed as 'missed'.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_missed_appointment_check(db)
         return
+    await _run_missed_appointment_check(db)
+
+
+async def _run_missed_appointment_check(db):
 
     yesterday = (date.today() - timedelta(days=1)).isoformat()
 
@@ -167,7 +186,13 @@ async def run_insurance_billing(db=None):
     Luminos Public and Uninsured have no premium.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_insurance_billing(db)
         return
+    await _run_insurance_billing(db)
+
+
+async def _run_insurance_billing(db):
 
     WEEKLY_PREMIUMS = {
         "clarity_basic":    6,    # ~25/mo ÷ 4
@@ -239,7 +264,13 @@ async def run_vaccination_reminders(db=None):
     Daily: remind players of vaccinations due within the next 7 days.
     """
     if db is None:
+        async with service_db() as db:
+            await _run_vaccination_reminders(db)
         return
+    await _run_vaccination_reminders(db)
+
+
+async def _run_vaccination_reminders(db):
 
     today    = date.today()
     in_7days = (today + timedelta(days=7)).isoformat()

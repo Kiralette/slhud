@@ -12,6 +12,7 @@ Priority levels:
 """
 
 from app.database import is_postgres
+from app.services._db_helper import service_db
 
 
 async def push_notification(
@@ -28,6 +29,11 @@ async def push_notification(
     Called by decay engine, career service, shop service, etc.
     """
     if db is None:
+        async with service_db() as db:
+            await push_notification(
+                player_id=player_id, app_source=app_source,
+                title=title, body=body, priority=priority,
+                action_url=action_url, db=db)
         return
 
     if is_postgres():
