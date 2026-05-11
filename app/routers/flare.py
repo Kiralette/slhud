@@ -946,3 +946,337 @@ async def mention_search(token: str, q: str, db=Depends(get_db)):
             for r in rows
         ]
     }
+
+
+# ── Flare DM Schemas ──────────────────────────────────────────────────────────
+
+class FlareMessage(BaseModel):
+    token: str
+    body: str
+
+class InterestsBody(BaseModel):
+    token: str
+    categories: list[str]   # list of category strings to save
+
+
+# ── Flare DM helpers ──────────────────────────────────────────────────────────
+
+async def _get_or_create_flare_thread(player_a: int, player_b: int, db) -> int:
+    """Return existing thread id or create one. Lower id is always player_a."""
+    a, b = min(player_a, player_b), max(player_a, player_b)
+    if is_postgres():
+        row = await db.fetchrow(
+            "SELECT id FROM flare_threads WHERE player_a_id=$1 AND player_b_id=$2", a, b)
+        if row:
+            return row["id"]
+        return await db.fetchval(
+            "INSERT INTO flare_threads (player_a_id,player_b_id) VALUES ($1,$2) RETURNING id", a, b)
+    else:
+        async with db.execute(
+            "SELECT id FROM flare_threads WHERE player_a_id=? AND player_b_id=?", (a, b)
+        ) as cur:
+            row = await cur.fetchone()
+        if row:
+            return row["id"]
+        async with db.execute(
+            "INSERT INTO flare_threads (player_a_id,player_b_id) VALUES (?,?)", (a, b)
+        ) as cur:
+            tid = cur.lastrowid
+        await db.commit()
+        return tid
+
+
+# ── GET /flare/dms — thread list ──────────────────────────────────────────────
+
+@router.get("/dms")
+async def list_dm_threads(token: str, db=Depends(get_db)):
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    player_id = player["id"]
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT ft.*,
+                      p.display_name AS other_name, p.avatar_uuid AS other_avatar,
+                      pp.profile_pic_uuid AS other_pic,
+                      (SELECT COUNT(*) FROM flare_messages
+                       WHERE thread_id=ft.id AND sender_id!=? AND is_read=0) AS unread,
+                      (SELECT body FROM flare_messages
+                       WHERE thread_id=ft.id ORDER BY sent_at DESC LIMIT 1) AS last_body
+               FROM flare_threads ft
+               JOIN players p ON p.id = CASE WHEN ft.player_a_id=? THEN ft.player_b_id ELSE ft.player_a_id END
+               LEFT JOIN player_profiles pp ON pp.player_id = p.id
+               WHERE ft.player_a_id=? OR ft.player_b_id=?
+               ORDER BY ft.last_message_at DESC NULLS LAST""",
+            player_id, player_id, player_id, player_id)
+    else:
+        async with db.execute(
+            """SELECT ft.*,
+                      p.display_name AS other_name, p.avatar_uuid AS other_avatar,
+                      pp.profile_pic_uuid AS other_pic,
+                      (SELECT COUNT(*) FROM flare_messages
+                       WHERE thread_id=ft.id AND sender_id!=? AND is_read=0) AS unread,
+                      (SELECT body FROM flare_messages
+                       WHERE thread_id=ft.id ORDER BY sent_at DESC LIMIT 1) AS last_body
+               FROM flare_threads ft
+               JOIN players p ON p.id = CASE WHEN ft.player_a_id=? THEN ft.player_b_id ELSE ft.player_a_id END
+               LEFT JOIN player_profiles pp ON pp.player_id = p.id
+               WHERE ft.player_a_id=? OR ft.player_b_id=?
+               ORDER BY ft.last_message_at DESC""",
+            (player_id, player_id, player_id, player_id)
+        ) as cur:
+            rows = await cur.fetchall()
+
+    threads = []
+    for r in rows:
+        d = dict(r)
+        d["other_id"] = d["player_b_id"] if d["player_a_id"] == player_id else d["player_a_id"]
+        threads.append(d)
+    return {"threads": threads}
+
+
+# ── GET /flare/dms/{thread_id} — messages ────────────────────────────────────
+
+@router.get("/dms/{thread_id}")
+async def get_dm_thread(thread_id: int, token: str, db=Depends(get_db)):
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    player_id = player["id"]
+
+    # Verify membership
+    if is_postgres():
+        thread = await db.fetchrow(
+            "SELECT * FROM flare_threads WHERE id=$1 AND (player_a_id=$2 OR player_b_id=$2)",
+            thread_id, player_id)
+        messages = await db.fetch(
+            "SELECT * FROM flare_messages WHERE thread_id=$1 ORDER BY sent_at ASC LIMIT 200",
+            thread_id)
+        await db.execute(
+            "UPDATE flare_messages SET is_read=1 WHERE thread_id=$1 AND sender_id!=$2 AND is_read=0",
+            thread_id, player_id)
+        other_id = thread["player_b_id"] if thread["player_a_id"] == player_id else thread["player_a_id"]
+        other = await db.fetchrow("SELECT display_name, avatar_uuid FROM players WHERE id=$1", other_id)
+    else:
+        async with db.execute(
+            "SELECT * FROM flare_threads WHERE id=? AND (player_a_id=? OR player_b_id=?)",
+            (thread_id, player_id, player_id)
+        ) as cur:
+            thread = await cur.fetchone()
+        if not thread:
+            raise HTTPException(status_code=404, detail="Thread not found.")
+        async with db.execute(
+            "SELECT * FROM flare_messages WHERE thread_id=? ORDER BY sent_at ASC LIMIT 200",
+            (thread_id,)
+        ) as cur:
+            messages = await cur.fetchall()
+        await db.execute(
+            "UPDATE flare_messages SET is_read=1 WHERE thread_id=? AND sender_id!=? AND is_read=0",
+            (thread_id, player_id))
+        other_id = thread["player_b_id"] if thread["player_a_id"] == player_id else thread["player_a_id"]
+        async with db.execute(
+            "SELECT display_name, avatar_uuid FROM players WHERE id=?", (other_id,)
+        ) as cur:
+            other = await cur.fetchone()
+        await db.commit()
+
+    if not thread:
+        raise HTTPException(status_code=404, detail="Thread not found.")
+
+    return {
+        "thread_id":    thread_id,
+        "player_id":    player_id,
+        "other_id":     other_id,
+        "other_name":   other["display_name"] if other else "Unknown",
+        "other_avatar": other["avatar_uuid"]  if other else None,
+        "messages":     [dict(m) for m in messages],
+    }
+
+
+# ── POST /flare/dms/{player_id} — send or start DM ───────────────────────────
+
+@router.post("/dms/{other_player_id}")
+async def send_flare_dm(other_player_id: int, body: FlareMessage, db=Depends(get_db)):
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    player_id = player["id"]
+    if player_id == other_player_id:
+        raise HTTPException(status_code=400, detail="Cannot DM yourself.")
+
+    text = body.body.strip()[:1000]
+    if not text:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    # Verify other player exists
+    if is_postgres():
+        other = await db.fetchrow("SELECT id, display_name FROM players WHERE id=$1 AND is_banned=0", other_player_id)
+    else:
+        async with db.execute("SELECT id, display_name FROM players WHERE id=? AND is_banned=0", (other_player_id,)) as cur:
+            other = await cur.fetchone()
+    if not other:
+        raise HTTPException(status_code=404, detail="Player not found.")
+
+    thread_id = await _get_or_create_flare_thread(player_id, other_player_id, db)
+    now = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+
+    if is_postgres():
+        msg_id = await db.fetchval(
+            "INSERT INTO flare_messages (thread_id,sender_id,body,sent_at) VALUES ($1,$2,$3,$4) RETURNING id",
+            thread_id, player_id, text, now)
+        await db.execute(
+            "UPDATE flare_threads SET last_message_at=$1 WHERE id=$2", now, thread_id)
+    else:
+        async with db.execute(
+            "INSERT INTO flare_messages (thread_id,sender_id,body,sent_at) VALUES (?,?,?,?)",
+            (thread_id, player_id, text, now)
+        ) as cur:
+            msg_id = cur.lastrowid
+        await db.execute("UPDATE flare_threads SET last_message_at=? WHERE id=?", (now, thread_id))
+        await db.commit()
+
+    await push_notification(
+        player_id=other_player_id, app_source="flare",
+        title=f"{player['display_name']} sent you a message ✦",
+        body=text[:80] + ("…" if len(text) > 80 else ""),
+        priority="normal", db=db)
+
+    return {"status": "sent", "thread_id": thread_id, "message_id": msg_id}
+
+
+# ── POST /flare/interests — save player interests ─────────────────────────────
+
+@router.post("/interests")
+async def save_interests(body: InterestsBody, db=Depends(get_db)):
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    from app.config import get_config
+    cfg = get_config()
+    valid_cats = set(cfg.get("flare", {}).get("categories", []))
+    cats = [c for c in body.categories if c in valid_cats][:15]
+    player_id = player["id"]
+    now = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+
+    if is_postgres():
+        # Clear existing, insert new
+        await db.execute("DELETE FROM player_interests WHERE player_id=$1", player_id)
+        for cat in cats:
+            await db.execute(
+                "INSERT INTO player_interests (player_id,category,weight,updated_at) VALUES ($1,$2,1,$3)",
+                player_id, cat, now)
+    else:
+        await db.execute("DELETE FROM player_interests WHERE player_id=?", (player_id,))
+        for cat in cats:
+            await db.execute(
+                "INSERT INTO player_interests (player_id,category,weight,updated_at) VALUES (?,?,1,?)",
+                (player_id, cat, now))
+        await db.commit()
+
+    return {"status": "saved", "categories": cats}
+
+
+# ── GET /flare/for-you — interest-weighted algorithm feed ────────────────────
+
+@router.get("/for-you")
+async def for_you(token: str, sort: str = "top", db=Depends(get_db)):
+    """
+    Algorithm-weighted discover feed.
+    sort=top  → engagement score × recency decay × interest boost
+    sort=new  → recency only × interest boost
+    """
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    player_id = player["id"]
+
+    # Get player interests
+    if is_postgres():
+        interest_rows = await db.fetch(
+            "SELECT category, weight FROM player_interests WHERE player_id=$1", player_id)
+        rows = await db.fetch(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
+               FROM posts p JOIN players pl ON pl.id = p.player_id
+               WHERE p.visibility = 'public'
+               ORDER BY p.created_at DESC LIMIT 200""")
+        # Real likes per post
+        like_rows = await db.fetch(
+            "SELECT post_id, COUNT(*) as cnt FROM post_engagements WHERE type='like' GROUP BY post_id")
+        comment_rows = await db.fetch(
+            "SELECT post_id, COUNT(*) as cnt FROM post_engagements WHERE type='comment' GROUP BY post_id")
+    else:
+        async with db.execute(
+            "SELECT category, weight FROM player_interests WHERE player_id=?", (player_id,)
+        ) as cur:
+            interest_rows = await cur.fetchall()
+        async with db.execute(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
+               FROM posts p JOIN players pl ON pl.id = p.player_id
+               WHERE p.visibility = 'public'
+               ORDER BY p.created_at DESC LIMIT 200"""
+        ) as cur:
+            rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT post_id, COUNT(*) as cnt FROM post_engagements WHERE type='like' GROUP BY post_id"
+        ) as cur:
+            like_rows = await cur.fetchall()
+        async with db.execute(
+            "SELECT post_id, COUNT(*) as cnt FROM post_engagements WHERE type='comment' GROUP BY post_id"
+        ) as cur:
+            comment_rows = await cur.fetchall()
+
+    interests = {r["category"]: int(r["weight"]) for r in interest_rows}
+    likes_map    = {r["post_id"]: int(r["cnt"]) for r in like_rows}
+    comments_map = {r["post_id"]: int(r["cnt"]) for r in comment_rows}
+
+    import math
+    from datetime import datetime, timezone
+
+    now_ts = datetime.now(timezone.utc).timestamp()
+
+    scored = []
+    for r in rows:
+        d = dict(r)
+        post_id = d["id"]
+
+        # Recency decay
+        try:
+            post_ts = datetime.fromisoformat(d["created_at"].replace("Z","")).replace(tzinfo=timezone.utc).timestamp()
+        except Exception:
+            post_ts = now_ts
+        age_hours = (now_ts - post_ts) / 3600
+        if age_hours < 24:
+            decay = 1.0
+        elif age_hours < 72:
+            decay = 0.5
+        else:
+            decay = 0.2
+
+        # Interest multiplier
+        cat = d.get("category", "")
+        interest_mult = 1.0 + (interests.get(cat, 0) * 0.5)
+
+        # Engagement score
+        real_likes    = likes_map.get(post_id, 0)
+        real_comments = comments_map.get(post_id, 0)
+        npc_likes     = d.get("npc_likes", 0)
+        engagement    = (real_likes * 1.0 + real_comments * 2.0 + npc_likes * 0.1)
+
+        if sort == "new":
+            score = decay * interest_mult * (1 + math.log1p(engagement))
+        else:  # top
+            score = engagement * decay * interest_mult
+
+        d["algo_score"]      = score
+        d["total_likes"]     = real_likes + npc_likes
+        d["total_comments"]  = real_comments + d.get("npc_comments", 0)
+        d["viewer_has_liked"] = False  # caller checks separately if needed
+        image_uuid = d.get("image_uuid")
+        d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
+        scored.append(d)
+
+    scored.sort(key=lambda x: x["algo_score"], reverse=True)
+
+    return {"posts": scored[:40], "sort": sort}

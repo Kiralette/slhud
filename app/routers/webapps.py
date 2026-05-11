@@ -924,13 +924,41 @@ async def flare(
         flare_profile_row = await db.fetchrow(
             "SELECT relationship_status, profile_pic_uuid FROM player_profiles WHERE player_id = $1",
             player_id)
+        # Player interests
+        interest_rows = await db.fetch(
+            "SELECT category FROM player_interests WHERE player_id = $1", player_id)
+        # DM unread count
+        dm_unread = await db.fetchval(
+            """SELECT COUNT(*) FROM flare_messages fm
+               JOIN flare_threads ft ON ft.id = fm.thread_id
+               WHERE (ft.player_a_id=$1 OR ft.player_b_id=$1)
+               AND fm.sender_id!=$1 AND fm.is_read=0""", player_id) or 0
     else:
         async with db.execute(
             "SELECT relationship_status, profile_pic_uuid FROM player_profiles WHERE player_id = ?",
             (player_id,)
         ) as cur:
             flare_profile_row = await cur.fetchone()
-    flare_profile = dict(flare_profile_row) if flare_profile_row else {}
+        async with db.execute(
+            "SELECT category FROM player_interests WHERE player_id = ?", (player_id,)
+        ) as cur:
+            interest_rows = await cur.fetchall()
+        try:
+            async with db.execute(
+                """SELECT COUNT(*) FROM flare_messages fm
+                   JOIN flare_threads ft ON ft.id = fm.thread_id
+                   WHERE (ft.player_a_id=? OR ft.player_b_id=?)
+                   AND fm.sender_id!=? AND fm.is_read=0""",
+                (player_id, player_id, player_id)
+            ) as cur:
+                row = await cur.fetchone()
+            dm_unread = row[0] if row else 0
+        except Exception:
+            dm_unread = 0
+
+    flare_profile      = dict(flare_profile_row) if flare_profile_row else {}
+    player_interests   = [r["category"] for r in interest_rows]
+    has_set_interests  = len(player_interests) > 0
 
     return templates.TemplateResponse(request, "apps/flare.html", {
         "token":              token,
@@ -944,6 +972,9 @@ async def flare(
         "categories":         categories,
         "trending_hashtags":  trending_hashtags,
         "following_ids":      list(following_ids),
+        "player_interests":   player_interests,
+        "has_set_interests":  has_set_interests,
+        "dm_unread":          dm_unread,
     })
 
 

@@ -956,6 +956,39 @@ async def _init_sqlite():
         """)
 
         await db.commit()
+
+        # ── Flare Phase 2 Tables (SQLite) ─────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS flare_threads (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_a_id     INTEGER NOT NULL REFERENCES players(id),
+                player_b_id     INTEGER NOT NULL REFERENCES players(id),
+                created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+                last_message_at TEXT    DEFAULT NULL,
+                UNIQUE(player_a_id, player_b_id)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS flare_messages (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                thread_id   INTEGER NOT NULL REFERENCES flare_threads(id) ON DELETE CASCADE,
+                sender_id   INTEGER NOT NULL REFERENCES players(id),
+                body        TEXT    NOT NULL,
+                sent_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+                is_read     INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS player_interests (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                category    TEXT    NOT NULL,
+                weight      INTEGER NOT NULL DEFAULT 1,
+                updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(player_id, category)
+            )
+        """)
+        await db.commit()
         print("   Database tables ready (SQLite)")
 
 
@@ -1448,6 +1481,38 @@ async def _init_postgres():
         """)
 
         print("   Database tables ready (PostgreSQL)")
+
+        # ── Flare Phase 2 Tables (PostgreSQL) ─────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS flare_threads (
+                id              SERIAL  PRIMARY KEY,
+                player_a_id     INTEGER NOT NULL REFERENCES players(id),
+                player_b_id     INTEGER NOT NULL REFERENCES players(id),
+                created_at      TEXT    NOT NULL DEFAULT (now()::text),
+                last_message_at TEXT    DEFAULT NULL,
+                UNIQUE(player_a_id, player_b_id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS flare_messages (
+                id          SERIAL  PRIMARY KEY,
+                thread_id   INTEGER NOT NULL REFERENCES flare_threads(id) ON DELETE CASCADE,
+                sender_id   INTEGER NOT NULL REFERENCES players(id),
+                body        TEXT    NOT NULL,
+                sent_at     TEXT    NOT NULL DEFAULT (now()::text),
+                is_read     INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS player_interests (
+                id          SERIAL  PRIMARY KEY,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                category    TEXT    NOT NULL,
+                weight      INTEGER NOT NULL DEFAULT 1,
+                updated_at  TEXT    NOT NULL DEFAULT (now()::text),
+                UNIQUE(player_id, category)
+            )
+        """)
 
         # ── Cycle & Reproductive Health Migrations (Postgres) ─────────────────
         migrations_pg = [

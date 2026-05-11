@@ -181,6 +181,34 @@
     margin-top: 8px;
   }
 </style>
+
+  /* ── Discover sub-tabs ── */
+  .at-sub-tab {
+    padding: 10px 14px; font-size: 12px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink4); background: none; border: none;
+    cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; font-family: inherit;
+    transition: color .15s, border-color .15s;
+  }
+  .at-sub-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+  /* ── DM thread list ── */
+  .dm-thread-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; border-bottom: 1px solid var(--bg3);
+    cursor: pointer;
+  }
+  .dm-thread-row:active { background: var(--bg2); }
+  .dm-thread-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--bg3); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; background-size: cover; background-position: center;
+  }
+  .dm-thread-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .dm-thread-preview { font-size: 12px; color: var(--ink4); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+  .dm-unread-badge { background: var(--rose); color: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; margin-left: auto; flex-shrink: 0; }
 {% endblock %}
 
 {% block content %}
@@ -250,6 +278,9 @@
   <button class="tab"        data-tab="tab-post"     onclick="showTab('tab-post')">Post</button>
   <button class="tab"        data-tab="tab-profile"  onclick="showTab('tab-profile')">Profile</button>
   <button class="tab"        data-tab="tab-discover" onclick="showTab('tab-discover')">Discover</button>
+  <button class="tab"        data-tab="tab-dms"      onclick="showTab('tab-dms')">
+    Messages{% if dm_unread > 0 %} <span style="background:var(--rose);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px;">{{ dm_unread }}</span>{% endif %}
+  </button>
 </div>
 
 <!-- ── FEED TAB ── -->
@@ -365,6 +396,9 @@
     <button onclick="openRelStatusSheet()" style="margin-top:8px;background:none;border:0.5px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--ink4);cursor:pointer;">
       {% if flare_profile.relationship_status and flare_profile.relationship_status != 'not_specified' %}Edit status{% else %}+ Add relationship status{% endif %}
     </button>
+    <button onclick="openInterestsSheet()" style="margin-top:6px;margin-left:6px;background:none;border:0.5px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--ink4);cursor:pointer;">
+      ✦ Edit interests
+    </button>
     </div>
   </div>
 
@@ -400,24 +434,71 @@
 
 <!-- ── DISCOVER TAB ── -->
 <div id="tab-discover" class="tab-panel">
-  <div class="section-head">
-    <div class="section-head-title">Discover</div>
-    <div class="section-head-sub">Top posts from the community</div>
+
+  <!-- Sub-tab bar: For You / Discover -->
+  <div style="display:flex;border-bottom:1px solid var(--bg4);padding:0 18px;background:var(--bg);">
+    <button class="at-sub-tab active" id="sub-for-you" onclick="showSubTab('for-you')">For You</button>
+    <button class="at-sub-tab" id="sub-discover" onclick="showSubTab('discover')">Discover</button>
   </div>
 
-  {% if discover %}
-    <div class="stagger">
-    {% for post in discover %}
-      {{ _render_post(post, token) }}
-    {% endfor %}
+  <!-- For You panel -->
+  <div id="subtab-for-you">
+    <!-- Category filter chips -->
+    <div class="disc-filter-bar" id="disc-filter-bar">
+      <button class="disc-chip active" onclick="setDiscFilter(this,'')">All</button>
+      {% for cat in categories %}
+      <button class="disc-chip" onclick="setDiscFilter(this,'{{ cat }}')">{{ cat | title }}</button>
+      {% endfor %}
     </div>
-  {% else %}
-    <div class="empty">
-      <div class="empty-icon">🌐</div>
-      <div class="empty-title">All quiet</div>
-      <div class="empty-text">No posts from the community yet.</div>
+    {% if trending_hashtags %}
+    <div style="padding:4px 18px 2px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Trending</div>
+    <div style="padding:2px 18px 8px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;">
+      {% for ht in trending_hashtags %}
+      <span class="trending-tag" onclick="openHashtagFeed('{{ ht.tag }}')">#{{ ht.tag }} <span style="color:var(--ink4);font-weight:400;">{{ ht.post_count }}</span></span>
+      {% endfor %}
     </div>
-  {% endif %}
+    {% endif %}
+    <div id="for-you-posts">
+      <div style="padding:40px;text-align:center;color:var(--ink4);">Loading your feed…</div>
+    </div>
+  </div>
+
+  <!-- Discover panel -->
+  <div id="subtab-discover" style="display:none;">
+    <!-- Top / New sort toggle -->
+    <div style="display:flex;gap:8px;padding:10px 18px;border-bottom:1px solid var(--bg3);">
+      <button class="disc-chip active" id="sort-top" onclick="setDiscoverSort('top',this)">🔥 Top</button>
+      <button class="disc-chip" id="sort-new" onclick="setDiscoverSort('new',this)">✨ New</button>
+    </div>
+    <div id="disc-posts-container">
+      {% if discover %}
+      <div class="stagger">
+      {% for post in discover %}
+        {{ _render_post(post, token) }}
+      {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <div class="empty-icon">🌐</div>
+        <div class="empty-title">All quiet</div>
+        <div class="empty-text">No posts from the community yet.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- DMs tab -->
+<div id="tab-dms" class="tab-panel" style="display:none;">
+  <div style="padding:14px 18px 8px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);">Messages ✦</div>
+    <div style="font-size:11px;color:var(--ink4);">Flare DMs</div>
+  </div>
+  <div id="dm-thread-list">
+    <div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>
+  </div>
   <div class="scroll-pad"></div>
 </div>
 
@@ -426,6 +507,357 @@
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
+  const PLAYER_INTERESTS = {{ player_interests | tojson }};
+  const HAS_INTERESTS    = {{ 'true' if has_set_interests else 'false' }};
+  const ALL_CATEGORIES   = {{ categories | tojson }};
+
+  // ── Interest onboarding overlay ───────────────────────────────────────────
+  (function() {
+    if (HAS_INTERESTS) return;  // already set, skip
+    const el = document.createElement('div');
+    el.id = 'interest-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;padding:24px 18px 40px;';
+    el.innerHTML = `
+      <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);margin-bottom:6px;">What do you love? ✦</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:20px;line-height:1.5;">Pick your interests so we can personalise your For You feed. You can change these anytime in settings.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;" id="interest-pills">
+        ${ALL_CATEGORIES.map(c => `<button class="at-pill" onclick="toggleInterest(this,'${c}')">${c.charAt(0).toUpperCase()+c.slice(1)}</button>`).join('')}
+      </div>
+      <button onclick="saveOnboardingInterests()"
+        style="width:100%;padding:14px;background:var(--ink);color:var(--bg);border:none;
+               border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
+        Let's go ✦
+      </button>
+      <button onclick="document.getElementById('interest-overlay').remove()"
+        style="width:100%;padding:10px;background:none;border:none;font-size:12px;
+               color:var(--ink4);cursor:pointer;font-family:inherit;margin-top:8px;">
+        Skip for now
+      </button>`;
+    document.body.appendChild(el);
+  })();
+
+  const _selectedInterests = new Set(PLAYER_INTERESTS);
+
+  function toggleInterest(btn, cat) {
+    if (_selectedInterests.has(cat)) {
+      _selectedInterests.delete(cat);
+      btn.classList.remove('selected');
+    } else {
+      _selectedInterests.add(cat);
+      btn.classList.add('selected');
+    }
+  }
+
+  async function saveOnboardingInterests() {
+    const cats = [..._selectedInterests];
+    try {
+      const res = await fetch('/flare/interests', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, categories: cats })
+      });
+      if (res.ok) {
+        document.getElementById('interest-overlay')?.remove();
+        loadForYou();
+      }
+    } catch(e) { document.getElementById('interest-overlay')?.remove(); }
+  }
+
+  // ── Interest settings sheet (accessible from profile tab) ─────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2998;" id="interests-overlay" onclick="closeInterestsSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:2999;
+  max-height:85vh;overflow-y:auto;" id="interests-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Your interests</div>
+    <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Shapes your For You feed.</div>
+  </div>
+  <div style="padding:14px 18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="settings-interest-pills">
+      ${ALL_CATEGORIES.map(c => `<button class="at-pill ${PLAYER_INTERESTS.includes(c)?'selected':''}"
+        onclick="toggleSettingsInterest(this,'${c}')">${c.charAt(0).toUpperCase()+c.slice(1)}</button>`).join('')}
+    </div>
+    <button onclick="saveSettingsInterests()"
+      style="width:100%;padding:13px;background:var(--ink);color:var(--bg);border:none;
+             border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+      Save interests
+    </button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  const _settingsInterests = new Set(PLAYER_INTERESTS);
+  function toggleSettingsInterest(btn, cat) {
+    if (_settingsInterests.has(cat)) { _settingsInterests.delete(cat); btn.classList.remove('selected'); }
+    else { _settingsInterests.add(cat); btn.classList.add('selected'); }
+  }
+  async function saveSettingsInterests() {
+    try {
+      const res = await fetch('/flare/interests', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, categories: [..._settingsInterests] })
+      });
+      if (res.ok) { closeInterestsSheet(); toast('Interests saved ✓'); loadForYou(); }
+    } catch(e) { toast('Error'); }
+  }
+  function openInterestsSheet() {
+    document.getElementById('interests-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('interests-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+  }
+  function closeInterestsSheet() {
+    document.getElementById('interests-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('interests-overlay').style.display = 'none';
+  }
+
+  // ── Sub-tabs (For You / Discover) ─────────────────────────────────────────
+  let _activeSubTab = 'for-you';
+  function showSubTab(id) {
+    document.getElementById('subtab-for-you').style.display = id === 'for-you' ? 'block' : 'none';
+    document.getElementById('subtab-discover').style.display = id === 'discover' ? 'block' : 'none';
+    document.getElementById('sub-for-you').classList.toggle('active', id === 'for-you');
+    document.getElementById('sub-discover').classList.toggle('active', id === 'discover');
+    _activeSubTab = id;
+    if (id === 'for-you') loadForYou();
+  }
+
+  // ── For You feed ──────────────────────────────────────────────────────────
+  let _forYouSort  = 'top';
+  let _discSort    = 'top';
+  let _discCatFilter = '';
+
+  async function loadForYou() {
+    const container = document.getElementById('for-you-posts');
+    if (!container) return;
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
+    try {
+      const res  = await fetch(`/flare/for-you?token=${TOKEN}&sort=${_forYouSort}`);
+      const data = await res.json();
+      const posts = data.posts || [];
+      if (!posts.length) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">✦</div><div style="font-size:13px;color:var(--ink4);text-align:center;padding:0 24px;">No posts yet. Follow people or set your interests to personalise this feed.</div></div>';
+        return;
+      }
+      // Filter by category if set
+      const filtered = _discCatFilter ? posts.filter(p => p.category === _discCatFilter) : posts;
+      container.innerHTML = filtered.map(p => renderPostCard(p)).join('');
+    } catch(e) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
+    }
+  }
+
+  function renderPostCard(p) {
+    const imageHtml = p.image_url
+      ? `<div style="margin:8px 0;border-radius:var(--radius-sm);overflow:hidden;max-height:180px;"><img src="${p.image_url}" style="width:100%;object-fit:cover;max-height:180px;" onerror="this.parentElement.style.display='none'"></div>` : '';
+    return `<div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
+      <div class="post-header">
+        <div>
+          <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name||'Unknown'}</span>
+          <div class="post-meta">${(p.created_at||'').slice(0,10)}</div>
+        </div>
+        ${p.quality_tier > 0 ? `<span class="post-quality q${p.quality_tier}">${['','Good','Great','✦ Exceptional'][p.quality_tier]||''}</span>` : ''}
+      </div>
+      <div class="post-cat">${(p.category||'').replace(/_/g,' ')}</div>
+      ${imageHtml}
+      <div class="post-content">${p.content_text}</div>
+      <div class="post-actions" onclick="event.stopPropagation();">
+        <button class="post-action-btn${p.viewer_has_liked?' liked':''}" id="like-btn-${p.id}"
+          onclick="likePost(${p.id},'${TOKEN}',this)">${p.viewer_has_liked?'♥ Liked':'♡ Like'}</button>
+        <button class="post-action-btn" onclick="openPostDetail(${p.id})">💬 Comment</button>
+        <button class="post-action-btn" onclick="repostPost(${p.id})">🔁 Repost</button>
+        <span class="post-npc-count" id="counts-${p.id}">${p.total_likes} likes · ${p.total_comments} comments</span>
+      </div>
+    </div>`;
+  }
+
+  // ── Discover sort ─────────────────────────────────────────────────────────
+  function setDiscoverSort(sort, btn) {
+    _discSort = sort;
+    document.getElementById('sort-top').classList.toggle('active', sort === 'top');
+    document.getElementById('sort-new').classList.toggle('active', sort === 'new');
+    loadDiscover(_discCatFilter);
+  }
+
+  function setDiscFilter(btn, cat) {
+    document.querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _discCatFilter = cat;
+    if (_activeSubTab === 'for-you') loadForYou();
+    else loadDiscover(cat);
+  }
+
+  async function loadDiscover(cat) {
+    const container = document.getElementById('disc-posts-container');
+    if (!container) return;
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
+    let url = `/flare/discover?token=${TOKEN}&sort=${_discSort === 'new' ? 'new' : 'top'}`;
+    if (cat) url += `&category=${encodeURIComponent(cat)}`;
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      const posts = data.discover || [];
+      if (!posts.length) {
+        container.innerHTML = '<div class="empty"><div class="empty-icon">🌐</div><div class="empty-title">All quiet</div></div>';
+        return;
+      }
+      container.innerHTML = posts.map(p => renderPostCard(p)).join('');
+    } catch(e) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
+    }
+  }
+
+  // ── DM tab ────────────────────────────────────────────────────────────────
+  async function loadDMThreads() {
+    const list = document.getElementById('dm-thread-list');
+    if (!list) return;
+    try {
+      const res  = await fetch(`/flare/dms?token=${TOKEN}`);
+      const data = await res.json();
+      const threads = data.threads || [];
+      if (!threads.length) {
+        list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">No messages yet.<br>Start a conversation from someone\'s profile.</div>';
+        return;
+      }
+      list.innerHTML = threads.map(t => `
+        <div class="dm-thread-row" onclick="openFlareDM(${t.other_id},'${t.other_name}')">
+          <div class="dm-thread-avatar" ${t.other_pic ? `style="background-image:url('https://secondlife.com/app/image/${t.other_pic}/2')"` : ''}>${!t.other_pic ? (t.other_name||'?')[0] : ''}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="dm-thread-name">${t.other_name}</div>
+            <div class="dm-thread-preview">${t.last_body || 'No messages yet'}</div>
+          </div>
+          ${t.unread > 0 ? `<span class="dm-unread-badge">${t.unread}</span>` : ''}
+        </div>`).join('');
+    } catch(e) {
+      list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
+    }
+  }
+
+  // ── Flare DM chat sheet ───────────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:998;" id="flare-dm-overlay" onclick="closeFlareDMSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:999;
+  height:80vh;display:flex;flex-direction:column;" id="flare-dm-sheet">
+  <div style="flex-shrink:0;">
+    <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 6px;"></div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:10px;">
+      <button onclick="closeFlareDMSheet()" style="background:none;border:none;font-size:20px;color:var(--ink3);cursor:pointer;">←</button>
+      <div style="font-family:var(--font-head);font-size:20px;color:var(--ink);" id="flare-dm-name">Chat</div>
+      <div style="font-size:11px;color:var(--ink4);">Flare · Private</div>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;" id="flare-dm-messages"></div>
+  <div style="flex-shrink:0;padding:10px 14px 20px;border-top:1px solid var(--bg3);display:flex;gap:8px;">
+    <textarea id="flare-dm-input" placeholder="Say something…"
+      style="flex:1;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--bg4);
+             background:var(--bg2);font-size:14px;color:var(--ink);font-family:inherit;
+             resize:none;height:42px;line-height:1.4;box-sizing:border-box;"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFlareMsg();}"></textarea>
+    <button onclick="sendFlareMsg()"
+      style="width:42px;height:42px;border-radius:var(--radius-sm);background:var(--ink);
+             color:var(--bg);border:none;font-size:18px;cursor:pointer;flex-shrink:0;">↑</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  let _flareDmOtherId = null, _flareDmThreadId = null, _flareDmMyId = null, _flareDmPoll = null;
+
+  async function openFlareDM(otherId, otherName) {
+    _flareDmOtherId = otherId;
+    document.getElementById('flare-dm-name').textContent = otherName || 'Chat';
+    document.getElementById('flare-dm-messages').innerHTML =
+      '<div style="text-align:center;color:var(--ink4);font-size:12px;padding:20px 0;">Loading…</div>';
+    document.getElementById('flare-dm-input').value = '';
+    document.getElementById('flare-dm-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('flare-dm-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+    await _loadFlareMessages(otherId);
+    _flareDmPoll = setInterval(() => _loadFlareMessages(otherId), 8000);
+  }
+
+  function closeFlareDMSheet() {
+    document.getElementById('flare-dm-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('flare-dm-overlay').style.display = 'none';
+    if (_flareDmPoll) { clearInterval(_flareDmPoll); _flareDmPoll = null; }
+  }
+
+  async function _loadFlareMessages(otherId) {
+    try {
+      const res  = await fetch(`/flare/dms?token=${TOKEN}`);
+      const data = await res.json();
+      const thread = (data.threads||[]).find(t => t.other_id === otherId);
+      if (thread) {
+        _flareDmThreadId = thread.id;
+        const res2  = await fetch(`/flare/dms/${thread.id}?token=${TOKEN}`);
+        const data2 = await res2.json();
+        _flareDmMyId = data2.player_id;
+        _renderFlareMessages(data2.messages, data2.player_id);
+      } else {
+        _flareDmThreadId = null;
+        _renderFlareMessages([], null);
+      }
+    } catch(e) {}
+  }
+
+  function _renderFlareMessages(messages, myId) {
+    const c = document.getElementById('flare-dm-messages');
+    const atBottom = c.scrollHeight - c.scrollTop <= c.clientHeight + 40;
+    c.innerHTML = '';
+    if (!messages.length) {
+      c.innerHTML = '<div style="text-align:center;color:var(--ink4);font-size:13px;padding:32px 0;">No messages yet. Say hello ✦</div>';
+      return;
+    }
+    messages.forEach(msg => {
+      const mine = msg.sender_id === myId;
+      const b = document.createElement('div');
+      b.style.cssText = `display:flex;flex-direction:column;align-items:${mine?'flex-end':'flex-start'};`;
+      const t = document.createElement('div');
+      t.style.cssText = `max-width:78%;padding:9px 13px;border-radius:${mine?'16px 16px 4px 16px':'16px 16px 16px 4px'};background:${mine?'var(--ink)':'var(--bg2)'};color:${mine?'var(--bg)':'var(--ink)'};font-size:14px;line-height:1.4;word-break:break-word;border:${mine?'none':'1px solid var(--bg4)'};`;
+      t.textContent = msg.body;
+      const ts = document.createElement('div');
+      ts.style.cssText = 'font-size:10px;color:var(--ink4);margin-top:3px;padding:0 4px;';
+      ts.textContent = (msg.sent_at||'').slice(11,16);
+      b.appendChild(t); b.appendChild(ts); c.appendChild(b);
+    });
+    if (atBottom) c.scrollTop = c.scrollHeight;
+  }
+
+  async function sendFlareMsg() {
+    if (!_flareDmOtherId) return;
+    const input = document.getElementById('flare-dm-input');
+    const text  = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    try {
+      const res = await fetch(`/flare/dms/${_flareDmOtherId}`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, body: text })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        _flareDmThreadId = d.thread_id;
+        await _loadFlareMessages(_flareDmOtherId);
+      } else { input.value = text; toast('Could not send'); }
+    } catch(e) { input.value = text; toast('Connection error'); }
+  }
+
+  // ── Override showTab to load DMs ──────────────────────────────────────────
+  const _origShowTab = showTab;
+  showTab = function(id) {
+    _origShowTab(id);
+    if (id === 'tab-dms') loadDMThreads();
+    if (id === 'tab-discover') { loadForYou(); }
+  };
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadForYou();
 
   // ── Char count ────────────────────────────────────────────────────────────
   function updateCharCount() {
