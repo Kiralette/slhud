@@ -263,28 +263,42 @@ async def get_feed(token: str, db=Depends(get_db)):
 # ── GET /flare/discover ───────────────────────────────────────────────────────
 
 @router.get("/discover")
-async def discover(token: str, db=Depends(get_db)):
+async def discover(token: str, category: str | None = None, db=Depends(get_db)):
     """Recent posts from all players — sorted by quality then recency."""
     player = await _get_player(token, db)
     if not player:
         raise HTTPException(status_code=401, detail="Invalid token.")
 
     if is_postgres():
-        rows = await db.fetch(
-            """SELECT p.*, pl.display_name, pl.avatar_uuid
+        base = """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
-               ORDER BY p.quality_tier DESC, p.created_at DESC
-               LIMIT 30""")
+               WHERE p.visibility = 'public'"""
+        if category:
+            rows = await db.fetch(
+                base + " AND p.category = $1 ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30",
+                category)
+        else:
+            rows = await db.fetch(
+                base + " ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30")
     else:
-        async with db.execute(
-            """SELECT p.*, pl.display_name, pl.avatar_uuid
-               FROM posts p
-               JOIN players pl ON pl.id = p.player_id
-               ORDER BY p.quality_tier DESC, p.created_at DESC
-               LIMIT 30"""
-        ) as cur:
-            rows = await cur.fetchall()
+        if category:
+            async with db.execute(
+                """SELECT p.*, pl.display_name, pl.avatar_uuid
+                   FROM posts p JOIN players pl ON pl.id = p.player_id
+                   WHERE p.visibility = 'public' AND p.category = ?
+                   ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""",
+                (category,)
+            ) as cur:
+                rows = await cur.fetchall()
+        else:
+            async with db.execute(
+                """SELECT p.*, pl.display_name, pl.avatar_uuid
+                   FROM posts p JOIN players pl ON pl.id = p.player_id
+                   WHERE p.visibility = 'public'
+                   ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30"""
+            ) as cur:
+                rows = await cur.fetchall()
 
     return {"discover": [_format_post(dict(r)) for r in rows]}
 
@@ -473,3 +487,462 @@ async def comment_post(body: CommentRequest, db=Depends(get_db)):
         )
 
     return {"status": "commented"}
+
+
+# ── Schemas (Phase 1 additions) ───────────────────────────────────────────────
+
+class RepostRequest(BaseModel):
+    token: str
+    post_id: int
+    comment: str | None = None  # optional quote-repost comment
+
+
+# ── Helpers (Phase 1) ─────────────────────────────────────────────────────────
+
+import re as _re
+
+def _parse_hashtags(text: str) -> list[str]:
+    """Extract #hashtags from post text, normalised to lowercase."""
+    return list({tag.lower() for tag in _re.findall(r'#([A-Za-z0-9_]+)', text)})
+
+
+def _parse_mentions(text: str) -> list[str]:
+    """Extract @mentions from post text."""
+    return list({m.lower() for m in _re.findall(r'@([A-Za-z0-9_. ]+?)(?=\s|$|[^A-Za-z0-9_.])', text)})
+
+
+# ── Patch create_post to handle new fields ────────────────────────────────────
+# (original create_post is above; this adds a new route that wraps it)
+
+class NewPostV2(BaseModel):
+    token: str
+    content_text: str
+    category: str = "life"
+    image_uuid: str | None = None
+    visibility: str = "public"   # public | friends
+
+
+@router.post("/post/v2")
+async def create_post_v2(body: NewPostV2, db=Depends(get_db)):
+    """Enhanced create post — supports image, visibility, hashtags, mentions."""
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    cfg = get_config()
+    player_id = player["id"]
+
+    valid_cats = cfg.get("flare", {}).get("categories", ["life"])
+    category   = body.category if body.category in valid_cats else "life"
+    visibility = body.visibility if body.visibility in ("public", "friends") else "public"
+
+    content = body.content_text.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Post content cannot be empty.")
+    if len(content) > 500:
+        raise HTTPException(status_code=400, detail="Post too long (500 char max).")
+
+    # Validate image_uuid format (basic check)
+    image_uuid = None
+    if body.image_uuid:
+        uuid_clean = body.image_uuid.strip()
+        if len(uuid_clean) in (32, 36):
+            image_uuid = uuid_clean
+
+    hashtags = _parse_hashtags(content)
+    hashtags_str = ",".join(hashtags) if hashtags else None
+
+    creativity   = await _get_skill_level(player_id, "creativity", db)
+    charisma     = await _get_skill_level(player_id, "charisma",   db)
+    quality_tier = _calculate_quality_tier(creativity, charisma, cfg)
+
+    await _ensure_flare_stats(player_id, db)
+
+    now = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+
+    if is_postgres():
+        stats_row = await db.fetchrow(
+            "SELECT follower_count FROM flare_stats WHERE player_id = $1", player_id)
+        follower_count = int(stats_row["follower_count"]) if stats_row else 0
+
+        post_id = await db.fetchval(
+            """INSERT INTO posts
+               (player_id, content_text, category, quality_tier, follower_count_at_post,
+                image_uuid, visibility, hashtags)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id""",
+            player_id, content, category, quality_tier, follower_count,
+            image_uuid, visibility, hashtags_str)
+
+        await db.execute(
+            """UPDATE flare_stats SET weekly_post_count = weekly_post_count + 1,
+               last_post_at = $1 WHERE player_id = $2""",
+            now, player_id)
+        await db.execute(
+            """INSERT INTO player_stats (player_id, total_posts_made) VALUES ($1, 1)
+               ON CONFLICT (player_id) DO UPDATE SET
+               total_posts_made = player_stats.total_posts_made + 1,
+               last_updated = $2""",
+            player_id, now)
+
+        # Index hashtags
+        for tag in hashtags:
+            await db.execute(
+                "INSERT INTO post_hashtags (post_id, tag, created_at) VALUES ($1,$2,$3)",
+                post_id, tag, now)
+
+        # Parse and notify mentions
+        mentions = _parse_mentions(content)
+        for mention_name in mentions:
+            mentioned = await db.fetchrow(
+                "SELECT id FROM players WHERE LOWER(display_name) = $1 AND is_banned = 0",
+                mention_name)
+            if mentioned and mentioned["id"] != player_id:
+                await db.execute(
+                    "INSERT INTO post_mentions (post_id, player_id, created_at) VALUES ($1,$2,$3)",
+                    post_id, mentioned["id"], now)
+                await push_notification(
+                    player_id=mentioned["id"], app_source="flare",
+                    title=f"{player['display_name']} mentioned you in a post",
+                    body=content[:80], priority="normal", db=db)
+
+    else:
+        async with db.execute(
+            "SELECT follower_count FROM flare_stats WHERE player_id = ?", (player_id,)
+        ) as cur:
+            stats_row = await cur.fetchone()
+        follower_count = int(stats_row["follower_count"]) if stats_row else 0
+
+        async with db.execute(
+            """INSERT INTO posts
+               (player_id, content_text, category, quality_tier, follower_count_at_post,
+                image_uuid, visibility, hashtags)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (player_id, content, category, quality_tier, follower_count,
+             image_uuid, visibility, hashtags_str)
+        ) as cur:
+            post_id = cur.lastrowid
+
+        await db.execute(
+            """UPDATE flare_stats SET weekly_post_count = weekly_post_count + 1,
+               last_post_at = ? WHERE player_id = ?""",
+            (now, player_id))
+        await db.execute(
+            "INSERT OR IGNORE INTO player_stats (player_id) VALUES (?)", (player_id,))
+        await db.execute(
+            """UPDATE player_stats SET total_posts_made = total_posts_made + 1,
+               last_updated = ? WHERE player_id = ?""",
+            (now, player_id))
+
+        for tag in hashtags:
+            await db.execute(
+                "INSERT INTO post_hashtags (post_id, tag, created_at) VALUES (?,?,?)",
+                (post_id, tag, now))
+
+        mentions = _parse_mentions(content)
+        for mention_name in mentions:
+            async with db.execute(
+                "SELECT id FROM players WHERE LOWER(display_name) = ? AND is_banned = 0",
+                (mention_name,)
+            ) as cur:
+                mentioned = await cur.fetchone()
+            if mentioned and mentioned["id"] != player_id:
+                await db.execute(
+                    "INSERT INTO post_mentions (post_id, player_id, created_at) VALUES (?,?,?)",
+                    (post_id, mentioned["id"], now))
+                await push_notification(
+                    player_id=mentioned["id"], app_source="flare",
+                    title=f"{player['display_name']} mentioned you in a post",
+                    body=content[:80], priority="normal", db=db)
+
+        await db.commit()
+
+    try:
+        from app.services.achievements import check_achievements
+        await check_achievements(player_id, "total_posts_made")
+    except Exception:
+        pass
+
+    return {
+        "status": "posted", "post_id": post_id,
+        "quality_tier": quality_tier,
+        "hashtags": hashtags,
+        "image_url": f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None,
+    }
+
+
+# ── GET /flare/post/{id} — post detail with real comments ────────────────────
+
+@router.get("/post/{post_id}")
+async def get_post_detail(post_id: int, token: str, db=Depends(get_db)):
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+
+    if is_postgres():
+        post = await db.fetchrow(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
+               FROM posts p JOIN players pl ON pl.id = p.player_id
+               WHERE p.id = $1""", post_id)
+        comments = await db.fetch(
+            """SELECT pe.*, pl.display_name, pl.avatar_uuid
+               FROM post_engagements pe
+               JOIN players pl ON pl.id = pe.player_id
+               WHERE pe.post_id = $1 AND pe.type = 'comment'
+               ORDER BY pe.created_at ASC""", post_id)
+        real_likes = await db.fetchval(
+            "SELECT COUNT(*) FROM post_engagements WHERE post_id = $1 AND type = 'like'",
+            post_id)
+        viewer_liked = await db.fetchrow(
+            "SELECT id FROM post_engagements WHERE post_id=$1 AND player_id=$2 AND type='like'",
+            post_id, player_id)
+        viewer_following = await db.fetchrow(
+            "SELECT id FROM follows WHERE follower_id=$1 AND following_id=$2",
+            player_id, post["player_id"]) if post else None
+    else:
+        async with db.execute(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
+               FROM posts p JOIN players pl ON pl.id = p.player_id
+               WHERE p.id = ?""", (post_id,)
+        ) as cur:
+            post = await cur.fetchone()
+        async with db.execute(
+            """SELECT pe.*, pl.display_name, pl.avatar_uuid
+               FROM post_engagements pe
+               JOIN players pl ON pl.id = pe.player_id
+               WHERE pe.post_id = ? AND pe.type = 'comment'
+               ORDER BY pe.created_at ASC""", (post_id,)
+        ) as cur:
+            comments = await cur.fetchall()
+        async with db.execute(
+            "SELECT COUNT(*) as cnt FROM post_engagements WHERE post_id=? AND type='like'",
+            (post_id,)
+        ) as cur:
+            rl = await cur.fetchone()
+        real_likes = rl["cnt"] if rl else 0
+        async with db.execute(
+            "SELECT id FROM post_engagements WHERE post_id=? AND player_id=? AND type='like'",
+            (post_id, player_id)
+        ) as cur:
+            viewer_liked = await cur.fetchone()
+        async with db.execute(
+            "SELECT id FROM follows WHERE follower_id=? AND following_id=?",
+            (player_id, post["player_id"])
+        ) as cur:
+            viewer_following = await cur.fetchone()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found.")
+
+    post = dict(post)
+    total_likes    = (post.get("npc_likes") or 0) + (real_likes or 0)
+    total_comments = len(comments)
+
+    image_uuid = post.get("image_uuid")
+    post["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
+    post["total_likes"]    = total_likes
+    post["total_comments"] = total_comments
+    post["viewer_has_liked"]    = bool(viewer_liked)
+    post["viewer_is_following"] = bool(viewer_following)
+    post["is_own_post"] = post["player_id"] == player_id
+
+    return {
+        "post":     post,
+        "comments": [dict(c) for c in comments],
+    }
+
+
+# ── POST /flare/repost ────────────────────────────────────────────────────────
+
+@router.post("/repost")
+async def repost(body: RepostRequest, db=Depends(get_db)):
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+
+    # Get original post
+    if is_postgres():
+        orig = await db.fetchrow("SELECT * FROM posts WHERE id = $1", body.post_id)
+    else:
+        async with db.execute("SELECT * FROM posts WHERE id = ?", (body.post_id,)) as cur:
+            orig = await cur.fetchone()
+
+    if not orig:
+        raise HTTPException(status_code=404, detail="Post not found.")
+
+    cfg = get_config()
+    creativity   = await _get_skill_level(player_id, "creativity", db)
+    charisma     = await _get_skill_level(player_id, "charisma",   db)
+    quality_tier = _calculate_quality_tier(creativity, charisma, cfg)
+
+    await _ensure_flare_stats(player_id, db)
+
+    content  = body.comment.strip() if body.comment else ""
+    now      = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+
+    if is_postgres():
+        stats_row = await db.fetchrow(
+            "SELECT follower_count FROM flare_stats WHERE player_id = $1", player_id)
+        follower_count = int(stats_row["follower_count"]) if stats_row else 0
+
+        post_id = await db.fetchval(
+            """INSERT INTO posts
+               (player_id, content_text, category, quality_tier, follower_count_at_post,
+                is_repost, original_post_id, visibility)
+               VALUES ($1,$2,$3,$4,$5,1,$6,'public') RETURNING id""",
+            player_id, content, orig["category"], quality_tier,
+            follower_count, body.post_id)
+
+        await db.execute(
+            """UPDATE flare_stats SET weekly_post_count = weekly_post_count + 1,
+               last_post_at = $1 WHERE player_id = $2""", now, player_id)
+
+    else:
+        async with db.execute(
+            "SELECT follower_count FROM flare_stats WHERE player_id = ?", (player_id,)
+        ) as cur:
+            stats_row = await cur.fetchone()
+        follower_count = int(stats_row["follower_count"]) if stats_row else 0
+
+        async with db.execute(
+            """INSERT INTO posts
+               (player_id, content_text, category, quality_tier, follower_count_at_post,
+                is_repost, original_post_id, visibility)
+               VALUES (?,?,?,?,?,1,?,'public')""",
+            (player_id, content, orig["category"], quality_tier,
+             follower_count, body.post_id)
+        ) as cur:
+            post_id = cur.lastrowid
+
+        await db.execute(
+            """UPDATE flare_stats SET weekly_post_count = weekly_post_count + 1,
+               last_post_at = ? WHERE player_id = ?""", (now, player_id))
+        await db.commit()
+
+    # Notify original author
+    if orig["player_id"] != player_id:
+        await push_notification(
+            player_id=orig["player_id"], app_source="flare",
+            title=f"{player['display_name']} reposted your post 🔁",
+            body=content[:60] if content else "Reposted your post.",
+            priority="low", db=db)
+
+    return {"status": "reposted", "post_id": post_id}
+
+
+# ── GET /flare/hashtag/{tag} ──────────────────────────────────────────────────
+
+@router.get("/hashtag/{tag}")
+async def hashtag_feed(tag: str, token: str, db=Depends(get_db)):
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    tag_clean = tag.lower().lstrip('#')
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
+               FROM post_hashtags ph
+               JOIN posts p ON p.id = ph.post_id
+               JOIN players pl ON pl.id = p.player_id
+               WHERE ph.tag = $1 AND p.visibility = 'public'
+               ORDER BY p.created_at DESC LIMIT 40""",
+            tag_clean)
+    else:
+        async with db.execute(
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
+               FROM post_hashtags ph
+               JOIN posts p ON p.id = ph.post_id
+               JOIN players pl ON pl.id = p.player_id
+               WHERE ph.tag = ? AND p.visibility = 'public'
+               ORDER BY p.created_at DESC LIMIT 40""",
+            (tag_clean,)
+        ) as cur:
+            rows = await cur.fetchall()
+
+    return {"tag": tag_clean, "posts": [dict(r) for r in rows]}
+
+
+# ── GET /flare/trending-hashtags ──────────────────────────────────────────────
+
+@router.get("/trending-hashtags")
+async def trending_hashtags(token: str, db=Depends(get_db)):
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT ph.tag, COUNT(*) as post_count
+               FROM post_hashtags ph
+               JOIN posts p ON p.id = ph.post_id
+               WHERE ph.created_at >= (now() - interval '24 hours')::text
+               AND p.visibility = 'public'
+               GROUP BY ph.tag
+               ORDER BY post_count DESC LIMIT 15""")
+    else:
+        async with db.execute(
+            """SELECT ph.tag, COUNT(*) as post_count
+               FROM post_hashtags ph
+               JOIN posts p ON p.id = ph.post_id
+               WHERE ph.created_at >= datetime('now', '-24 hours')
+               AND p.visibility = 'public'
+               GROUP BY ph.tag
+               ORDER BY post_count DESC LIMIT 15"""
+        ) as cur:
+            rows = await cur.fetchall()
+
+    return {"trending": [dict(r) for r in rows]}
+
+
+# ── GET /flare/mention-search ─────────────────────────────────────────────────
+
+@router.get("/mention-search")
+async def mention_search(token: str, q: str, db=Depends(get_db)):
+    """Search players by display_name prefix for @mention autocomplete."""
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    q_clean = q.strip()[:30]
+    if len(q_clean) < 1:
+        return {"results": []}
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT p.id, p.display_name, p.avatar_uuid,
+                      pp.profile_pic_uuid
+               FROM players p
+               LEFT JOIN player_profiles pp ON pp.player_id = p.id
+               WHERE LOWER(p.display_name) LIKE $1
+               AND p.is_banned = 0
+               ORDER BY p.display_name ASC LIMIT 8""",
+            f"{q_clean.lower()}%")
+    else:
+        async with db.execute(
+            """SELECT p.id, p.display_name, p.avatar_uuid,
+                      pp.profile_pic_uuid
+               FROM players p
+               LEFT JOIN player_profiles pp ON pp.player_id = p.id
+               WHERE LOWER(p.display_name) LIKE ?
+               AND p.is_banned = 0
+               ORDER BY p.display_name ASC LIMIT 8""",
+            (f"{q_clean.lower()}%",)
+        ) as cur:
+            rows = await cur.fetchall()
+
+    return {
+        "results": [
+            {
+                "id":           r["id"],
+                "display_name": r["display_name"],
+                "avatar_url":   f"https://secondlife.com/app/image/{r['profile_pic_uuid']}/2"
+                                if r.get("profile_pic_uuid") else None,
+            }
+            for r in rows
+        ]
+    }

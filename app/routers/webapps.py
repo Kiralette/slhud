@@ -782,12 +782,18 @@ async def flare(
         feed_rows  = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
-               WHERE p.player_id IN (SELECT following_id FROM follows WHERE follower_id = $1)
-                  OR p.player_id = $1
+               WHERE (p.player_id IN (SELECT following_id FROM follows WHERE follower_id = $1)
+                  OR p.player_id = $1)
+               AND (p.visibility = 'public'
+                   OR p.player_id = $1
+                   OR (p.visibility = 'friends' AND EXISTS (
+                       SELECT 1 FROM follows WHERE follower_id = p.player_id AND following_id = $1
+                   )))
                ORDER BY p.created_at DESC LIMIT 40""", player_id)
         discover_rows = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
+               WHERE p.visibility = 'public'
                ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""")
         profile_posts_rows = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
@@ -816,13 +822,19 @@ async def flare(
         async with db.execute(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
-               WHERE p.player_id IN (SELECT following_id FROM follows WHERE follower_id = ?)
-                  OR p.player_id = ?
-               ORDER BY p.created_at DESC LIMIT 40""", (player_id, player_id)) as cur:
+               WHERE (p.player_id IN (SELECT following_id FROM follows WHERE follower_id = ?)
+                  OR p.player_id = ?)
+               AND (p.visibility = 'public'
+                   OR p.player_id = ?
+                   OR (p.visibility = 'friends' AND EXISTS (
+                       SELECT 1 FROM follows WHERE follower_id = p.player_id AND following_id = ?
+                   )))
+               ORDER BY p.created_at DESC LIMIT 40""", (player_id, player_id, player_id, player_id)) as cur:
             feed_rows = await cur.fetchall()
         async with db.execute(
             """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
+               WHERE p.visibility = 'public'
                ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""") as cur:
             discover_rows = await cur.fetchall()
         async with db.execute(
@@ -845,16 +857,54 @@ async def flare(
     real_likes_map = {r["post_id"]: r["cnt"] for r in real_likes_rows}
     liked_post_ids = {r["post_id"] for r in liked_post_ids_rows}
 
+    # Fetch real comment counts per post
+    if is_postgres():
+        real_comments_rows = await db.fetch(
+            """SELECT post_id, COUNT(*) as cnt FROM post_engagements
+               WHERE type = 'comment' GROUP BY post_id""")
+    else:
+        async with db.execute(
+            """SELECT post_id, COUNT(*) as cnt FROM post_engagements
+               WHERE type = 'comment' GROUP BY post_id"""
+        ) as cur:
+            real_comments_rows = await cur.fetchall()
+    real_comments_map = {r["post_id"]: r["cnt"] for r in real_comments_rows}
+
+    # Fetch trending hashtags (last 24h)
+    try:
+        if is_postgres():
+            trending_rows = await db.fetch(
+                """SELECT ph.tag, COUNT(*) as post_count
+                   FROM post_hashtags ph
+                   JOIN posts p ON p.id = ph.post_id
+                   WHERE ph.created_at >= (now() - interval '24 hours')::text
+                   AND p.visibility = 'public'
+                   GROUP BY ph.tag ORDER BY post_count DESC LIMIT 10""")
+        else:
+            async with db.execute(
+                """SELECT ph.tag, COUNT(*) as post_count
+                   FROM post_hashtags ph
+                   JOIN posts p ON p.id = ph.post_id
+                   WHERE ph.created_at >= datetime('now', '-24 hours')
+                   AND p.visibility = 'public'
+                   GROUP BY ph.tag ORDER BY post_count DESC LIMIT 10"""
+            ) as cur:
+                trending_rows = await cur.fetchall()
+        trending_hashtags = [dict(r) for r in trending_rows]
+    except Exception:
+        trending_hashtags = []  # table may not exist yet
+
     def fmt_post(row):
         d = dict(row)
         d["content_text"] = d.get("content_text", "")
-        d["player_uuid"] = d.get("avatar_uuid", "")
+        d["player_uuid"]  = d.get("avatar_uuid", "")
         post_id = d.get("id")
-        # Total likes = NPC likes + real player likes
-        d["total_likes"] = d.get("npc_likes", 0) + real_likes_map.get(post_id, 0)
-        d["total_comments"] = d.get("npc_comments", 0)
-        d["viewer_has_liked"] = post_id in liked_post_ids
+        d["total_likes"]    = d.get("npc_likes", 0) + real_likes_map.get(post_id, 0)
+        d["total_comments"] = real_comments_map.get(post_id, 0) + d.get("npc_comments", 0)
+        d["viewer_has_liked"]    = post_id in liked_post_ids
         d["viewer_is_following"] = d.get("player_id") in following_ids
+        image_uuid = d.get("image_uuid")
+        d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
         return d
 
     wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
@@ -892,6 +942,7 @@ async def flare(
         "flare_stats":        flare_stats,
         "flare_profile":      flare_profile,
         "categories":         categories,
+        "trending_hashtags":  trending_hashtags,
         "following_ids":      list(following_ids),
     })
 

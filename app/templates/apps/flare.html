@@ -427,6 +427,7 @@
 <script>
   const TOKEN = "{{ token }}";
 
+  // ── Char count ────────────────────────────────────────────────────────────
   function updateCharCount() {
     const ta   = document.getElementById('post-content');
     const left = 500 - ta.value.length;
@@ -435,22 +436,110 @@
     el.classList.toggle('warn', left < 60);
   }
 
+  // ── Visibility toggle ─────────────────────────────────────────────────────
+  let _postVisibility = 'public';
+  function setVisibility(val, btn) {
+    _postVisibility = val;
+    document.querySelectorAll('.compose-vis-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ── Image UUID preview ────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    const uuidInput = document.getElementById('post-image-uuid');
+    if (uuidInput) {
+      uuidInput.addEventListener('input', function() {
+        const uuid    = this.value.trim();
+        const preview = document.getElementById('image-preview');
+        const img     = document.getElementById('image-preview-img');
+        if (uuid.length >= 32) {
+          img.src = `https://secondlife.com/app/image/${uuid}/2`;
+          preview.style.display = 'block';
+          img.onerror = () => { preview.style.display = 'none'; };
+        } else {
+          preview.style.display = 'none';
+        }
+      });
+    }
+  });
+
+  // ── @mention autocomplete ─────────────────────────────────────────────────
+  let _mentionTimer = null;
+  let _mentionStart = -1;
+
+  async function detectMention(ta) {
+    const val    = ta.value;
+    const cursor = ta.selectionStart;
+    // Walk back from cursor to find @ symbol
+    let i = cursor - 1;
+    while (i >= 0 && val[i] !== '@' && val[i] !== ' ' && val[i] !== '\n') i--;
+    const dropdown = document.getElementById('mention-dropdown');
+    if (i >= 0 && val[i] === '@') {
+      const query = val.slice(i + 1, cursor);
+      _mentionStart = i;
+      if (query.length === 0) { dropdown.style.display = 'none'; return; }
+      clearTimeout(_mentionTimer);
+      _mentionTimer = setTimeout(async () => {
+        try {
+          const res  = await fetch(`/flare/mention-search?token=${TOKEN}&q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          const results = data.results || [];
+          if (!results.length) { dropdown.style.display = 'none'; return; }
+          dropdown.innerHTML = results.map(r => `
+            <div onclick="insertMention('${r.display_name}')"
+              style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--bg3);">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);flex-shrink:0;
+                ${r.avatar_url ? `background-image:url('${r.avatar_url}');background-size:cover;` : ''}
+                display:flex;align-items:center;justify-content:center;font-size:12px;">
+                ${r.avatar_url ? '' : r.display_name[0]}
+              </div>
+              <span style="font-size:13px;color:var(--ink);">${r.display_name}</span>
+            </div>`).join('');
+          dropdown.style.display = 'block';
+        } catch(e) { dropdown.style.display = 'none'; }
+      }, 220);
+    } else {
+      dropdown.style.display = 'none';
+      _mentionStart = -1;
+    }
+  }
+
+  function insertMention(name) {
+    const ta  = document.getElementById('post-content');
+    const val = ta.value;
+    const cursor = ta.selectionStart;
+    const before = val.slice(0, _mentionStart) + '@' + name + ' ';
+    const after  = val.slice(cursor);
+    ta.value = before + after;
+    ta.selectionStart = ta.selectionEnd = before.length;
+    document.getElementById('mention-dropdown').style.display = 'none';
+    updateCharCount();
+    ta.focus();
+  }
+
+  // ── Submit post ───────────────────────────────────────────────────────────
   async function submitPost() {
-    const content = document.getElementById('post-content').value.trim();
-    const cat     = document.getElementById('post-cat').value;
-    const btn     = document.getElementById('post-btn');
+    const content   = document.getElementById('post-content').value.trim();
+    const cat       = document.getElementById('post-cat').value;
+    const imageUuid = document.getElementById('post-image-uuid')?.value.trim() || null;
+    const btn       = document.getElementById('post-btn');
     if (!content) { toast('Write something first'); return; }
     btn.disabled = true; btn.textContent = '···';
     try {
-      const res = await fetch('/flare/post', {
+      const res = await fetch('/flare/post/v2', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token: TOKEN, content_text: content, category: cat })
+        body: JSON.stringify({
+          token: TOKEN, content_text: content, category: cat,
+          image_uuid: imageUuid || null, visibility: _postVisibility
+        })
       });
       const data = await res.json();
       if (res.ok) {
         toast('Posted ✓ — ' + (data.tier_label || 'Standard') + ' quality');
         document.getElementById('post-content').value = '';
+        if (document.getElementById('post-image-uuid')) document.getElementById('post-image-uuid').value = '';
+        if (document.getElementById('image-preview')) document.getElementById('image-preview').style.display = 'none';
         updateCharCount();
         setTimeout(() => location.reload(), 1600);
       } else {
@@ -463,109 +552,308 @@
     }
   }
 
+  // ── Like ──────────────────────────────────────────────────────────────────
   async function likePost(postId, token, btn) {
     if (btn.classList.contains('liked')) return;
-    // Optimistic UI update immediately
     btn.classList.add('liked');
     btn.textContent = '♥ Liked';
     const countEl = document.getElementById('counts-' + postId);
     if (countEl) {
-      const parts = countEl.textContent.split('·');
-      const likes = (parseInt(parts[0]) || 0) + 1;
+      const parts    = countEl.textContent.split('·');
+      const likes    = (parseInt(parts[0]) || 0) + 1;
       const comments = parseInt(parts[1]) || 0;
       countEl.textContent = likes + ' likes · ' + comments + ' comments';
     }
+    // Also update detail sheet if open
+    const sheetLikes = document.getElementById('detail-like-count');
+    if (sheetLikes) sheetLikes.textContent = (parseInt(sheetLikes.textContent) || 0) + 1;
     try {
       await fetch('/flare/like', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: token, post_id: postId })
       });
-    } catch(e) { /* silent — optimistic update already applied */ }
+    } catch(e) {}
   }
 
-  async function commentPost(postId, token) {
-    const content = prompt('Your comment:');
-    if (!content || !content.trim()) return;
+  // ── Repost ────────────────────────────────────────────────────────────────
+  async function repostPost(postId) {
     try {
-      const res = await fetch('/flare/comment', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token: token, post_id: postId, content: content.trim() })
+      const res = await fetch('/flare/repost', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, post_id: postId })
       });
-      if (res.ok) {
-        toast('Comment posted 💬');
-        // Refresh comment count
-        const countEl = document.getElementById('counts-' + postId);
-        if (countEl) {
-          const parts = countEl.textContent.split('·');
-          const likes = parseInt(parts[0]) || 0;
-          const comments = (parseInt((parts[1] || '0')) || 0) + 1;
-          countEl.textContent = likes + ' likes · ' + comments + ' comments';
-        }
-      } else {
-        const data = await res.json();
-        toast(data.detail || 'Could not comment');
-      }
+      if (res.ok) { toast('Reposted 🔁'); }
+      else { const d = await res.json(); toast(d.detail || 'Could not repost'); }
     } catch(e) { toast('Connection error'); }
   }
 
+  // ── Post detail sheet ─────────────────────────────────────────────────────
+  let _detailPostId = null;
+
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:998;" id="post-overlay" onclick="closePostDetail()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:999;
+  max-height:90vh;display:flex;flex-direction:column;overflow:hidden;" id="post-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;flex-shrink:0;"></div>
+  <div style="overflow-y:auto;flex:1;padding-bottom:80px;" id="post-sheet-body">
+    <div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;display:flex;gap:8px;
+    padding:10px 14px 18px;background:var(--bg);border-top:1px solid var(--bg3);">
+    <textarea id="sheet-comment-input" placeholder="Add a comment…"
+      style="flex:1;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--bg4);
+             background:var(--bg2);font-size:13px;color:var(--ink);font-family:inherit;
+             resize:none;height:38px;box-sizing:border-box;"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComment();}"></textarea>
+    <button onclick="sendComment()"
+      style="width:38px;height:38px;border-radius:var(--radius-sm);background:var(--ink);
+             color:var(--bg);border:none;font-size:16px;cursor:pointer;flex-shrink:0;">↑</button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  async function openPostDetail(postId) {
+    _detailPostId = postId;
+    document.getElementById('post-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('post-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+    document.getElementById('post-sheet-body').innerHTML =
+      '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
+    document.getElementById('sheet-comment-input').value = '';
+    try {
+      const res  = await fetch(`/flare/post/${postId}?token=${TOKEN}`);
+      const data = await res.json();
+      renderPostDetail(data);
+    } catch(e) {
+      document.getElementById('post-sheet-body').innerHTML =
+        '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
+    }
+  }
+
+  function closePostDetail() {
+    document.getElementById('post-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('post-overlay').style.display = 'none';
+    _detailPostId = null;
+  }
+
+  function renderPostDetail(data) {
+    const post     = data.post;
+    const comments = data.comments || [];
+    const liked    = post.viewer_has_liked;
+
+    const imageHtml = post.image_url
+      ? `<div style="margin:10px 0;border-radius:var(--radius-sm);overflow:hidden;">
+           <img src="${post.image_url}" style="width:100%;object-fit:cover;max-height:260px;"
+                onerror="this.parentElement.style.display='none'">
+         </div>` : '';
+
+    const commentsHtml = comments.length
+      ? comments.map(c => `
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:1px solid var(--bg3);">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);flex-shrink:0;
+            ${c.avatar_uuid ? `background-image:url('/players/avatar-image/${c.avatar_uuid}');background-size:cover;` : ''}
+            display:flex;align-items:center;justify-content:center;font-size:12px;">
+            ${c.avatar_uuid ? '' : (c.display_name||'?')[0]}
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--ink);">${c.display_name}</div>
+            <div style="font-size:13px;color:var(--ink2);line-height:1.5;margin-top:2px;">${c.content}</div>
+            <div style="font-size:10px;color:var(--ink4);margin-top:2px;">${(c.created_at||'').slice(0,10)}</div>
+          </div>
+        </div>`).join('')
+      : '<div style="padding:16px 18px;color:var(--ink4);font-size:13px;">No comments yet. Be the first!</div>';
+
+    document.getElementById('post-sheet-body').innerHTML = `
+      ${imageHtml}
+      <div style="padding:14px 16px;border-bottom:1px solid var(--bg3);">
+        <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px;">${post.display_name}</div>
+        <div style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">${post.category}</div>
+        <div style="font-size:14px;color:var(--ink);line-height:1.6;">${post.content_text}</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:10px;padding-top:8px;border-top:0.5px solid var(--border);">
+          <button id="detail-like-btn" onclick="likePost(${post.id},'${TOKEN}',this)"
+            class="post-action-btn ${liked ? 'liked' : ''}"
+            style="font-size:13px;">
+            ${liked ? '♥ Liked' : '♡ Like'}
+          </button>
+          <button class="post-action-btn" onclick="repostPost(${post.id})" style="font-size:13px;">🔁 Repost</button>
+          <span style="font-size:12px;color:var(--ink3);">
+            <span id="detail-like-count">${post.total_likes}</span> likes ·
+            <span id="detail-comment-count">${post.total_comments}</span> comments
+          </span>
+        </div>
+      </div>
+      <div style="padding:8px 16px 4px;font-size:10px;font-weight:600;letter-spacing:.1em;
+        text-transform:uppercase;color:var(--ink4);">Comments</div>
+      <div id="comment-thread">${commentsHtml}</div>
+    `;
+  }
+
+  async function sendComment() {
+    if (!_detailPostId) return;
+    const input = document.getElementById('sheet-comment-input');
+    const text  = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    try {
+      const res = await fetch('/flare/comment', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, post_id: _detailPostId, content: text })
+      });
+      if (res.ok) {
+        // Optimistic: append comment to thread
+        const thread = document.getElementById('comment-thread');
+        if (thread) {
+          const noComments = thread.querySelector('div[style*="No comments"]');
+          if (noComments) noComments.remove();
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:1px solid var(--bg3);';
+          row.innerHTML = `
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);flex-shrink:0;
+              display:flex;align-items:center;justify-content:center;font-size:12px;">?</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--ink);">You</div>
+              <div style="font-size:13px;color:var(--ink2);line-height:1.5;margin-top:2px;">${text}</div>
+            </div>`;
+          thread.appendChild(row);
+        }
+        // Update counts
+        const countEl = document.getElementById('counts-' + _detailPostId);
+        if (countEl) {
+          const parts = countEl.textContent.split('·');
+          const likes = parseInt(parts[0]) || 0;
+          const coms  = (parseInt(parts[1]) || 0) + 1;
+          countEl.textContent = likes + ' likes · ' + coms + ' comments';
+        }
+        const dc = document.getElementById('detail-comment-count');
+        if (dc) dc.textContent = (parseInt(dc.textContent) || 0) + 1;
+      } else {
+        input.value = text;
+        const d = await res.json();
+        toast(d.detail || 'Could not comment');
+      }
+    } catch(e) { input.value = text; toast('Connection error'); }
+  }
+
+  // ── Discover filter chips ─────────────────────────────────────────────────
+  let _discFilter = '';
+  function setDiscFilter(btn, cat) {
+    document.querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _discFilter = cat;
+    loadDiscover(cat);
+  }
+
+  async function loadDiscover(cat) {
+    const container = document.getElementById('disc-posts-container');
+    if (!container) return;
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
+    let url = `/flare/discover?token=${TOKEN}`;
+    if (cat) url += `&category=${encodeURIComponent(cat)}`;
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      const posts = data.discover || [];
+      if (!posts.length) {
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">No posts found.</div>';
+        return;
+      }
+      container.innerHTML = posts.map(p => `
+        <div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
+          <div class="post-header">
+            <div>
+              <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name || 'Unknown'}</span>
+              <div class="post-meta">${(p.created_at||'').slice(0,10)}</div>
+            </div>
+            ${p.quality_tier > 0 ? `<span class="post-quality q${p.quality_tier}">${['','Good','Great','✦ Exceptional'][p.quality_tier]||''}</span>` : ''}
+          </div>
+          <div class="post-cat">${(p.category||'').replace(/_/g,' ')}</div>
+          ${p.image_url ? `<div style="margin:8px 0;border-radius:var(--radius-sm);overflow:hidden;max-height:180px;"><img src="${p.image_url}" style="width:100%;object-fit:cover;max-height:180px;" onerror="this.parentElement.style.display='none'"></div>` : ''}
+          <div class="post-content">${p.content_text}</div>
+          <div class="post-actions" onclick="event.stopPropagation();">
+            <button class="post-action-btn${p.viewer_has_liked?' liked':''}" id="like-btn-${p.id}"
+              onclick="likePost(${p.id},'${TOKEN}',this)">${p.viewer_has_liked?'♥ Liked':'♡ Like'}</button>
+            <button class="post-action-btn" onclick="openPostDetail(${p.id})">💬 Comment</button>
+            <button class="post-action-btn" onclick="repostPost(${p.id})">🔁 Repost</button>
+            <span class="post-npc-count" id="counts-${p.id}">${p.total_likes} likes · ${p.total_comments} comments</span>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
+    }
+  }
+
+  // ── Hashtag feed ──────────────────────────────────────────────────────────
+  async function openHashtagFeed(tag) {
+    // Switch to discover tab and filter by tag
+    showTab('tab-discover');
+    const container = document.getElementById('disc-posts-container');
+    if (!container) return;
+    container.innerHTML = `<div style="padding:12px 18px 4px;font-size:15px;font-weight:600;color:var(--ink);">#${tag}</div>
+      <div style="padding:4px 18px 20px;color:var(--ink4);font-size:12px;">Loading…</div>`;
+    try {
+      const res  = await fetch(`/flare/hashtag/${encodeURIComponent(tag)}?token=${TOKEN}`);
+      const data = await res.json();
+      const posts = data.posts || [];
+      const header = `<div style="padding:12px 18px 10px;border-bottom:1px solid var(--bg3);">
+        <span style="font-size:16px;font-weight:700;color:var(--ink);">#${tag}</span>
+        <span style="font-size:12px;color:var(--ink4);margin-left:8px;">${posts.length} post${posts.length!==1?'s':''}</span>
+        <button onclick="setDiscFilter(document.querySelector('.disc-chip'),'')"
+          style="float:right;background:none;border:none;font-size:12px;color:var(--ink4);cursor:pointer;">✕ Clear</button>
+      </div>`;
+      container.innerHTML = header + (posts.length
+        ? posts.map(p => `
+          <div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
+            <div class="post-header">
+              <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name||'Unknown'}</span>
+            </div>
+            <div class="post-cat">${p.category||''}</div>
+            ${p.image_url ? `<img src="${p.image_url}" style="width:100%;border-radius:var(--radius-sm);max-height:180px;object-fit:cover;margin:6px 0;" onerror="this.style.display='none'">` : ''}
+            <div class="post-content">${p.content_text}</div>
+          </div>`).join('')
+        : '<div style="padding:40px;text-align:center;color:var(--ink4);">No posts with this hashtag yet.</div>');
+    } catch(e) { container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>'; }
+  }
+
+  // ── Follow / unfollow ─────────────────────────────────────────────────────
   async function toggleFollow(playerUuid, playerName, token, btn) {
     const isFollowing = btn.classList.contains('following');
-
     if (isFollowing) {
-      // Prompt to unfollow
-      if (!confirm(`Unfollow ${playerName}?`)) return;
       try {
         const res = await fetch('/social/follow', {
-          method: 'DELETE',
-          headers: {'Content-Type':'application/json'},
+          method: 'DELETE', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ follower_token: token, following_avatar_uuid: playerUuid })
         });
         if (res.ok) {
-          btn.textContent = '+ Follow';
-          btn.classList.remove('following');
-          btn.style.color = '';
+          btn.textContent = '+ Follow'; btn.classList.remove('following'); btn.style.color = '';
           toast(`Unfollowed ${playerName}`);
           setTimeout(() => location.reload(), 1200);
-        } else {
-          const data = await res.json();
-          toast(data.detail || 'Could not unfollow');
-        }
+        } else { const d = await res.json(); toast(d.detail || 'Could not unfollow'); }
       } catch(e) { toast('Could not unfollow'); }
     } else {
-      // Follow
       try {
         const res = await fetch('/social/follow', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
+          method: 'POST', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ follower_token: token, following_avatar_uuid: playerUuid })
         });
         if (res.ok) {
-          btn.textContent = '✓ Following';
-          btn.classList.add('following');
-          btn.style.color = 'var(--green)';
+          btn.textContent = '✓ Following'; btn.classList.add('following'); btn.style.color = 'var(--green)';
           toast(`Following ${playerName} ✓`);
           setTimeout(() => location.reload(), 1800);
-        } else {
-          const data = await res.json();
-          toast(data.detail || 'Could not follow');
-        }
+        } else { const d = await res.json(); toast(d.detail || 'Could not follow'); }
       } catch(e) { toast('Could not follow'); }
     }
   }
 
-  // Brand deal follower milestone labels
-  const MILESTONES = [50000, 10000, 5000, 1000, 500];
-  function nextMilestone(count) {
-    return MILESTONES.find(m => m > count) || null;
-  }
   // ── Relationship status sheet ─────────────────────────────────────────────
   (function() {
     const el = document.createElement('div');
     el.innerHTML = `
-<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:999;" id="relstatus-overlay" onclick="closeRelStatusSheet()"></div>
-<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:1000;max-height:65vh;overflow-y:auto;" id="relstatus-sheet">
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1999;" id="relstatus-overlay" onclick="closeRelStatusSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:2000;max-height:65vh;overflow-y:auto;" id="relstatus-sheet">
   <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
   <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
     <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Relationship status</div>
@@ -582,9 +870,8 @@
   </div>
 </div>`;
     while (el.firstChild) document.body.appendChild(el.firstChild);
-    // Inject styles
     const style = document.createElement('style');
-    style.textContent = `.relstatus-opt { padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--bg4); background:var(--bg2); font-size:14px; color:var(--ink); cursor:pointer; text-align:left; font-family:inherit; transition:background .12s; } .relstatus-opt:active { background:var(--bg3); }`;
+    style.textContent = `.relstatus-opt{padding:12px 16px;border-radius:var(--radius-sm);border:1px solid var(--bg4);background:var(--bg2);font-size:14px;color:var(--ink);cursor:pointer;text-align:left;font-family:inherit;transition:background .12s;}.relstatus-opt:active{background:var(--bg3);}`;
     document.head.appendChild(style);
   })();
 
@@ -607,5 +894,8 @@
       else toast('Could not update');
     } catch(e) { toast('Connection error'); }
   }
+
+  // Discover also needs /flare/discover to support category filter
+  // We pass it via query param - update discover endpoint to accept it
 </script>
 {% endblock %}

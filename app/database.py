@@ -500,6 +500,12 @@ async def _init_sqlite():
             "ALTER TABLE cycle_log ADD COLUMN override_note TEXT DEFAULT NULL",
             # player_occurrences — surrogate/partner linking
             "ALTER TABLE player_occurrences ADD COLUMN linked_player_uuid TEXT DEFAULT NULL",
+            # posts — phase 1 flare expansion
+            "ALTER TABLE posts ADD COLUMN image_uuid TEXT DEFAULT NULL",
+            "ALTER TABLE posts ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public'",
+            "ALTER TABLE posts ADD COLUMN is_repost INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE posts ADD COLUMN original_post_id INTEGER DEFAULT NULL",
+            "ALTER TABLE posts ADD COLUMN hashtags TEXT DEFAULT NULL",
         ]
         for sql in migrations_sqlite:
             try:
@@ -540,6 +546,25 @@ async def _init_sqlite():
             )
         """)
 
+        await db.commit()
+
+        # ── Flare Phase 1 Tables (SQLite) ─────────────────────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS post_hashtags (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                tag        TEXT    NOT NULL,
+                created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS post_mentions (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                player_id  INTEGER NOT NULL REFERENCES players(id),
+                created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
         await db.commit()
 
         # ── Spark (Dating) Tables (SQLite) ────────────────────────────────────
@@ -1437,6 +1462,12 @@ async def _init_postgres():
             "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS is_override INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE cycle_log ADD COLUMN IF NOT EXISTS override_note TEXT DEFAULT NULL",
             "ALTER TABLE player_occurrences ADD COLUMN IF NOT EXISTS linked_player_uuid TEXT DEFAULT NULL",
+            # posts — phase 1 flare expansion
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS image_uuid TEXT DEFAULT NULL",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'public'",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_repost INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS original_post_id INTEGER DEFAULT NULL",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS hashtags TEXT DEFAULT NULL",
         ]
         for sql in migrations_pg:
             try:
@@ -1473,6 +1504,24 @@ async def _init_postgres():
                 peak_day_hit    INTEGER NOT NULL DEFAULT 0,
                 result          TEXT    DEFAULT NULL,
                 checked_at      TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+
+        # ── Flare Phase 1 Tables (PostgreSQL) ─────────────────────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS post_hashtags (
+                id         SERIAL  PRIMARY KEY,
+                post_id    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                tag        TEXT    NOT NULL,
+                created_at TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS post_mentions (
+                id         SERIAL  PRIMARY KEY,
+                post_id    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                player_id  INTEGER NOT NULL REFERENCES players(id),
+                created_at TEXT    NOT NULL DEFAULT (now()::text)
             )
         """)
 

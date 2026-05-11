@@ -1047,10 +1047,20 @@ flare:
   # Post categories
   categories:
     - life
-    - food
     - fashion
+    - beauty
+    - food
     - fitness
     - music
+    - gaming
+    - art
+    - career
+    - relationships
+    - home
+    - travel
+    - events
+    - drama
+    - adult
     - gaming
     - art
     - career
