@@ -861,23 +861,23 @@
           style="color:var(--gold);text-decoration:none;font-weight:600;">#${tag}</a>`)
       .replace(/@([A-Za-z0-9_.]+)/g, (_, name) =>
         `<a href="javascript:void(0)"
-          onclick="event.stopPropagation();navigateToMention('${name.replace(/'/g,"\\'")}',this)"
+          onclick="event.stopPropagation();window._navMention('${name.replace(/'/g,"\\'")}')"
           style="color:var(--ink);font-weight:600;text-decoration:none;cursor:pointer;">@${name}</a>`);
   }
 
-  async function navigateToMention(displayName, el) {
+  window._navMention = async function(displayName) {
     try {
       const res  = await fetch(`/flare/mention-search?token=${TOKEN}&q=${encodeURIComponent(displayName)}`);
       const data = await res.json();
       const match = (data.results || []).find(r =>
         r.display_name.toLowerCase() === displayName.toLowerCase());
-      if (match) {
-        window.location.href = `/app/player/${match.avatar_uuid || ''}?token=${TOKEN}`;
+      if (match && match.avatar_uuid) {
+        window.location.href = `/app/player/${match.avatar_uuid}?token=${TOKEN}`;
       } else {
-        toast('Player not found');
+        toast('@' + displayName + ' not found');
       }
     } catch(e) { toast('Could not load profile'); }
-  }
+  };
 
   // Render all post-content divs that have data-content attr
   function renderPostContents() {
@@ -915,9 +915,11 @@
         container.innerHTML = '<div class="empty"><div class="empty-icon">✦</div><div style="font-size:13px;color:var(--ink4);text-align:center;padding:0 24px;">No posts yet. Follow people or set your interests to personalise this feed.</div></div>';
         return;
       }
-      // Filter by category if set
-      const filtered = _discCatFilter ? posts.filter(p => p.category === _discCatFilter) : posts;
-      container.innerHTML = filtered.map(p => renderPostCard(p)).join('');
+      // Filter by selected categories (supports multi-select)
+      const filtered = _selectedFilters.size > 0
+        ? posts.filter(p => _selectedFilters.has(p.category))
+        : posts;
+      container.innerHTML = (filtered.length ? filtered : posts).map(p => renderPostCard(p)).join('');
     } catch(e) {
       container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
     }
@@ -1041,6 +1043,7 @@
       btn.style.color = count > 0 ? 'var(--ink)' : 'var(--ink3)';
       btn.style.borderColor = count > 0 ? 'var(--ink)' : '';
     }
+    // For single category pass to API; for multiple, fetch all and filter client-side
     _discCatFilter = _selectedFilters.size === 1 ? [..._selectedFilters][0] : '';
     if (_activeSubTab === 'for-you') loadForYou();
     else loadDiscover(_discCatFilter);

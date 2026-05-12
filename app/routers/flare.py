@@ -99,18 +99,35 @@ async def _ensure_flare_stats(player_id: int, db):
 
 
 def _format_post(row: dict, include_author: bool = True) -> dict:
+    image_uuid = row.get("image_uuid")
     return {
         "id":                    row["id"],
         "player_id":             row["player_id"],
         "player_uuid":           row.get("avatar_uuid", ""),
-        "display_name":          row.get("display_name", ""),
-        "content_text":          row["content_text"],
-        "category":              row["category"],
-        "quality_tier":          row["quality_tier"],
-        "npc_likes":             row["npc_likes"],
-        "npc_comments":          row["npc_comments"],
-        "is_brand_deal_post":    bool(row["is_brand_deal_post"]),
-        "created_at":            row["created_at"],
+        "display_name":          row.get("display_name", "") if include_author else "",
+        "content_text":          row.get("content_text", ""),
+        "category":              row.get("category", ""),
+        "quality_tier":          row.get("quality_tier", 0),
+        "npc_likes":             row.get("npc_likes", 0),
+        "npc_comments":          row.get("npc_comments", 0),
+        "total_likes":           row.get("npc_likes", 0),
+        "total_comments":        row.get("npc_comments", 0),
+        "is_brand_deal_post":    bool(row.get("is_brand_deal_post", False)),
+        "is_repost":             bool(row.get("is_repost", False)),
+        "original_post_id":      row.get("original_post_id"),
+        "original_content":      row.get("original_content"),
+        "original_author":       row.get("original_author"),
+        "is_locked":             bool(row.get("is_locked", False)),
+        "ppv_price":             row.get("ppv_price", 0),
+        "is_adult":              bool(row.get("is_adult", False)),
+        "visibility":            row.get("visibility", "public"),
+        "image_uuid":            image_uuid,
+        "image_url":             f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None,
+        "created_at":            row.get("created_at", ""),
+        "viewer_has_liked":      False,
+        "viewer_is_following":   False,
+        "viewer_can_see_locked": True,
+        "hidden_adult":          False,
     }
 
 
@@ -270,9 +287,13 @@ async def discover(token: str, category: str | None = None, db=Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid token.")
 
     if is_postgres():
-        base = """SELECT p.*, pl.display_name, pl.avatar_uuid
+        base = """SELECT p.*, pl.display_name, pl.avatar_uuid,
+                      op.content_text AS original_content,
+                      opl.display_name AS original_author
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
+               LEFT JOIN posts op ON op.id = p.original_post_id
+               LEFT JOIN players opl ON opl.id = op.player_id
                WHERE p.visibility = 'public'"""
         if category:
             rows = await db.fetch(
@@ -282,21 +303,23 @@ async def discover(token: str, category: str | None = None, db=Depends(get_db)):
             rows = await db.fetch(
                 base + " ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30")
     else:
+        base = """SELECT p.*, pl.display_name, pl.avatar_uuid,
+                      op.content_text AS original_content,
+                      opl.display_name AS original_author
+               FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               LEFT JOIN posts op ON op.id = p.original_post_id
+               LEFT JOIN players opl ON opl.id = op.player_id
+               WHERE p.visibility = 'public'"""
         if category:
             async with db.execute(
-                """SELECT p.*, pl.display_name, pl.avatar_uuid
-                   FROM posts p JOIN players pl ON pl.id = p.player_id
-                   WHERE p.visibility = 'public' AND p.category = ?
-                   ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""",
+                base + " AND p.category = ? ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30",
                 (category,)
             ) as cur:
                 rows = await cur.fetchall()
         else:
             async with db.execute(
-                """SELECT p.*, pl.display_name, pl.avatar_uuid
-                   FROM posts p JOIN players pl ON pl.id = p.player_id
-                   WHERE p.visibility = 'public'
-                   ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30"""
+                base + " ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30"
             ) as cur:
                 rows = await cur.fetchall()
 
