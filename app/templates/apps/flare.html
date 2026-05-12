@@ -637,44 +637,46 @@
 <!-- ── DISCOVER TAB ── -->
 <div id="tab-discover" class="tab-panel">
 
-  <!-- Sub-tab chips -->
-  <div style="display:flex;gap:8px;padding:12px 18px 0;">
+  <!-- For You / Explore chips -->
+  <div style="display:flex;gap:8px;padding:14px 18px 10px;border-bottom:1px solid var(--bg3);">
     <button class="disc-chip active" id="sub-for-you" onclick="showSubTab('for-you')">For You</button>
     <button class="disc-chip" id="sub-discover" onclick="showSubTab('discover')">Explore</button>
   </div>
 
-  <!-- FOR YOU ─────────────────────────────────────────────── -->
+  <!-- ── FOR YOU ─────────────────────────────────────────── -->
   <div id="subtab-for-you">
 
-    <!-- Category chips -->
-    <div class="disc-filter-bar">
+    <!-- Category filter chips (horizontal scroll) -->
+    <div style="display:flex;gap:6px;padding:10px 18px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
       <button class="disc-chip active" onclick="setDiscFilter(this,'')">All</button>
       {% for cat in categories %}
-      <button class="disc-chip" onclick="setDiscFilter(this,'{{ cat }}')">{{ cat | title }}</button>
+      <button class="disc-chip" style="flex-shrink:0;" onclick="setDiscFilter(this,'{{ cat }}')">{{ cat | title }}</button>
       {% endfor %}
     </div>
 
     {% if trending_hashtags %}
-    <div class="disc-section-label">Trending now</div>
-    <div class="disc-trending-bar">
+    <div style="padding:2px 18px 4px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Trending</div>
+    <div style="display:flex;gap:6px;padding:4px 18px 10px;overflow-x:auto;scrollbar-width:none;">
       {% for ht in trending_hashtags %}
-      <button class="disc-trending-pill" onclick="openHashtagFeed('{{ ht.tag }}')">
-        #{{ ht.tag }}<span class="disc-trending-count">{{ ht.post_count }}</span>
+      <button onclick="openHashtagFeed('{{ ht.tag }}')"
+        style="display:flex;align-items:center;gap:4px;padding:5px 11px;border-radius:20px;flex-shrink:0;
+               background:var(--bg2);border:1px solid var(--border2);
+               font-family:var(--font);font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;">
+        #{{ ht.tag }}<span style="font-size:10px;color:var(--ink4);font-weight:400;">{{ ht.post_count }}</span>
       </button>
       {% endfor %}
     </div>
     {% endif %}
 
-    <div class="disc-section-label">Your feed</div>
     <div id="for-you-posts">
-      <div class="disc-loading">Loading your feed…</div>
+      <div style="padding:40px;text-align:center;color:var(--ink4);font-size:13px;">Loading your feed…</div>
     </div>
   </div>
 
-  <!-- EXPLORE ────────────────────────────────────────────── -->
+  <!-- ── EXPLORE ──────────────────────────────────────────── -->
   <div id="subtab-discover" style="display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;">
-      <div class="disc-section-label" style="margin:0;">Browse all posts</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+      <span style="font-size:12px;font-weight:600;color:var(--ink3);">All posts</span>
       <div style="display:flex;gap:6px;">
         <button class="disc-chip active" id="sort-top" onclick="setDiscoverSort('top',this)">🔥 Top</button>
         <button class="disc-chip" id="sort-new" onclick="setDiscoverSort('new',this)">✨ New</button>
