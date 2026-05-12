@@ -2671,9 +2671,9 @@ async def public_player_profile(
         d["total_likes"] = d.get("npc_likes", 0) + real_likes_map.get(post_id, 0)
         d["total_comments"] = d.get("npc_comments", 0)
         d["viewer_has_liked"] = post_id in liked_post_ids
+        image_uuid = d.get("image_uuid")
+        d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
         return d
-
-    is_own_profile = (target_id == viewer_id)
 
     target_profile = dict(target_profile_row) if target_profile_row else {}
 

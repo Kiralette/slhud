@@ -197,7 +197,13 @@
       {% endif %}
     </div>
     <div class="post-cat">{{ post.category | title }}</div>
-    <div class="post-text">{{ post.content_text }}</div>
+    {% if post.image_url %}
+    <div style="margin:8px 0;border-radius:var(--radius-sm);overflow:hidden;">
+      <img src="{{ post.image_url }}" style="width:100%;object-fit:cover;aspect-ratio:16/9;"
+           onerror="this.parentElement.style.display='none'" alt="Post image">
+    </div>
+    {% endif %}
+    <div class="post-text" data-content="{{ post.content_text | e }}"></div>
     <div class="post-footer">
       <button class="post-like-btn {% if post.viewer_has_liked %}liked{% endif %}"
               id="like-{{ post.id }}"
@@ -227,6 +233,39 @@
 <script>
 const TOKEN = "{{ token }}";
 const TARGET_ID = {{ target.id }};
+
+// ── Linkify post content ──────────────────────────────────────────────────────
+function linkifyContent(text) {
+  if (!text) return '';
+  const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped
+    .replace(/#([A-Za-z0-9_]+)/g, (_, tag) =>
+      `<span style="color:#9a7c4e;font-weight:600;">#${tag}</span>`)
+    .replace(/@([A-Za-z0-9_.]+)/g, (_, name) =>
+      `<a href="javascript:void(0)" onclick="window._navMention('${name.replace(/'/g,"\\'")}',this)"
+        style="color:var(--ink);font-weight:600;text-decoration:none;cursor:pointer;">@${name}</a>`);
+}
+
+window._navMention = async function(displayName) {
+  try {
+    const res  = await fetch(`/flare/mention-search?token=${TOKEN}&q=${encodeURIComponent(displayName)}`);
+    const data = await res.json();
+    const match = (data.results || []).find(r =>
+      r.display_name.toLowerCase() === displayName.toLowerCase());
+    if (match && match.avatar_uuid) {
+      window.location.href = `/app/player/${match.avatar_uuid}?token=${TOKEN}`;
+    } else {
+      alert('@' + displayName + ' not found');
+    }
+  } catch(e) {}
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.post-text[data-content]').forEach(el => {
+    el.innerHTML = linkifyContent(el.getAttribute('data-content'));
+    el.removeAttribute('data-content');
+  });
+});
 
 async function likePost(postId, token, btn) {
   if (btn.classList.contains('liked')) return;
