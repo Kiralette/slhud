@@ -2675,6 +2675,7 @@ async def public_player_profile(
         d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
         return d
 
+    is_own_profile = (target_id == viewer_id)
     target_profile = dict(target_profile_row) if target_profile_row else {}
 
     return templates.TemplateResponse(request, "apps/public_profile.html", {
