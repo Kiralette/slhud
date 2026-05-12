@@ -1012,13 +1012,13 @@ async def list_dm_threads(token: str, db=Depends(get_db)):
                       p.display_name AS other_name, p.avatar_uuid AS other_avatar,
                       pp.profile_pic_uuid AS other_pic,
                       (SELECT COUNT(*) FROM flare_messages
-                       WHERE thread_id=ft.id AND sender_id!=? AND is_read=0) AS unread,
+                       WHERE thread_id=ft.id AND sender_id!=$1 AND is_read=0) AS unread,
                       (SELECT body FROM flare_messages
                        WHERE thread_id=ft.id ORDER BY sent_at DESC LIMIT 1) AS last_body
                FROM flare_threads ft
-               JOIN players p ON p.id = CASE WHEN ft.player_a_id=? THEN ft.player_b_id ELSE ft.player_a_id END
+               JOIN players p ON p.id = CASE WHEN ft.player_a_id=$2 THEN ft.player_b_id ELSE ft.player_a_id END
                LEFT JOIN player_profiles pp ON pp.player_id = p.id
-               WHERE ft.player_a_id=? OR ft.player_b_id=?
+               WHERE ft.player_a_id=$3 OR ft.player_b_id=$4
                ORDER BY ft.last_message_at DESC NULLS LAST""",
             player_id, player_id, player_id, player_id)
     else:
