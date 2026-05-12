@@ -208,6 +208,55 @@
   .dm-thread-name { font-size: 14px; font-weight: 600; color: var(--ink); }
   .dm-thread-preview { font-size: 12px; color: var(--ink4); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
   .dm-unread-badge { background: var(--rose); color: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; margin-left: auto; flex-shrink: 0; }
+
+  /* ── Pills ── */
+  .at-pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
+  .at-pill {
+    padding: 6px 13px; border-radius: 20px; border: 0.5px solid var(--border2);
+    background: var(--bg2); font-size: 12px; color: var(--ink3); cursor: pointer;
+    font-family: inherit; transition: all .12s;
+  }
+  .at-pill.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  /* ── Bottom sheet (interest onboarding + settings) ── */
+  .at-sheet-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 998;
+  }
+  .at-sheet-overlay.open { display: block; }
+  .at-sheet {
+    position: fixed; bottom: 0; left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: min(420px,100vw); background: var(--bg);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.15);
+    transition: transform .3s; z-index: 999;
+    max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .at-sheet.open { transform: translateX(-50%) translateY(0); }
+  .at-sheet-handle {
+    width: 36px; height: 4px; background: var(--bg4);
+    border-radius: 2px; margin: 12px auto 8px; flex-shrink: 0;
+  }
+  .at-sheet-scroll { overflow-y: auto; flex: 1; padding: 0 18px 32px; }
+  .at-sheet-title {
+    font-family: var(--font-head); font-size: 26px;
+    color: var(--ink); margin-bottom: 5px; padding-top: 4px;
+  }
+  .at-sheet-sub {
+    font-size: 13px; color: var(--ink3); line-height: 1.5; margin-bottom: 20px;
+  }
+  .at-sheet-save {
+    display: block; width: 100%; padding: 14px;
+    background: var(--ink); color: var(--bg); border: none;
+    border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit; margin-top: 24px;
+  }
+  .at-sheet-skip {
+    display: block; width: 100%; padding: 10px; background: none; border: none;
+    font-size: 12px; color: var(--ink4); cursor: pointer;
+    font-family: inherit; margin-top: 4px;
+  }
 </style>
 {% endblock %}
 
@@ -606,30 +655,39 @@
   const HAS_INTERESTS    = {{ 'true' if has_set_interests else 'false' }};
   const ALL_CATEGORIES   = {{ categories | tojson }};
 
-  // ── Interest onboarding overlay ───────────────────────────────────────────
+  // ── Interest onboarding sheet ─────────────────────────────────────────────
   (function() {
-    if (HAS_INTERESTS) return;  // already set, skip
-    const el = document.createElement('div');
-    el.id = 'interest-overlay';
-    el.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;padding:24px 18px 40px;';
-    el.innerHTML = `
-      <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);margin-bottom:6px;">What do you love? ✦</div>
-      <div style="font-size:13px;color:var(--ink3);margin-bottom:20px;line-height:1.5;">Pick your interests so we can personalise your For You feed. You can change these anytime in settings.</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;" id="interest-pills">
-        ${ALL_CATEGORIES.map(c => `<button class="at-pill" onclick="toggleInterest(this,'${c}')">${c.charAt(0).toUpperCase()+c.slice(1)}</button>`).join('')}
-      </div>
-      <button onclick="saveOnboardingInterests()"
-        style="width:100%;padding:14px;background:var(--ink);color:var(--bg);border:none;
-               border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
-        Let's go ✦
-      </button>
-      <button onclick="document.getElementById('interest-overlay').remove()"
-        style="width:100%;padding:10px;background:none;border:none;font-size:12px;
-               color:var(--ink4);cursor:pointer;font-family:inherit;margin-top:8px;">
-        Skip for now
-      </button>`;
-    document.body.appendChild(el);
+    if (HAS_INTERESTS) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'at-sheet-overlay';
+    overlay.id = 'onboard-overlay';
+    const sheet = document.createElement('div');
+    sheet.className = 'at-sheet';
+    sheet.id = 'onboard-sheet';
+    sheet.innerHTML = `
+      <div class="at-sheet-handle"></div>
+      <div class="at-sheet-scroll">
+        <div class="at-sheet-title">What do you love? ✦</div>
+        <div class="at-sheet-sub">Pick your interests so we can personalise your For You feed. You can change these anytime in settings.</div>
+        <div class="at-pill-group" id="interest-pills">
+          ${ALL_CATEGORIES.map(c => '<button class="at-pill" onclick="toggleInterest(this,\'' + c + '\')">' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>').join('')}
+        </div>
+        <button class="at-sheet-save" onclick="saveOnboardingInterests()">Let’s go ✦</button>
+        <button class="at-sheet-skip" onclick="closeOnboardSheet()">Skip for now</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+      sheet.classList.add('open');
+    });
   })();
+
+  function closeOnboardSheet() {
+    document.getElementById('onboard-overlay')?.classList.remove('open');
+    document.getElementById('onboard-sheet')?.classList.remove('open');
+  }
+
 
   const _selectedInterests = new Set(PLAYER_INTERESTS);
 
@@ -651,39 +709,33 @@
         body: JSON.stringify({ token: TOKEN, categories: cats })
       });
       if (res.ok) {
-        document.getElementById('interest-overlay')?.remove();
+        closeOnboardSheet();
         loadForYou();
       }
-    } catch(e) { document.getElementById('interest-overlay')?.remove(); }
+    } catch(e) { closeOnboardSheet(); }
   }
 
   // ── Interest settings sheet (accessible from profile tab) ─────────────────
   (function() {
-    const el = document.createElement('div');
-    el.innerHTML = `
-<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2998;" id="interests-overlay" onclick="closeInterestsSheet()"></div>
-<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
-  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
-  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:2999;
-  max-height:85vh;overflow-y:auto;" id="interests-sheet">
-  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
-  <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
-    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Your interests</div>
-    <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Shapes your For You feed.</div>
-  </div>
-  <div style="padding:14px 18px;">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="settings-interest-pills">
-      ${ALL_CATEGORIES.map(c => `<button class="at-pill ${PLAYER_INTERESTS.includes(c)?'selected':''}"
-        onclick="toggleSettingsInterest(this,'${c}')">${c.charAt(0).toUpperCase()+c.slice(1)}</button>`).join('')}
-    </div>
-    <button onclick="saveSettingsInterests()"
-      style="width:100%;padding:13px;background:var(--ink);color:var(--bg);border:none;
-             border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
-      Save interests
-    </button>
-  </div>
-</div>`;
-    while (el.firstChild) document.body.appendChild(el.firstChild);
+    const overlay = document.createElement('div');
+    overlay.className = 'at-sheet-overlay';
+    overlay.id = 'interests-overlay';
+    overlay.onclick = closeInterestsSheet;
+    const sheet = document.createElement('div');
+    sheet.className = 'at-sheet';
+    sheet.id = 'interests-sheet';
+    sheet.innerHTML = `
+      <div class="at-sheet-handle"></div>
+      <div class="at-sheet-scroll">
+        <div class="at-sheet-title">Your interests</div>
+        <div class="at-sheet-sub">Shapes your For You feed.</div>
+        <div class="at-pill-group" id="settings-interest-pills">
+          ${ALL_CATEGORIES.map(c => '<button class="at-pill ' + (PLAYER_INTERESTS.includes(c) ? 'selected' : '') + '" onclick="toggleSettingsInterest(this,\'' + c + '\')">' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>').join('')}
+        </div>
+        <button class="at-sheet-save" onclick="saveSettingsInterests()">Save interests</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
   })();
 
   const _settingsInterests = new Set(PLAYER_INTERESTS);
@@ -701,13 +753,14 @@
     } catch(e) { toast('Error'); }
   }
   function openInterestsSheet() {
-    document.getElementById('interests-overlay').style.display = 'block';
-    setTimeout(() => document.getElementById('interests-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+    document.getElementById('interests-overlay').classList.add('open');
+    requestAnimationFrame(() => document.getElementById('interests-sheet').classList.add('open'));
   }
   function closeInterestsSheet() {
-    document.getElementById('interests-sheet').style.transform = 'translateX(-50%) translateY(100%)';
-    document.getElementById('interests-overlay').style.display = 'none';
+    document.getElementById('interests-sheet').classList.remove('open');
+    document.getElementById('interests-overlay').classList.remove('open');
   }
+
 
   // ── Sub-tabs (For You / Discover) ─────────────────────────────────────────
   let _activeSubTab = 'for-you';
