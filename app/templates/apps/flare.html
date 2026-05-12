@@ -637,36 +637,36 @@
 <!-- ── DISCOVER TAB ── -->
 <div id="tab-discover" class="tab-panel">
 
-  <!-- For You / Explore chips -->
-  <div style="display:flex;gap:8px;padding:14px 18px 10px;border-bottom:1px solid var(--bg3);">
-    <button class="disc-chip active" id="sub-for-you" onclick="showSubTab('for-you')">For You</button>
-    <button class="disc-chip" id="sub-discover" onclick="showSubTab('discover')">Explore</button>
+  <!-- Centered For You / Explore switcher -->
+  <div style="display:flex;justify-content:center;gap:8px;padding:14px 18px 10px;border-bottom:1px solid var(--bg3);">
+    <button class="disc-chip active" id="sub-for-you" onclick="showSubTab('for-you')" style="min-width:90px;text-align:center;">For You</button>
+    <button class="disc-chip" id="sub-discover" onclick="showSubTab('discover')" style="min-width:90px;text-align:center;">Explore</button>
   </div>
 
   <!-- ── FOR YOU ─────────────────────────────────────────── -->
   <div id="subtab-for-you">
 
-    <!-- Category filter chips (horizontal scroll) -->
-    <div style="display:flex;gap:6px;padding:10px 18px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
-      <button class="disc-chip active" onclick="setDiscFilter(this,'')">All</button>
-      {% for cat in categories %}
-      <button class="disc-chip" style="flex-shrink:0;" onclick="setDiscFilter(this,'{{ cat }}')">{{ cat | title }}</button>
-      {% endfor %}
-    </div>
-
-    {% if trending_hashtags %}
-    <div style="padding:2px 18px 4px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Trending</div>
-    <div style="display:flex;gap:6px;padding:4px 18px 10px;overflow-x:auto;scrollbar-width:none;">
-      {% for ht in trending_hashtags %}
-      <button onclick="openHashtagFeed('{{ ht.tag }}')"
-        style="display:flex;align-items:center;gap:4px;padding:5px 11px;border-radius:20px;flex-shrink:0;
+    <!-- Filter + trending row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px 8px;">
+      <div style="display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1;">
+        {% if trending_hashtags %}
+        {% for ht in trending_hashtags[:4] %}
+        <button onclick="openHashtagFeed('{{ ht.tag }}')"
+          style="display:flex;align-items:center;gap:3px;padding:5px 10px;border-radius:20px;flex-shrink:0;
+                 background:var(--bg2);border:1px solid var(--border2);
+                 font-family:var(--font);font-size:11px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap;">
+          #{{ ht.tag }}
+        </button>
+        {% endfor %}
+        {% endif %}
+      </div>
+      <button onclick="openFilterSheet()" id="filter-btn"
+        style="display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:20px;flex-shrink:0;
                background:var(--bg2);border:1px solid var(--border2);
-               font-family:var(--font);font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;">
-        #{{ ht.tag }}<span style="font-size:10px;color:var(--ink4);font-weight:400;">{{ ht.post_count }}</span>
+               font-family:var(--font);font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;margin-left:8px;">
+        ⚙ Filter
       </button>
-      {% endfor %}
     </div>
-    {% endif %}
 
     <div id="for-you-posts">
       <div style="padding:40px;text-align:center;color:var(--ink4);font-size:13px;">Loading your feed…</div>
@@ -725,27 +725,46 @@
 
   // ── Interest onboarding overlay ───────────────────────────────────────────
   (function() {
-    if (HAS_INTERESTS) return;  // already set, skip
-    const el = document.createElement('div');
-    el.id = 'interest-overlay';
-    el.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;padding:24px 18px 40px;';
-    el.innerHTML = `
-      <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);margin-bottom:6px;">What do you love? ✦</div>
-      <div style="font-size:13px;color:var(--ink3);margin-bottom:20px;line-height:1.5;">Pick your interests so we can personalise your For You feed. You can change these anytime in settings.</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;" id="interest-pills">
+    if (HAS_INTERESTS) return;
+    const backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2998;';
+    backdrop.onclick = () => backdrop.nextElementSibling?.remove() || backdrop.remove();
+
+    const sheet = document.createElement('div');
+    sheet.id = 'interest-overlay';
+    sheet.style.cssText = `position:fixed;bottom:0;left:50%;
+      transform:translateX(-50%) translateY(100%);
+      width:min(420px,100vw);background:var(--bg);
+      border-radius:20px 20px 0 0;
+      box-shadow:0 -8px 40px rgba(0,0,0,.15);
+      transition:transform .3s;z-index:2999;
+      max-height:85vh;overflow-y:auto;`;
+    sheet.innerHTML = `
+      <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+      <div style="padding:16px 18px 8px;">
+        <div style="font-family:var(--font-head);font-size:26px;color:var(--ink);margin-bottom:4px;">What do you love? ✦</div>
+        <div style="font-size:13px;color:var(--ink3);line-height:1.5;">Pick your interests to personalise your For You feed. Change these anytime in settings.</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px 16px;" id="interest-pills">
         ${ALL_CATEGORIES.map(c => `<button class="at-pill" onclick="toggleInterest(this,'${c}')">${c.charAt(0).toUpperCase()+c.slice(1)}</button>`).join('')}
       </div>
-      <button onclick="saveOnboardingInterests()"
-        style="width:100%;padding:14px;background:var(--ink);color:var(--bg);border:none;
-               border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
-        Let's go ✦
-      </button>
-      <button onclick="document.getElementById('interest-overlay').remove()"
-        style="width:100%;padding:10px;background:none;border:none;font-size:12px;
-               color:var(--ink4);cursor:pointer;font-family:inherit;margin-top:8px;">
-        Skip for now
-      </button>`;
-    document.body.appendChild(el);
+      <div style="padding:0 18px 28px;display:flex;flex-direction:column;gap:8px;">
+        <button onclick="saveOnboardingInterests()"
+          style="width:100%;padding:13px;background:var(--ink);color:var(--bg);border:none;
+                 border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+          Let's go ✦
+        </button>
+        <button onclick="document.getElementById('interest-overlay').style.transform='translateX(-50%) translateY(100%)';setTimeout(()=>{document.getElementById('interest-overlay').remove();document.getElementById('interest-backdrop').remove();},300);"
+          style="width:100%;padding:10px;background:none;border:none;font-size:12px;
+                 color:var(--ink4);cursor:pointer;font-family:inherit;">
+          Skip for now
+        </button>
+      </div>`;
+
+    backdrop.id = 'interest-backdrop';
+    document.body.appendChild(backdrop);
+    document.body.appendChild(sheet);
+    setTimeout(() => sheet.style.transform = 'translateX(-50%) translateY(0)', 10);
   })();
 
   const _selectedInterests = new Set(PLAYER_INTERESTS);
@@ -768,10 +787,16 @@
         body: JSON.stringify({ token: TOKEN, categories: cats })
       });
       if (res.ok) {
-        document.getElementById('interest-overlay')?.remove();
+        const sheet = document.getElementById('interest-overlay');
+        const backdrop = document.getElementById('interest-backdrop');
+        if (sheet) sheet.style.transform = 'translateX(-50%) translateY(100%)';
+        setTimeout(() => { sheet?.remove(); backdrop?.remove(); }, 300);
         loadForYou();
       }
-    } catch(e) { document.getElementById('interest-overlay')?.remove(); }
+    } catch(e) {
+      document.getElementById('interest-overlay')?.remove();
+      document.getElementById('interest-backdrop')?.remove();
+    }
   }
 
   // ── Interest settings sheet (accessible from profile tab) ─────────────────
@@ -876,7 +901,7 @@
   // ── For You feed ──────────────────────────────────────────────────────────
   let _forYouSort  = 'top';
   let _discSort    = 'top';
-  let _discCatFilter = '';
+  // _discCatFilter declared below with filter sheet
 
   async function loadForYou() {
     const container = document.getElementById('for-you-posts');
@@ -937,8 +962,93 @@
     loadDiscover(_discCatFilter);
   }
 
+  // ── Category filter sheet ─────────────────────────────────────────────────
+  const _selectedFilters = new Set();
+
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2998;" id="filter-backdrop" onclick="closeFilterSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:2999;
+  max-height:80vh;overflow-y:auto;" id="filter-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);">Filter by category</div>
+    <button onclick="clearFilters()" style="background:none;border:none;font-size:12px;color:var(--ink4);cursor:pointer;font-family:inherit;">Clear all</button>
+  </div>
+  <div style="padding:14px 18px;display:flex;flex-direction:column;gap:2px;" id="filter-options"></div>
+  <div style="padding:8px 18px 28px;">
+    <button onclick="applyFilters()"
+      style="width:100%;padding:13px;background:var(--ink);color:var(--bg);border:none;
+             border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+      Apply filters
+    </button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  function openFilterSheet() {
+    const opts = document.getElementById('filter-options');
+    opts.innerHTML = ['', ...ALL_CATEGORIES].map(cat => {
+      const label = cat ? cat.charAt(0).toUpperCase() + cat.slice(1) : 'All categories';
+      const checked = cat === '' ? _selectedFilters.size === 0 : _selectedFilters.has(cat);
+      return `<label style="display:flex;align-items:center;gap:12px;padding:11px 0;
+        border-bottom:1px solid var(--bg3);cursor:pointer;font-size:14px;color:var(--ink);">
+        <input type="checkbox" ${checked ? 'checked' : ''} value="${cat}"
+          onchange="toggleFilter(this)"
+          style="width:18px;height:18px;accent-color:var(--ink);cursor:pointer;flex-shrink:0;">
+        ${label}
+      </label>`;
+    }).join('');
+    document.getElementById('filter-backdrop').style.display = 'block';
+    setTimeout(() => document.getElementById('filter-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+  }
+
+  function closeFilterSheet() {
+    document.getElementById('filter-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('filter-backdrop').style.display = 'none';
+  }
+
+  function toggleFilter(cb) {
+    if (cb.value === '') {
+      _selectedFilters.clear();
+      document.querySelectorAll('#filter-options input[type=checkbox]').forEach(el => { el.checked = el.value === ''; });
+    } else {
+      _selectedFilters.delete('');
+      if (cb.checked) _selectedFilters.add(cb.value);
+      else _selectedFilters.delete(cb.value);
+      const allCb = document.querySelector('#filter-options input[value=""]');
+      if (allCb) allCb.checked = _selectedFilters.size === 0;
+    }
+  }
+
+  function clearFilters() {
+    _selectedFilters.clear();
+    document.querySelectorAll('#filter-options input[type=checkbox]').forEach(el => { el.checked = el.value === ''; });
+  }
+
+  function applyFilters() {
+    closeFilterSheet();
+    const btn = document.getElementById('filter-btn');
+    const count = _selectedFilters.size;
+    if (btn) {
+      btn.innerHTML = count > 0
+        ? `⚙ Filter <span style="background:var(--ink);color:var(--bg);border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px;">${count}</span>`
+        : '⚙ Filter';
+      btn.style.color = count > 0 ? 'var(--ink)' : 'var(--ink3)';
+      btn.style.borderColor = count > 0 ? 'var(--ink)' : '';
+    }
+    _discCatFilter = _selectedFilters.size === 1 ? [..._selectedFilters][0] : '';
+    if (_activeSubTab === 'for-you') loadForYou();
+    else loadDiscover(_discCatFilter);
+  }
+
+  let _discCatFilter = '';
+
   function setDiscFilter(btn, cat) {
-    // Only toggle chips in the same parent container, not all disc-chips on page
     btn.closest('div').querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     _discCatFilter = cat;
@@ -1432,13 +1542,6 @@
 
   // ── Discover filter chips ─────────────────────────────────────────────────
   let _discFilter = '';
-  function setDiscFilter(btn, cat) {
-    document.querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    _discFilter = cat;
-    loadDiscover(cat);
-  }
-
   async function loadDiscover(cat) {
     const container = document.getElementById('disc-posts-container');
     if (!container) return;
