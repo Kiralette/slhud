@@ -949,6 +949,7 @@ async def mention_search(token: str, q: str, db=Depends(get_db)):
             {
                 "id":           r["id"],
                 "display_name": r["display_name"],
+                "avatar_uuid":  r["avatar_uuid"],
                 "sl_username":  r.get("sl_username") or r["avatar_uuid"][:8],
                 "avatar_url":   f"https://secondlife.com/app/image/{r['profile_pic_uuid']}/2"
                                 if r.get("profile_pic_uuid") else None,

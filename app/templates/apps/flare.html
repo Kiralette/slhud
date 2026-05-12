@@ -771,16 +771,29 @@
   // ── Linkify post content (hashtags + mentions) ────────────────────────────
   function linkifyContent(text, token) {
     if (!text) return '';
-    // Escape HTML first
     const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return escaped
       .replace(/#([A-Za-z0-9_]+)/g, (_, tag) =>
         `<a href="javascript:void(0)" onclick="event.stopPropagation();openHashtagFeed('${tag.toLowerCase()}')"
           style="color:var(--gold);text-decoration:none;font-weight:600;">#${tag}</a>`)
       .replace(/@([A-Za-z0-9_.]+)/g, (_, name) =>
-        `<a href="/app/player/search?display_name=${encodeURIComponent(name)}&token=${token}"
-          onclick="event.stopPropagation();"
-          style="color:var(--ink);font-weight:600;text-decoration:none;">@${name}</a>`);
+        `<a href="javascript:void(0)"
+          onclick="event.stopPropagation();navigateToMention('${name.replace(/'/g,"\\'")}',this)"
+          style="color:var(--ink);font-weight:600;text-decoration:none;cursor:pointer;">@${name}</a>`);
+  }
+
+  async function navigateToMention(displayName, el) {
+    try {
+      const res  = await fetch(`/flare/mention-search?token=${TOKEN}&q=${encodeURIComponent(displayName)}`);
+      const data = await res.json();
+      const match = (data.results || []).find(r =>
+        r.display_name.toLowerCase() === displayName.toLowerCase());
+      if (match) {
+        window.location.href = `/app/player/${match.avatar_uuid || ''}?token=${TOKEN}`;
+      } else {
+        toast('Player not found');
+      }
+    } catch(e) { toast('Could not load profile'); }
   }
 
   // Render all post-content divs that have data-content attr
