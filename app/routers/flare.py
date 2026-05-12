@@ -99,8 +99,6 @@ async def _ensure_flare_stats(player_id: int, db):
 
 
 def _format_post(row: dict, include_author: bool = True) -> dict:
-    image_uuid = row.get("image_uuid")
-    orig_image_uuid = row.get("orig_image_uuid")
     return {
         "id":                    row["id"],
         "player_id":             row["player_id"],
@@ -113,12 +111,6 @@ def _format_post(row: dict, include_author: bool = True) -> dict:
         "npc_comments":          row["npc_comments"],
         "is_brand_deal_post":    bool(row["is_brand_deal_post"]),
         "created_at":            row["created_at"],
-        "image_url":             f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None,
-        "is_repost":             bool(row.get("is_repost", 0)),
-        "original_post_id":      row.get("original_post_id"),
-        "original_display_name": row.get("orig_display_name") or "",
-        "original_content":      row.get("orig_content_text") or "",
-        "original_image_url":    f"https://secondlife.com/app/image/{orig_image_uuid}/2" if orig_image_uuid else None,
     }
 
 
@@ -278,13 +270,9 @@ async def discover(token: str, category: str | None = None, db=Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid token.")
 
     if is_postgres():
-        base = """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
+        base = """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
-               LEFT JOIN posts op ON op.id = p.original_post_id
-               LEFT JOIN players opl ON opl.id = op.player_id
                WHERE p.visibility = 'public'"""
         if category:
             rows = await db.fetch(
@@ -296,12 +284,8 @@ async def discover(token: str, category: str | None = None, db=Depends(get_db)):
     else:
         if category:
             async with db.execute(
-                """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                          op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                          opl.display_name AS orig_display_name
+                """SELECT p.*, pl.display_name, pl.avatar_uuid
                    FROM posts p JOIN players pl ON pl.id = p.player_id
-                   LEFT JOIN posts op ON op.id = p.original_post_id
-                   LEFT JOIN players opl ON opl.id = op.player_id
                    WHERE p.visibility = 'public' AND p.category = ?
                    ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""",
                 (category,)
@@ -309,12 +293,8 @@ async def discover(token: str, category: str | None = None, db=Depends(get_db)):
                 rows = await cur.fetchall()
         else:
             async with db.execute(
-                """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                          op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                          opl.display_name AS orig_display_name
+                """SELECT p.*, pl.display_name, pl.avatar_uuid
                    FROM posts p JOIN players pl ON pl.id = p.player_id
-                   LEFT JOIN posts op ON op.id = p.original_post_id
-                   LEFT JOIN players opl ON opl.id = op.player_id
                    WHERE p.visibility = 'public'
                    ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30"""
             ) as cur:
@@ -338,13 +318,8 @@ async def get_profile(token: str, db=Depends(get_db)):
         stats_row = await db.fetchrow(
             "SELECT * FROM flare_stats WHERE player_id = $1", player_id)
         posts_rows = await db.fetch(
-            """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
-               FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
-               LEFT JOIN posts op ON op.id = p.original_post_id
-               LEFT JOIN players opl ON opl.id = op.player_id
                WHERE p.player_id = $1
                ORDER BY p.created_at DESC LIMIT 20""",
             player_id)
@@ -948,7 +923,7 @@ async def mention_search(token: str, q: str, db=Depends(get_db)):
 
     if is_postgres():
         rows = await db.fetch(
-            """SELECT p.id, p.display_name, p.avatar_uuid,
+            """SELECT p.id, p.display_name, p.avatar_uuid, p.sl_username,
                       pp.profile_pic_uuid
                FROM players p
                LEFT JOIN player_profiles pp ON pp.player_id = p.id
@@ -958,7 +933,7 @@ async def mention_search(token: str, q: str, db=Depends(get_db)):
             f"{q_clean.lower()}%")
     else:
         async with db.execute(
-            """SELECT p.id, p.display_name, p.avatar_uuid,
+            """SELECT p.id, p.display_name, p.avatar_uuid, p.sl_username,
                       pp.profile_pic_uuid
                FROM players p
                LEFT JOIN player_profiles pp ON pp.player_id = p.id
@@ -974,6 +949,7 @@ async def mention_search(token: str, q: str, db=Depends(get_db)):
             {
                 "id":           r["id"],
                 "display_name": r["display_name"],
+                "sl_username":  r.get("sl_username") or r["avatar_uuid"][:8],
                 "avatar_url":   f"https://secondlife.com/app/image/{r['profile_pic_uuid']}/2"
                                 if r.get("profile_pic_uuid") else None,
             }
@@ -1231,12 +1207,8 @@ async def for_you(token: str, sort: str = "top", db=Depends(get_db)):
         interest_rows = await db.fetch(
             "SELECT category, weight FROM player_interests WHERE player_id=$1", player_id)
         rows = await db.fetch(
-            """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p JOIN players pl ON pl.id = p.player_id
-               LEFT JOIN posts op ON op.id = p.original_post_id
-               LEFT JOIN players opl ON opl.id = op.player_id
                WHERE p.visibility = 'public'
                ORDER BY p.created_at DESC LIMIT 200""")
         # Real likes per post
@@ -1250,12 +1222,8 @@ async def for_you(token: str, sort: str = "top", db=Depends(get_db)):
         ) as cur:
             interest_rows = await cur.fetchall()
         async with db.execute(
-            """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
+            """SELECT p.*, pl.display_name, pl.avatar_uuid
                FROM posts p JOIN players pl ON pl.id = p.player_id
-               LEFT JOIN posts op ON op.id = p.original_post_id
-               LEFT JOIN players opl ON opl.id = op.player_id
                WHERE p.visibility = 'public'
                ORDER BY p.created_at DESC LIMIT 200"""
         ) as cur:
@@ -1317,11 +1285,6 @@ async def for_you(token: str, sort: str = "top", db=Depends(get_db)):
         d["viewer_has_liked"] = False  # caller checks separately if needed
         image_uuid = d.get("image_uuid")
         d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
-        d["is_repost"]             = bool(d.get("is_repost", 0))
-        d["original_display_name"] = d.get("orig_display_name") or ""
-        d["original_content"]      = d.get("orig_content_text") or ""
-        orig_img = d.get("orig_image_uuid")
-        d["original_image_url"]    = f"https://secondlife.com/app/image/{orig_img}/2" if orig_img else None
         scored.append(d)
 
     scored.sort(key=lambda x: x["algo_score"], reverse=True)

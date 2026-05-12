@@ -781,8 +781,8 @@ async def flare(
         follower_count_real = await db.fetchval("SELECT COUNT(*) FROM follows WHERE following_id = $1", player_id)
         feed_rows  = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
+                      op.content_text AS original_content,
+                      opl.display_name AS original_author
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                LEFT JOIN posts op ON op.id = p.original_post_id
@@ -797,8 +797,8 @@ async def flare(
                ORDER BY p.created_at DESC LIMIT 40""", player_id)
         discover_rows = await db.fetch(
             """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
+                      op.content_text AS original_content,
+                      opl.display_name AS original_author
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                LEFT JOIN posts op ON op.id = p.original_post_id
@@ -806,13 +806,8 @@ async def flare(
                WHERE p.visibility = 'public'
                ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""")
         profile_posts_rows = await db.fetch(
-            """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
-               FROM posts p
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
                JOIN players pl ON pl.id = p.player_id
-               LEFT JOIN posts op ON op.id = p.original_post_id
-               LEFT JOIN players opl ON opl.id = op.player_id
                WHERE p.player_id = $1
                ORDER BY p.created_at DESC LIMIT 20""", player_id)
         following_ids_rows = await db.fetch(
@@ -836,9 +831,10 @@ async def flare(
         follower_count_real = fc2["cnt"] if fc2 else 0
         async with db.execute(
             """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
-               FROM posts p JOIN players pl ON pl.id = p.player_id
+                      op.content_text AS original_content,
+                      opl.display_name AS original_author
+               FROM posts p
+               JOIN players pl ON pl.id = p.player_id
                LEFT JOIN posts op ON op.id = p.original_post_id
                LEFT JOIN players opl ON opl.id = op.player_id
                WHERE (p.player_id IN (SELECT following_id FROM follows WHERE follower_id = ?)
@@ -852,21 +848,18 @@ async def flare(
             feed_rows = await cur.fetchall()
         async with db.execute(
             """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
-               FROM posts p JOIN players pl ON pl.id = p.player_id
+                      op.content_text AS original_content,
+                      opl.display_name AS original_author
+               FROM posts p
+               JOIN players pl ON pl.id = p.player_id
                LEFT JOIN posts op ON op.id = p.original_post_id
                LEFT JOIN players opl ON opl.id = op.player_id
                WHERE p.visibility = 'public'
                ORDER BY p.quality_tier DESC, p.created_at DESC LIMIT 30""") as cur:
             discover_rows = await cur.fetchall()
         async with db.execute(
-            """SELECT p.*, pl.display_name, pl.avatar_uuid,
-                      op.content_text AS orig_content_text, op.image_uuid AS orig_image_uuid,
-                      opl.display_name AS orig_display_name
-               FROM posts p JOIN players pl ON pl.id = p.player_id
-               LEFT JOIN posts op ON op.id = p.original_post_id
-               LEFT JOIN players opl ON opl.id = op.player_id
+            """SELECT p.*, pl.display_name, pl.avatar_uuid FROM posts p
+               JOIN players pl ON pl.id = p.player_id
                WHERE p.player_id = ?
                ORDER BY p.created_at DESC LIMIT 20""", (player_id,)) as cur:
             profile_posts_rows = await cur.fetchall()
@@ -975,12 +968,6 @@ async def flare(
         d["viewer_is_following"] = author_id in following_ids
         image_uuid = d.get("image_uuid")
         d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
-        # Repost original fields
-        d["is_repost"]             = bool(d.get("is_repost", 0))
-        d["original_display_name"] = d.get("orig_display_name") or ""
-        orig_img = d.get("orig_image_uuid")
-        d["original_content"]      = d.get("orig_content_text") or ""
-        d["original_image_url"]    = f"https://secondlife.com/app/image/{orig_img}/2" if orig_img else None
         # Creator unlock logic
         is_own      = author_id == player_id
         is_sub      = author_id in subscribed_creator_ids

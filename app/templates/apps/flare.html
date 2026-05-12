@@ -180,17 +180,59 @@
     font-size: 10px; color: var(--amber); font-weight: 500;
     margin-top: 8px;
   }
+</style>
 
   /* ── Discover sub-tabs ── */
-  .at-sub-tab {
-    padding: 10px 14px; font-size: 12px; font-weight: 600;
-    letter-spacing: .06em; text-transform: uppercase;
+  /* Post images - preserve aspect ratio */
+  .post-img {
+    width: 100%; border-radius: var(--radius-sm);
+    object-fit: cover; display: block;
+    aspect-ratio: 16/9; background: var(--bg3);
+  }
+  .post-img-wrap {
+    margin: 8px 0; border-radius: var(--radius-sm);
+    overflow: hidden; background: var(--bg3);
+  }
+
+  /* ── Discover sub-tabs ── */
+  .disc-subtab-bar {
+    display: flex; border-bottom: 1px solid var(--bg4);
+    background: var(--bg); padding: 0 18px;
+  }
+  .disc-subtab {
+    padding: 12px 16px; font-size: 13px; font-weight: 600;
     color: var(--ink4); background: none; border: none;
     cursor: pointer; border-bottom: 2px solid transparent;
     margin-bottom: -1px; font-family: inherit;
     transition: color .15s, border-color .15s;
   }
-  .at-sub-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .disc-subtab.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .disc-section-label {
+    padding: 10px 18px 4px; font-size: 10px; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink4);
+  }
+  .disc-loading { padding: 40px; text-align: center; color: var(--ink4); font-size: 13px; }
+  .disc-trending-bar {
+    display: flex; flex-wrap: nowrap; overflow-x: auto;
+    gap: 6px; padding: 4px 18px 10px; scrollbar-width: none;
+  }
+  .disc-trending-bar::-webkit-scrollbar { display: none; }
+  .disc-trending-pill {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 20px; flex-shrink: 0;
+    background: var(--bg2); border: 1px solid var(--bg4);
+    font-size: 12px; font-weight: 600; color: var(--ink);
+    cursor: pointer; font-family: inherit; transition: background .12s;
+  }
+  .disc-trending-pill:active { background: var(--bg3); }
+  .disc-trending-count { font-size: 10px; color: var(--ink4); font-weight: 400; }
+  .disc-sort-btn {
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid var(--bg4); background: var(--bg2);
+    font-size: 11px; font-weight: 600; color: var(--ink3);
+    cursor: pointer; font-family: inherit; transition: all .12s;
+  }
+  .disc-sort-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
   /* ── DM thread list ── */
   .dm-thread-row {
@@ -208,119 +250,6 @@
   .dm-thread-name { font-size: 14px; font-weight: 600; color: var(--ink); }
   .dm-thread-preview { font-size: 12px; color: var(--ink4); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
   .dm-unread-badge { background: var(--rose); color: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; margin-left: auto; flex-shrink: 0; }
-
-  /* ── Compose visibility buttons ── */
-  .compose-vis-btn {
-    padding: 5px 12px; border-radius: 20px;
-    border: 0.5px solid var(--border2);
-    background: var(--bg); font-size: 11px;
-    font-weight: 600; color: var(--ink4);
-    cursor: pointer; font-family: inherit;
-    transition: all .12s;
-  }
-  .compose-vis-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-
-  /* ── Discover filter chips ── */
-  .disc-filter-bar {
-    display: flex; flex-wrap: nowrap; gap: 6px;
-    padding: 10px 18px; overflow-x: auto; scrollbar-width: none;
-    border-bottom: 0.5px solid var(--border);
-  }
-  .disc-filter-bar::-webkit-scrollbar { display: none; }
-  .disc-chip {
-    flex-shrink: 0; padding: 5px 13px; border-radius: 20px;
-    border: 0.5px solid var(--border2); background: var(--bg2);
-    font-size: 11px; font-weight: 600; color: var(--ink4);
-    cursor: pointer; font-family: inherit; transition: all .12s; white-space: nowrap;
-  }
-  .disc-chip.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-
-  /* ── Discover sub-tab bar ── */
-  .disc-sub-bar { display: flex; border-bottom: 1px solid var(--bg4); background: var(--bg); }
-  .disc-sub-btn {
-    flex: 1; padding: 11px 4px; font-size: 11px; font-weight: 700;
-    letter-spacing: .07em; text-transform: uppercase;
-    color: var(--ink4); background: none; border: none;
-    cursor: pointer; border-bottom: 2px solid transparent;
-    font-family: inherit; transition: color .15s, border-color .15s;
-  }
-  .disc-sub-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
-
-  /* ── Discover sort bar ── */
-  .disc-sort-bar { display: flex; gap: 8px; padding: 10px 18px; border-bottom: 0.5px solid var(--border); }
-
-  /* ── Trending hashtags ── */
-  .trending-tag {
-    display: inline-block; margin-right: 8px;
-    font-size: 12px; font-weight: 600; color: var(--ink2);
-    cursor: pointer; padding: 4px 0;
-  }
-  .trending-tag:hover { color: var(--ink); }
-
-  /* ── Repost embed ── */
-  .repost-embed {
-    margin-top: 6px; padding: 10px 12px;
-    background: var(--bg3); border-left: 2px solid var(--border2);
-    border-radius: var(--radius-sm);
-  }
-  .repost-embed-author { font-size: 11px; font-weight: 600; color: var(--ink2); margin-bottom: 3px; }
-  .repost-embed-text { font-size: 12px; line-height: 1.5; color: var(--ink3); }
-  .repost-embed-img { margin-top: 6px; border-radius: 6px; overflow: hidden; }
-  .repost-embed-img img { width: 100%; max-height: 140px; object-fit: cover; display: block; }
-
-  /* ── Post image — natural aspect ratio ── */
-  .post-img-wrap { margin: 8px 0; border-radius: var(--radius-sm); overflow: hidden; background: var(--bg3); }
-  .post-img-wrap img { width: 100%; display: block; max-height: 400px; object-fit: contain; }
-
-  /* ── Pills ── */
-  .at-pill-group { display: flex; flex-wrap: wrap; gap: 7px; }
-  .at-pill {
-    padding: 6px 13px; border-radius: 20px; border: 0.5px solid var(--border2);
-    background: var(--bg2); font-size: 12px; color: var(--ink3); cursor: pointer;
-    font-family: inherit; transition: all .12s;
-  }
-  .at-pill.selected { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-
-  /* ── Bottom sheet (interest onboarding + settings) ── */
-  .at-sheet-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.4); z-index: 998;
-  }
-  .at-sheet-overlay.open { display: block; }
-  .at-sheet {
-    position: fixed; bottom: 0; left: 50%;
-    transform: translateX(-50%) translateY(100%);
-    width: min(420px,100vw); background: var(--bg);
-    border-radius: 20px 20px 0 0;
-    box-shadow: 0 -8px 40px rgba(0,0,0,.15);
-    transition: transform .3s; z-index: 999;
-    max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
-  }
-  .at-sheet.open { transform: translateX(-50%) translateY(0); }
-  .at-sheet-handle {
-    width: 36px; height: 4px; background: var(--bg4);
-    border-radius: 2px; margin: 12px auto 8px; flex-shrink: 0;
-  }
-  .at-sheet-scroll { overflow-y: auto; flex: 1; padding: 0 18px 32px; }
-  .at-sheet-title {
-    font-family: var(--font-head); font-size: 26px;
-    color: var(--ink); margin-bottom: 5px; padding-top: 4px;
-  }
-  .at-sheet-sub {
-    font-size: 13px; color: var(--ink3); line-height: 1.5; margin-bottom: 20px;
-  }
-  .at-sheet-save {
-    display: block; width: 100%; padding: 14px;
-    background: var(--ink); color: var(--bg); border: none;
-    border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
-    cursor: pointer; font-family: inherit; margin-top: 24px;
-  }
-  .at-sheet-skip {
-    display: block; width: 100%; padding: 10px; background: none; border: none;
-    font-size: 12px; color: var(--ink4); cursor: pointer;
-    font-family: inherit; margin-top: 4px;
-  }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -343,7 +272,7 @@
       <div class="post-meta">{{ post.created_at[:10] if post.created_at else '' }}</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
-      {% if post.is_adult %}<span style="font-size:10px;background:var(--rose-light,#fde8e8);color:var(--rose);padding:2px 6px;border-radius:10px;font-weight:600;">18+</span>{% endif %}
+
       {% if post.quality_tier > 0 %}
       <span class="post-quality q{{ post.quality_tier }}">
         {% if post.quality_tier == 1 %}Good{% elif post.quality_tier == 2 %}Great{% else %}✦ Exceptional{% endif %}
@@ -353,31 +282,24 @@
   </div>
   <div class="post-cat">{{ post.category|title }}{% if post.visibility == 'friends' %} · 👥{% endif %}{% if post.is_locked %} · 🔒{% endif %}</div>
 
-  {% if post.is_repost %}
-  {# Repost: show original content as embed, reposter's comment below #}
-  <div style="font-size:10px;color:var(--ink4);font-weight:500;margin-bottom:8px;">🔁 reposted</div>
-  <div class="repost-embed">
-    <div class="repost-embed-author">{{ post.original_display_name or 'Unknown' }}</div>
-    {% if post.original_content %}
-    <div class="repost-embed-text">{{ post.original_content }}</div>
-    {% endif %}
-    {% if post.original_image_url %}
-    <div class="repost-embed-img"><img src="{{ post.original_image_url }}" alt=""></div>
-    {% endif %}
-  </div>
-  {% if post.content_text %}
-  <div class="post-content" style="margin-top:8px;font-size:12px;color:var(--ink3);">{{ post.content_text }}</div>
-  {% endif %}
-  {% else %}
-  {# Regular post: image then content #}
   {% if post.image_url and post.viewer_can_see_locked %}
   <div class="post-img-wrap">
-    <img src="{{ post.image_url }}"
+    <img class="post-img" src="{{ post.image_url }}"
          onerror="this.parentElement.style.display='none'" alt="Post image">
   </div>
   {% endif %}
-  <div class="post-content">{{ post.content_text }}</div>
+
+  {% if post.is_repost %}
+  <div style="font-size:11px;color:var(--ink4);margin-bottom:6px;">🔁 Repost</div>
+  {% if post.original_content %}
+  <div style="border-left:3px solid var(--bg4);padding:8px 12px;margin-bottom:8px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--bg2);">
+    <div style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:3px;">{{ post.original_author or 'Unknown' }}</div>
+    <div style="font-size:13px;color:var(--ink2);line-height:1.5;">{{ post.original_content[:160] }}{% if post.original_content|length > 160 %}…{% endif %}</div>
+  </div>
   {% endif %}
+  {% endif %}
+
+  <div class="post-content" data-content="{{ post.content_text | e }}"></div>
 
   {# Locked CTA for non-subscribers #}
   {% if post.is_locked and not post.viewer_can_see_locked %}
@@ -430,9 +352,13 @@
     <div class="topbar-eyebrow">SL HUD</div>
     <div class="topbar-title">Flare ✦</div>
   </div>
-  <button class="topbar-lumen" onclick="showTab('tab-dms')" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:flex-end;padding:0;">
-    <span style="font-size:18px;line-height:1;">✉</span>
-    <span style="font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-top:1px;color:var(--ink4);">Messages{% if dm_unread > 0 %} <span style="background:var(--rose);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;">{{ dm_unread }}</span>{% endif %}</span>
+  <button onclick="showTab('tab-dms')"
+    style="background:none;border:none;cursor:pointer;padding:6px 10px;position:relative;color:var(--ink2);font-size:20px;line-height:1;">
+    ✉
+    {% if dm_unread > 0 %}
+    <span style="position:absolute;top:2px;right:4px;background:var(--rose);color:#fff;
+      border-radius:10px;padding:1px 5px;font-size:9px;font-weight:700;line-height:1.4;">{{ dm_unread }}</span>
+    {% endif %}
   </button>
 </div>
 
@@ -442,6 +368,7 @@
   <button class="tab"        data-tab="tab-post"     onclick="showTab('tab-post')">Post</button>
   <button class="tab"        data-tab="tab-profile"  onclick="showTab('tab-profile')">Profile</button>
   <button class="tab"        data-tab="tab-discover" onclick="showTab('tab-discover')">Discover</button>
+
 </div>
 
 <!-- ── FEED TAB ── -->
@@ -488,19 +415,18 @@
       </div>
 
       <!-- Creator options (PPV + 18+) -->
-      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;" id="creator-options">
+      <div style="display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
         {% if creator_profile and creator_profile.is_active %}
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:11px;color:var(--ink4);">PPV ✦</span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);cursor:pointer;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius-sm);padding:6px 10px;">
+          <span>PPV</span>
+          <span style="color:var(--gold);">✦</span>
           <input type="number" id="post-ppv" min="0" max="9999" value="0"
-            style="width:60px;padding:5px 8px;border-radius:var(--radius-sm);
-                   border:1px solid var(--bg4);background:var(--bg2);
-                   font-size:12px;color:var(--ink);font-family:inherit;">
-        </div>
+            style="width:52px;border:none;background:transparent;font-size:12px;color:var(--ink);font-family:inherit;outline:none;">
+        </label>
         {% endif %}
-        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--ink4);">
-          <input type="checkbox" id="post-adult" style="width:14px;height:14px;cursor:pointer;">
-          18+ content
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);cursor:pointer;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius-sm);padding:6px 10px;">
+          <input type="checkbox" id="post-adult" style="width:14px;height:14px;cursor:pointer;accent-color:var(--rose);">
+          <span>18+</span>
         </label>
       </div>
 
@@ -612,7 +538,14 @@
     </div>
   </div>
 
-
+  <!-- Adult content toggle -->
+  <div style="margin:8px 18px;padding:12px 14px;background:var(--bg2);border-radius:var(--radius-sm);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);">18+ content</div>
+      <div style="font-size:11px;color:var(--ink4);margin-top:1px;">Show adult-tagged posts in your feeds</div>
+    </div>
+    <button class="sp-toggle {% if show_adult_content %}on{% endif %}" id="adult-toggle" onclick="toggleAdultContent(this)"></button>
+  </div>
 
   {% if flare_stats.active_deal %}
   <div class="deal-banner">
@@ -647,40 +580,48 @@
 <!-- ── DISCOVER TAB ── -->
 <div id="tab-discover" class="tab-panel">
 
-  <!-- Sub-tab bar: For You / Discover -->
-  <div class="disc-sub-bar">
-    <button class="disc-sub-btn active" id="sub-for-you" onclick="showSubTab('for-you')">For You</button>
-    <button class="disc-sub-btn" id="sub-discover" onclick="showSubTab('discover')">Discover</button>
+  <!-- Sub-tab bar -->
+  <div class="disc-subtab-bar">
+    <button class="disc-subtab active" id="sub-for-you" onclick="showSubTab('for-you')">For You</button>
+    <button class="disc-subtab" id="sub-discover" onclick="showSubTab('discover')">Explore</button>
   </div>
 
-  <!-- For You panel -->
+  <!-- FOR YOU ─────────────────────────────────────────────── -->
   <div id="subtab-for-you">
-    <!-- Category filter chips -->
-    <div class="disc-filter-bar" id="disc-filter-bar">
+
+    <!-- Category chips -->
+    <div class="disc-filter-bar">
       <button class="disc-chip active" onclick="setDiscFilter(this,'')">All</button>
       {% for cat in categories %}
       <button class="disc-chip" onclick="setDiscFilter(this,'{{ cat }}')">{{ cat | title }}</button>
       {% endfor %}
     </div>
+
     {% if trending_hashtags %}
-    <div style="padding:4px 18px 2px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4);">Trending</div>
-    <div style="padding:2px 18px 8px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;">
+    <div class="disc-section-label">Trending now</div>
+    <div class="disc-trending-bar">
       {% for ht in trending_hashtags %}
-      <span class="trending-tag" onclick="openHashtagFeed('{{ ht.tag }}')">#{{ ht.tag }} <span style="color:var(--ink4);font-weight:400;">{{ ht.post_count }}</span></span>
+      <button class="disc-trending-pill" onclick="openHashtagFeed('{{ ht.tag }}')">
+        #{{ ht.tag }}<span class="disc-trending-count">{{ ht.post_count }}</span>
+      </button>
       {% endfor %}
     </div>
     {% endif %}
+
+    <div class="disc-section-label">Your feed</div>
     <div id="for-you-posts">
-      <div style="padding:40px;text-align:center;color:var(--ink4);">Loading your feed…</div>
+      <div class="disc-loading">Loading your feed…</div>
     </div>
   </div>
 
-  <!-- Discover panel -->
+  <!-- EXPLORE ────────────────────────────────────────────── -->
   <div id="subtab-discover" style="display:none;">
-    <!-- Top / New sort toggle -->
-    <div class="disc-sort-bar">
-      <button class="disc-chip active" id="sort-top" onclick="setDiscoverSort('top',this)">🔥 Top</button>
-      <button class="disc-chip" id="sort-new" onclick="setDiscoverSort('new',this)">✨ New</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;">
+      <div class="disc-section-label" style="margin:0;">Browse all posts</div>
+      <div style="display:flex;gap:6px;">
+        <button class="disc-sort-btn active" id="sort-top" onclick="setDiscoverSort('top',this)">🔥 Top</button>
+        <button class="disc-sort-btn" id="sort-new" onclick="setDiscoverSort('new',this)">✨ New</button>
+      </div>
     </div>
     <div id="disc-posts-container">
       {% if discover %}
@@ -722,41 +663,31 @@
   const PLAYER_INTERESTS = {{ player_interests | tojson }};
   const HAS_INTERESTS    = {{ 'true' if has_set_interests else 'false' }};
   const ALL_CATEGORIES   = {{ categories | tojson }};
-  let _showAdult         = {{ 'true' if show_adult_content else 'false' }};
 
-  // ── Interest onboarding sheet ─────────────────────────────────────────────
+  // ── Interest onboarding overlay ───────────────────────────────────────────
   (function() {
-    if (HAS_INTERESTS) return;
-    const overlay = document.createElement('div');
-    overlay.className = 'at-sheet-overlay';
-    overlay.id = 'onboard-overlay';
-    const sheet = document.createElement('div');
-    sheet.className = 'at-sheet';
-    sheet.id = 'onboard-sheet';
-    sheet.innerHTML = `
-      <div class="at-sheet-handle"></div>
-      <div class="at-sheet-scroll">
-        <div class="at-sheet-title">What do you love? ✦</div>
-        <div class="at-sheet-sub">Pick your interests so we can personalise your For You feed. You can change these anytime in settings.</div>
-        <div class="at-pill-group" id="interest-pills">
-          ${ALL_CATEGORIES.map(c => '<button class="at-pill" onclick="toggleInterest(this,\'' + c + '\')">' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>').join('')}
-        </div>
-        <button class="at-sheet-save" onclick="saveOnboardingInterests()">Let’s go ✦</button>
-        <button class="at-sheet-skip" onclick="closeOnboardSheet()">Skip for now</button>
-      </div>`;
-    document.body.appendChild(overlay);
-    document.body.appendChild(sheet);
-    requestAnimationFrame(() => {
-      overlay.classList.add('open');
-      sheet.classList.add('open');
-    });
+    if (HAS_INTERESTS) return;  // already set, skip
+    const el = document.createElement('div');
+    el.id = 'interest-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;padding:24px 18px 40px;';
+    el.innerHTML = `
+      <div style="font-family:var(--font-head);font-size:28px;color:var(--ink);margin-bottom:6px;">What do you love? ✦</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:20px;line-height:1.5;">Pick your interests so we can personalise your For You feed. You can change these anytime in settings.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;" id="interest-pills">
+        ${ALL_CATEGORIES.map(c => `<button class="at-pill" onclick="toggleInterest(this,'${c}')">${c.charAt(0).toUpperCase()+c.slice(1)}</button>`).join('')}
+      </div>
+      <button onclick="saveOnboardingInterests()"
+        style="width:100%;padding:14px;background:var(--ink);color:var(--bg);border:none;
+               border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
+        Let's go ✦
+      </button>
+      <button onclick="document.getElementById('interest-overlay').remove()"
+        style="width:100%;padding:10px;background:none;border:none;font-size:12px;
+               color:var(--ink4);cursor:pointer;font-family:inherit;margin-top:8px;">
+        Skip for now
+      </button>`;
+    document.body.appendChild(el);
   })();
-
-  function closeOnboardSheet() {
-    document.getElementById('onboard-overlay')?.classList.remove('open');
-    document.getElementById('onboard-sheet')?.classList.remove('open');
-  }
-
 
   const _selectedInterests = new Set(PLAYER_INTERESTS);
 
@@ -778,41 +709,39 @@
         body: JSON.stringify({ token: TOKEN, categories: cats })
       });
       if (res.ok) {
-        closeOnboardSheet();
+        document.getElementById('interest-overlay')?.remove();
         loadForYou();
       }
-    } catch(e) { closeOnboardSheet(); }
+    } catch(e) { document.getElementById('interest-overlay')?.remove(); }
   }
 
   // ── Interest settings sheet (accessible from profile tab) ─────────────────
   (function() {
-    const overlay = document.createElement('div');
-    overlay.className = 'at-sheet-overlay';
-    overlay.id = 'interests-overlay';
-    overlay.onclick = closeInterestsSheet;
-    const sheet = document.createElement('div');
-    sheet.className = 'at-sheet';
-    sheet.id = 'interests-sheet';
-    sheet.innerHTML = `
-      <div class="at-sheet-handle"></div>
-      <div class="at-sheet-scroll">
-        <div class="at-sheet-title">Your interests</div>
-        <div class="at-sheet-sub">Shapes your For You feed.</div>
-        <div class="at-pill-group" id="settings-interest-pills">
-          ${ALL_CATEGORIES.map(c => '<button class="at-pill ' + (PLAYER_INTERESTS.includes(c) ? 'selected' : '') + '" onclick="toggleSettingsInterest(this,\'' + c + '\')">' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>').join('')}
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 2px;border-top:0.5px solid var(--border);margin-top:14px;">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink);">18+ content</div>
-            <div style="font-size:11px;color:var(--ink4);margin-top:1px;">Show adult posts in feeds</div>
-          </div>
-          <button class="sp-toggle ${_showAdult?'on':''}" id="adult-toggle" onclick="toggleAdultContent(this)"></button>
-        </div>
-        <button class="at-sheet-save" onclick="saveSettingsInterests()">Save interests</button>
-      </div>`;
-
-    document.body.appendChild(overlay);
-    document.body.appendChild(sheet);
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2998;" id="interests-overlay" onclick="closeInterestsSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:2999;
+  max-height:85vh;overflow-y:auto;" id="interests-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Your interests</div>
+    <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Shapes your For You feed.</div>
+  </div>
+  <div style="padding:14px 18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="settings-interest-pills">
+      ${ALL_CATEGORIES.map(c => `<button class="at-pill ${PLAYER_INTERESTS.includes(c)?'selected':''}"
+        onclick="toggleSettingsInterest(this,'${c}')">${c.charAt(0).toUpperCase()+c.slice(1)}</button>`).join('')}
+    </div>
+    <button onclick="saveSettingsInterests()"
+      style="width:100%;padding:13px;background:var(--ink);color:var(--bg);border:none;
+             border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+      Save interests
+    </button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
   })();
 
   const _settingsInterests = new Set(PLAYER_INTERESTS);
@@ -830,16 +759,39 @@
     } catch(e) { toast('Error'); }
   }
   function openInterestsSheet() {
-    document.getElementById('interests-overlay').classList.add('open');
-    requestAnimationFrame(() => document.getElementById('interests-sheet').classList.add('open'));
+    document.getElementById('interests-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('interests-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
   }
   function closeInterestsSheet() {
-    document.getElementById('interests-sheet').classList.remove('open');
-    document.getElementById('interests-overlay').classList.remove('open');
+    document.getElementById('interests-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('interests-overlay').style.display = 'none';
   }
 
+  // ── Linkify post content (hashtags + mentions) ────────────────────────────
+  function linkifyContent(text, token) {
+    if (!text) return '';
+    // Escape HTML first
+    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return escaped
+      .replace(/#([A-Za-z0-9_]+)/g, (_, tag) =>
+        `<a href="javascript:void(0)" onclick="event.stopPropagation();openHashtagFeed('${tag.toLowerCase()}')"
+          style="color:var(--gold);text-decoration:none;font-weight:600;">#${tag}</a>`)
+      .replace(/@([A-Za-z0-9_.]+)/g, (_, name) =>
+        `<a href="/app/player/search?display_name=${encodeURIComponent(name)}&token=${token}"
+          onclick="event.stopPropagation();"
+          style="color:var(--ink);font-weight:600;text-decoration:none;">@${name}</a>`);
+  }
 
-  // ── Sub-tabs (For You / Discover) ─────────────────────────────────────────
+  // Render all post-content divs that have data-content attr
+  function renderPostContents() {
+    document.querySelectorAll('.post-content[data-content]').forEach(el => {
+      el.innerHTML = linkifyContent(el.getAttribute('data-content'), TOKEN);
+      el.removeAttribute('data-content');
+    });
+  }
+  document.addEventListener('DOMContentLoaded', renderPostContents);
+
+  // ── Sub-tabs (For You / Explore) ──────────────────────────────────────────
   let _activeSubTab = 'for-you';
   function showSubTab(id) {
     document.getElementById('subtab-for-you').style.display = id === 'for-you' ? 'block' : 'none';
@@ -848,7 +800,6 @@
     document.getElementById('sub-discover').classList.toggle('active', id === 'discover');
     _activeSubTab = id;
     if (id === 'for-you') loadForYou();
-    if (id === 'discover') loadDiscover(_discCatFilter);
   }
 
   // ── For You feed ──────────────────────────────────────────────────────────
@@ -877,66 +828,34 @@
   }
 
   function renderPostCard(p) {
-    const imageHtml = (!p.is_repost && p.image_url)
-      ? '<div class="post-img-wrap"><img src="' + p.image_url + '" style="width:100%;display:block;max-height:400px;object-fit:contain;" onerror="this.parentElement.style.display='none'"></div>'
-      : '';
-    let repostHtml = '';
-    if (p.is_repost) {
-      const embedImg = p.original_image_url
-        ? '<div class="repost-embed-img"><img src="' + p.original_image_url + '" alt=""></div>' : '';
-      const embedText = p.original_content
-        ? '<div class="repost-embed-text">' + linkifyContent(p.original_content) + '</div>' : '';
-      const repComment = p.content_text
-        ? '<div class="post-content" style="margin-top:8px;font-size:12px;color:var(--ink3);">' + linkifyContent(p.content_text) + '</div>' : '';
-      repostHtml = '<div style="font-size:10px;color:var(--ink4);font-weight:500;margin-bottom:8px;">🔁 reposted</div>'
-        + '<div class="repost-embed">'
-        + '<div class="repost-embed-author">' + (p.original_display_name || 'Unknown') + '</div>'
-        + embedText + embedImg
-        + '</div>' + repComment;
-    }
-    const contentHtml = p.is_repost ? '' : '<div class="post-content">' + linkifyContent(p.content_text) + '</div>';
-    const qualityHtml = p.quality_tier > 0
-      ? '<span class="post-quality q' + p.quality_tier + '">' + (['','Good','Great','✦ Exceptional'][p.quality_tier]||'') + '</span>' : '';
-    return '<div class="post-card" onclick="openPostDetail(' + p.id + ')" style="cursor:pointer;">'
-      + '<div class="post-header">'
-      +   '<div>'
-      +     '<a class="post-author" href="/app/player/' + p.player_uuid + '?token=' + TOKEN + '" onclick="event.stopPropagation()" style="font-weight:600;color:var(--ink);text-decoration:none;cursor:pointer;">' + (p.display_name||'Unknown') + '</a>'
-      +     '<div class="post-meta">' + (p.created_at||'').slice(0,10) + '</div>'
-      +   '</div>'
-      +   qualityHtml
-      + '</div>'
-      + '<div class="post-cat">' + (p.category||'').replace(/_/g,' ') + '</div>'
-      + repostHtml
-      + imageHtml
-      + contentHtml
-      + '<div class="post-actions" onclick="event.stopPropagation();">'
-      +   '<button class="post-action-btn' + (p.viewer_has_liked?' liked':'') + '" id="like-btn-' + p.id + '" onclick="likePost(' + p.id + ','' + TOKEN + '',this)">' + (p.viewer_has_liked?'♥ Liked':'♡ Like') + '</button>'
-      +   '<button class="post-action-btn" onclick="openPostDetail(' + p.id + ')">💬 Comment</button>'
-      +   '<button class="post-action-btn" onclick="repostPost(' + p.id + ')">🔁 Repost</button>'
-      +   '<span class="post-npc-count" id="counts-' + p.id + '">' + p.total_likes + ' likes · ' + p.total_comments + ' comments</span>'
-      + '</div>'
-      + '</div>';
-  }
-
-  // ── Content linkifier ───────────────────────────────────────────────────────
-  function linkifyContent(text, authorUuid) {
-    if (!text) return '';
-    return text
-      .replace(/#(\w+)/g, (m, tag) =>
-        `<span style="color:var(--ink2);font-weight:600;cursor:pointer;" onclick="event.stopPropagation();openHashtagFeed('${tag}')">${m}</span>`)
-      .replace(/@([\w.]+)/g, (m, name) =>
-        `<span style="color:var(--ink2);font-weight:600;cursor:pointer;" onclick="event.stopPropagation();openMentionProfile('${name}')">${m}</span>`);
-  }
-
-  function openMentionProfile(displayName) {
-    // Best effort: search for player by display name and navigate
-    fetch('/flare/search-players?q=' + encodeURIComponent(displayName) + '&token=' + TOKEN)
-      .then(r => r.json())
-      .then(d => {
-        const p = (d.players || [])[0];
-        if (p && p.avatar_uuid) window.location.href = '/app/player/' + p.avatar_uuid + '?token=' + TOKEN;
-        else toast('Player not found');
-      }).catch(() => toast('Player not found'));
+    const imageHtml = p.image_url
+      ? `<div class="post-img-wrap"><img class="post-img" src="${p.image_url}" onerror="this.parentElement.style.display='none'"></div>` : '';
+    const repostHtml = p.is_repost && p.original_content
+      ? `<div style="border-left:3px solid var(--bg4);padding:8px 12px;margin-bottom:8px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:var(--bg2);">
+           <div style="font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:3px;">${p.original_author||'Unknown'}</div>
+           <div style="font-size:13px;color:var(--ink2);line-height:1.5;">${(p.original_content||'').slice(0,160)}</div>
+         </div>` : (p.is_repost ? '<div style="font-size:11px;color:var(--ink4);margin-bottom:6px;">🔁 Repost</div>' : '');
+    return `<div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
+      <div class="post-header">
+        <div>
+          <a class="post-author" href="/app/player/${p.player_uuid}?token=${TOKEN}"
+             onclick="event.stopPropagation();" style="text-decoration:none;color:inherit;">${p.display_name||'Unknown'}</a>
+          <div class="post-meta">${(p.created_at||'').slice(0,10)}</div>
+        </div>
+        ${p.quality_tier > 0 ? `<span class="post-quality q${p.quality_tier}">${['','Good','Great','✦ Exceptional'][p.quality_tier]||''}</span>` : ''}
+      </div>
+      <div class="post-cat">${(p.category||'').replace(/_/g,' ')}</div>
+      ${imageHtml}
+      ${repostHtml}
+      <div class="post-content">${linkifyContent(p.content_text, TOKEN)}</div>
+      <div class="post-actions" onclick="event.stopPropagation();">
+        <button class="post-action-btn${p.viewer_has_liked?' liked':''}" id="like-btn-${p.id}"
+          onclick="likePost(${p.id},'${TOKEN}',this)">${p.viewer_has_liked?'♥ Liked':'♡ Like'}</button>
+        <button class="post-action-btn" onclick="openPostDetail(${p.id})">💬 Comment</button>
+        <button class="post-action-btn" onclick="repostPost(${p.id})">🔁 Repost</button>
+        <span class="post-npc-count" id="counts-${p.id}">${p.total_likes} likes · ${p.total_comments} comments</span>
+      </div>
+    </div>`;
   }
 
   // ── Discover sort ─────────────────────────────────────────────────────────
@@ -1190,7 +1109,10 @@
                 display:flex;align-items:center;justify-content:center;font-size:12px;">
                 ${r.avatar_url ? '' : r.display_name[0]}
               </div>
-              <span style="font-size:13px;color:var(--ink);">${r.display_name}</span>
+              <div>
+                <div style="font-size:13px;color:var(--ink);font-weight:600;">${r.display_name}</div>
+                <div style="font-size:11px;color:var(--ink4);">@${r.sl_username || ''}</div>
+              </div>
             </div>`).join('');
           dropdown.style.display = 'block';
         } catch(e) { dropdown.style.display = 'none'; }
@@ -1219,9 +1141,6 @@
     const content   = document.getElementById('post-content').value.trim();
     const cat       = document.getElementById('post-cat').value;
     const imageUuid = document.getElementById('post-image-uuid')?.value.trim() || null;
-    const ppvPrice  = parseInt(document.getElementById('post-ppv')?.value || '0') || 0;
-    const isAdult   = document.getElementById('post-adult')?.checked || false;
-    const isLocked  = _postVisibility === 'locked';
     const btn       = document.getElementById('post-btn');
     if (!content) { toast('Write something first'); return; }
     btn.disabled = true; btn.textContent = '···';
@@ -1231,11 +1150,7 @@
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           token: TOKEN, content_text: content, category: cat,
-          image_uuid:  imageUuid || null,
-          visibility:  isLocked ? 'public' : _postVisibility,
-          is_locked:   isLocked ? 1 : 0,
-          ppv_price:   ppvPrice,
-          is_adult:    isAdult ? 1 : 0,
+          image_uuid: imageUuid || null, visibility: _postVisibility
         })
       });
       const data = await res.json();
@@ -1244,8 +1159,6 @@
         document.getElementById('post-content').value = '';
         if (document.getElementById('post-image-uuid')) document.getElementById('post-image-uuid').value = '';
         if (document.getElementById('image-preview')) document.getElementById('image-preview').style.display = 'none';
-        if (document.getElementById('post-ppv')) document.getElementById('post-ppv').value = '0';
-        if (document.getElementById('post-adult')) document.getElementById('post-adult').checked = false;
         updateCharCount();
         setTimeout(() => location.reload(), 1600);
       } else {
@@ -1453,7 +1366,44 @@
     loadDiscover(cat);
   }
 
-
+  async function loadDiscover(cat) {
+    const container = document.getElementById('disc-posts-container');
+    if (!container) return;
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
+    let url = `/flare/discover?token=${TOKEN}`;
+    if (cat) url += `&category=${encodeURIComponent(cat)}`;
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      const posts = data.discover || [];
+      if (!posts.length) {
+        container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">No posts found.</div>';
+        return;
+      }
+      container.innerHTML = posts.map(p => `
+        <div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
+          <div class="post-header">
+            <div>
+              <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name || 'Unknown'}</span>
+              <div class="post-meta">${(p.created_at||'').slice(0,10)}</div>
+            </div>
+            ${p.quality_tier > 0 ? `<span class="post-quality q${p.quality_tier}">${['','Good','Great','✦ Exceptional'][p.quality_tier]||''}</span>` : ''}
+          </div>
+          <div class="post-cat">${(p.category||'').replace(/_/g,' ')}</div>
+          ${p.image_url ? `<div style="margin:8px 0;border-radius:var(--radius-sm);overflow:hidden;max-height:180px;"><img src="${p.image_url}" style="width:100%;object-fit:cover;max-height:180px;" onerror="this.parentElement.style.display='none'"></div>` : ''}
+          <div class="post-content">${p.content_text}</div>
+          <div class="post-actions" onclick="event.stopPropagation();">
+            <button class="post-action-btn${p.viewer_has_liked?' liked':''}" id="like-btn-${p.id}"
+              onclick="likePost(${p.id},'${TOKEN}',this)">${p.viewer_has_liked?'♥ Liked':'♡ Like'}</button>
+            <button class="post-action-btn" onclick="openPostDetail(${p.id})">💬 Comment</button>
+            <button class="post-action-btn" onclick="repostPost(${p.id})">🔁 Repost</button>
+            <span class="post-npc-count" id="counts-${p.id}">${p.total_likes} likes · ${p.total_comments} comments</span>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
+    }
+  }
 
   // ── Hashtag feed ──────────────────────────────────────────────────────────
   async function openHashtagFeed(tag) {
@@ -1474,7 +1424,15 @@
           style="float:right;background:none;border:none;font-size:12px;color:var(--ink4);cursor:pointer;">✕ Clear</button>
       </div>`;
       container.innerHTML = header + (posts.length
-        ? posts.map(p => renderPostCard(p)).join('')
+        ? posts.map(p => `
+          <div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
+            <div class="post-header">
+              <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name||'Unknown'}</span>
+            </div>
+            <div class="post-cat">${p.category||''}</div>
+            ${p.image_url ? `<img src="${p.image_url}" style="width:100%;border-radius:var(--radius-sm);max-height:180px;object-fit:cover;margin:6px 0;" onerror="this.style.display='none'">` : ''}
+            <div class="post-content">${p.content_text}</div>
+          </div>`).join('')
         : '<div style="padding:40px;text-align:center;color:var(--ink4);">No posts with this hashtag yet.</div>');
     } catch(e) { container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>'; }
   }
@@ -1734,6 +1692,7 @@
   }
 
   // ── Adult content toggle ──────────────────────────────────────────────────
+  let _showAdult = {{ 'true' if show_adult_content else 'false' }};
   async function toggleAdultContent(btn) {
     _showAdult = !_showAdult;
     btn.classList.toggle('on', _showAdult);
@@ -1746,6 +1705,50 @@
     } catch(e) { toast('Error'); _showAdult = !_showAdult; btn.classList.toggle('on', _showAdult); }
   }
 
-
+  // ── Update submitPost to include creator fields ───────────────────────────
+  const _origSubmitPost = submitPost;
+  submitPost = async function() {
+    // Override to inject ppv/adult into the v2 call
+    const content   = document.getElementById('post-content').value.trim();
+    const cat       = document.getElementById('post-cat').value;
+    const imageUuid = document.getElementById('post-image-uuid')?.value.trim() || null;
+    const ppvPrice  = parseInt(document.getElementById('post-ppv')?.value || '0') || 0;
+    const isAdult   = document.getElementById('post-adult')?.checked || false;
+    const isLocked  = _postVisibility === 'locked';
+    const btn       = document.getElementById('post-btn');
+    if (!content) { toast('Write something first'); return; }
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const body = {
+        token: TOKEN, content_text: content, category: cat,
+        image_uuid:  imageUuid || null,
+        visibility:  isLocked ? 'public' : _postVisibility,
+        is_locked:   isLocked ? 1 : 0,
+        ppv_price:   ppvPrice,
+        is_adult:    isAdult ? 1 : 0,
+      };
+      const res  = await fetch('/flare/post/v2', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Posted ✓ — ' + (data.tier_label || 'Standard') + ' quality');
+        document.getElementById('post-content').value = '';
+        if (document.getElementById('post-image-uuid')) document.getElementById('post-image-uuid').value = '';
+        if (document.getElementById('image-preview')) document.getElementById('image-preview').style.display = 'none';
+        if (document.getElementById('post-ppv')) document.getElementById('post-ppv').value = '0';
+        if (document.getElementById('post-adult')) document.getElementById('post-adult').checked = false;
+        updateCharCount();
+        setTimeout(() => location.reload(), 1600);
+      } else {
+        toast(data.detail || 'Could not post');
+        btn.disabled = false; btn.textContent = 'Post';
+      }
+    } catch(e) {
+      toast('Connection error');
+      btn.disabled = false; btn.textContent = 'Post';
+    }
+  };
 </script>
 {% endblock %}

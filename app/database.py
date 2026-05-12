@@ -512,6 +512,8 @@ async def _init_sqlite():
             "ALTER TABLE posts ADD COLUMN is_adult INTEGER NOT NULL DEFAULT 0",
             # player_profiles — adult content preference
             "ALTER TABLE player_profiles ADD COLUMN show_adult_content INTEGER NOT NULL DEFAULT 0",
+            # players — SL username for disambiguation
+            "ALTER TABLE players ADD COLUMN sl_username TEXT DEFAULT NULL",
         ]
         for sql in migrations_sqlite:
             try:
@@ -1618,6 +1620,8 @@ async def _init_postgres():
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_adult INTEGER NOT NULL DEFAULT 0",
             # player_profiles — adult content preference
             "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS show_adult_content INTEGER NOT NULL DEFAULT 0",
+            # players — SL username for disambiguation
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS sl_username TEXT DEFAULT NULL",
         ]
         for sql in migrations_pg:
             try:
