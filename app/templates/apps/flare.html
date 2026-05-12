@@ -180,6 +180,62 @@
     font-size: 10px; color: var(--amber); font-weight: 500;
     margin-top: 8px;
   }
+
+  /* ── Pill interest selector ── */
+  .at-pill {
+    padding: 8px 16px; border-radius: 20px;
+    border: 1px solid var(--border2); background: var(--bg2);
+    font-family: var(--font); font-size: 13px; font-weight: 500;
+    color: var(--ink3); cursor: pointer;
+    transition: all .15s;
+  }
+  .at-pill.selected {
+    background: var(--ink); color: var(--bg);
+    border-color: var(--ink);
+  }
+  .at-pill:active { opacity: .8; }
+
+  /* ── Visibility / toggle buttons in composer ── */
+  .compose-vis-btn {
+    padding: 7px 14px; border-radius: 20px;
+    border: 1px solid var(--border2); background: var(--bg2);
+    font-family: var(--font); font-size: 12px; font-weight: 500;
+    color: var(--ink3); cursor: pointer;
+    transition: all .15s;
+  }
+  .compose-vis-btn.active {
+    background: var(--ink); color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  /* ── Filter chips (discover / for you) ── */
+  .disc-chip {
+    padding: 6px 14px; border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    border: 1px solid var(--border2); background: var(--bg2);
+    font-family: var(--font); font-size: 12px; font-weight: 500;
+    color: var(--ink3); cursor: pointer;
+    transition: all .15s;
+  }
+  .disc-chip.active {
+    background: var(--ink); color: var(--bg);
+    border-color: var(--ink);
+  }
+
+  /* ── Toggle switch (sp-toggle) ── */
+  .sp-toggle {
+    width: 44px; height: 26px; border-radius: 13px;
+    background: var(--bg4); border: none; cursor: pointer;
+    position: relative; flex-shrink: 0; transition: background .2s;
+  }
+  .sp-toggle.on { background: #4a9a6a; }
+  .sp-toggle::after {
+    content: ''; position: absolute;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; top: 3px; left: 3px;
+    transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .sp-toggle.on::after { left: 21px; }
+
 </style>
 
 <style>
@@ -353,7 +409,7 @@
     <div class="topbar-eyebrow">SL HUD</div>
     <div class="topbar-title">Flare ✦</div>
   </div>
-  <button onclick="showTab('tab-dms')"
+  <button onclick="showTab('tab-dms')" data-tab="tab-dms"
     style="background:none;border:none;cursor:pointer;padding:6px 10px;position:relative;color:var(--ink2);font-size:20px;line-height:1;">
     ✉
     {% if dm_unread > 0 %}
@@ -581,10 +637,10 @@
 <!-- ── DISCOVER TAB ── -->
 <div id="tab-discover" class="tab-panel">
 
-  <!-- Sub-tab bar -->
-  <div class="disc-subtab-bar">
-    <button class="disc-subtab active" id="sub-for-you" onclick="showSubTab('for-you')">For You</button>
-    <button class="disc-subtab" id="sub-discover" onclick="showSubTab('discover')">Explore</button>
+  <!-- Sub-tab chips -->
+  <div style="display:flex;gap:8px;padding:12px 18px 0;">
+    <button class="disc-chip active" id="sub-for-you" onclick="showSubTab('for-you')">For You</button>
+    <button class="disc-chip" id="sub-discover" onclick="showSubTab('discover')">Explore</button>
   </div>
 
   <!-- FOR YOU ─────────────────────────────────────────────── -->
@@ -620,8 +676,8 @@
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;">
       <div class="disc-section-label" style="margin:0;">Browse all posts</div>
       <div style="display:flex;gap:6px;">
-        <button class="disc-sort-btn active" id="sort-top" onclick="setDiscoverSort('top',this)">🔥 Top</button>
-        <button class="disc-sort-btn" id="sort-new" onclick="setDiscoverSort('new',this)">✨ New</button>
+        <button class="disc-chip active" id="sort-top" onclick="setDiscoverSort('top',this)">🔥 Top</button>
+        <button class="disc-chip" id="sort-new" onclick="setDiscoverSort('new',this)">✨ New</button>
       </div>
     </div>
     <div id="disc-posts-container">
@@ -645,7 +701,7 @@
 </div>
 
 <!-- DMs tab -->
-<div id="tab-dms" class="tab-panel" style="display:none;">
+<div id="tab-dms" class="tab-panel">
   <div style="padding:14px 18px 8px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;">
     <div style="font-family:var(--font-head);font-size:22px;color:var(--ink);">Messages ✦</div>
     <div style="font-size:11px;color:var(--ink4);">Flare DMs</div>
@@ -805,7 +861,6 @@
   }
   document.addEventListener('DOMContentLoaded', renderPostContents);
 
-  // ── Sub-tabs (For You / Explore) ──────────────────────────────────────────
   let _activeSubTab = 'for-you';
   function showSubTab(id) {
     document.getElementById('subtab-for-you').style.display = id === 'for-you' ? 'block' : 'none';
@@ -1047,11 +1102,12 @@
   }
 
   // ── Override showTab to load DMs ──────────────────────────────────────────
-  const _origShowTab = showTab;
+  // Extend base showTab to load DM/discover data
+  const _baseShowTab = showTab;
   showTab = function(id) {
-    _origShowTab(id);
+    _baseShowTab(id);
     if (id === 'tab-dms') loadDMThreads();
-    if (id === 'tab-discover') { loadForYou(); }
+    if (id === 'tab-discover') loadForYou();
   };
 
   // ── Init ──────────────────────────────────────────────────────────────────
