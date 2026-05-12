@@ -215,41 +215,77 @@
 
 <!-- Post card macro -->
 {% macro _render_post(post, token) %}
-<div class="post-card">
+{% if post.hidden_adult %}
+{# Hidden 18+ post — show placeholder #}
+<div class="post-card" style="opacity:.5;">
+  <div class="post-cat">🔞 18+ content</div>
+  <div class="post-content" style="color:var(--ink4);font-size:12px;">Enable 18+ content in settings to view this post.</div>
+</div>
+{% else %}
+<div class="post-card" onclick="openPostDetail({{ post.id }})" style="cursor:pointer;">
   <div class="post-header">
     <div>
-      <a class="post-author" href="/app/player/{{ post.player_uuid }}?token={{ token }}" style="text-decoration:none;color:inherit;cursor:pointer;">{{ post.display_name or 'Unknown' }}</a>
+      <a class="post-author" href="/app/player/{{ post.player_uuid }}?token={{ token }}"
+         onclick="event.stopPropagation();"
+         style="text-decoration:none;color:inherit;cursor:pointer;">{{ post.display_name or 'Unknown' }}</a>
       <div class="post-meta">{{ post.created_at[:10] if post.created_at else '' }}</div>
     </div>
-    {% if post.quality_tier > 0 %}
-    <span class="post-quality q{{ post.quality_tier }}">
-      {% if post.quality_tier == 1 %}Good{% elif post.quality_tier == 2 %}Great{% else %}✦ Exceptional{% endif %}
-    </span>
-    {% endif %}
+    <div style="display:flex;align-items:center;gap:6px;">
+      {% if post.is_adult %}<span style="font-size:10px;background:var(--rose-light,#fde8e8);color:var(--rose);padding:2px 6px;border-radius:10px;font-weight:600;">18+</span>{% endif %}
+      {% if post.quality_tier > 0 %}
+      <span class="post-quality q{{ post.quality_tier }}">
+        {% if post.quality_tier == 1 %}Good{% elif post.quality_tier == 2 %}Great{% else %}✦ Exceptional{% endif %}
+      </span>
+      {% endif %}
+    </div>
   </div>
-  <div class="post-cat">{{ post.category|title }}</div>
+  <div class="post-cat">{{ post.category|title }}{% if post.visibility == 'friends' %} · 👥{% endif %}{% if post.is_locked %} · 🔒{% endif %}</div>
+
+  {% if post.image_url and post.viewer_can_see_locked %}
+  <div style="margin:8px 0;border-radius:var(--radius-sm);overflow:hidden;max-height:220px;">
+    <img src="{{ post.image_url }}" style="width:100%;object-fit:cover;max-height:220px;"
+         onerror="this.parentElement.style.display='none'" alt="Post image">
+  </div>
+  {% endif %}
+
+  {% if post.is_repost %}<div style="font-size:11px;color:var(--ink4);margin-bottom:4px;">🔁 Repost</div>{% endif %}
+
   <div class="post-content">{{ post.content_text }}</div>
-  <div class="post-actions">
+
+  {# Locked CTA for non-subscribers #}
+  {% if post.is_locked and not post.viewer_can_see_locked %}
+  <div style="margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);
+              text-align:center;font-size:12px;color:var(--ink3);"
+       onclick="event.stopPropagation();openSubscribeSheet({{ post.player_id }})">
+    🔒 <strong>Subscribe</strong> to read the full post
+  </div>
+  {% endif %}
+
+  {# PPV CTA #}
+  {% if post.ppv_price and not post.viewer_can_see_locked %}
+  <div style="margin-top:8px;padding:10px 12px;background:var(--gold-light);border-radius:var(--radius-sm);
+              text-align:center;font-size:12px;color:var(--gold);cursor:pointer;"
+       onclick="event.stopPropagation();unlockPost({{ post.id }}, {{ post.ppv_price }})">
+    ✦{{ post.ppv_price }} · <strong>Unlock this post</strong>
+  </div>
+  {% endif %}
+
+  <div class="post-actions" onclick="event.stopPropagation();">
     <button class="post-action-btn {% if post.viewer_has_liked %}liked{% endif %}"
             id="like-btn-{{ post.id }}"
             onclick="likePost({{ post.id }}, '{{ token }}', this)">
       {% if post.viewer_has_liked %}♥ Liked{% else %}♡ Like{% endif %}
     </button>
-    <button class="post-action-btn" onclick="commentPost({{ post.id }}, '{{ token }}')">
-      💬 Comment
-    </button>
+    <button class="post-action-btn" onclick="openPostDetail({{ post.id }})">💬 Comment</button>
+    <button class="post-action-btn" onclick="repostPost({{ post.id }})">🔁 Repost</button>
     {% if post.player_id != player.id %}
     {% if post.viewer_is_following %}
     <button class="post-action-btn following"
-            data-uuid="{{ post.player_uuid }}"
-            data-name="{{ post.display_name }}"
             onclick="toggleFollow('{{ post.player_uuid }}', '{{ post.display_name }}', '{{ token }}', this)">
       ✓ Following
     </button>
     {% else %}
     <button class="post-action-btn"
-            data-uuid="{{ post.player_uuid }}"
-            data-name="{{ post.display_name }}"
             onclick="toggleFollow('{{ post.player_uuid }}', '{{ post.display_name }}', '{{ token }}', this)">
       + Follow
     </button>
@@ -258,6 +294,7 @@
     <span class="post-npc-count" id="counts-{{ post.id }}">{{ post.total_likes }} likes · {{ post.total_comments }} comments</span>
   </div>
 </div>
+{% endif %}
 {% endmacro %}
 
 <!-- TOPBAR -->
@@ -316,11 +353,57 @@
           <option value="{{ cat }}">{{ cat|title }}</option>
         {% endfor %}
       </select>
-      <textarea class="compose-textarea" id="post-content"
-        placeholder="What's happening in your world?"
-        maxlength="500"
-        oninput="updateCharCount()"></textarea>
-      <div class="compose-footer">
+
+      <!-- Visibility -->
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="compose-vis-btn active" id="vis-public" onclick="setVisibility('public',this)">🌐 Public</button>
+        <button class="compose-vis-btn" id="vis-friends" onclick="setVisibility('friends',this)">👥 Friends</button>
+        {% if creator_profile and creator_profile.is_active %}
+        <button class="compose-vis-btn" id="vis-locked" onclick="setVisibility('locked',this)">🔒 Subscribers</button>
+        {% endif %}
+      </div>
+
+      <!-- Creator options (PPV + 18+) -->
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;" id="creator-options">
+        {% if creator_profile and creator_profile.is_active %}
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--ink4);">PPV ✦</span>
+          <input type="number" id="post-ppv" min="0" max="9999" value="0"
+            style="width:60px;padding:5px 8px;border-radius:var(--radius-sm);
+                   border:1px solid var(--bg4);background:var(--bg2);
+                   font-size:12px;color:var(--ink);font-family:inherit;">
+        </div>
+        {% endif %}
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--ink4);">
+          <input type="checkbox" id="post-adult" style="width:14px;height:14px;cursor:pointer;">
+          18+ content
+        </label>
+      </div>
+
+      <div style="position:relative;">
+        <textarea class="compose-textarea" id="post-content"
+          placeholder="What's happening? Use #hashtags and @mention players…"
+          maxlength="500"
+          oninput="updateCharCount();detectMention(this)"></textarea>
+        <div id="mention-dropdown" style="display:none;position:absolute;left:0;right:0;
+          background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius-sm);
+          z-index:50;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.12);">
+        </div>
+      </div>
+
+      <!-- Image UUID -->
+      <div style="margin-top:8px;">
+        <input type="text" id="post-image-uuid" maxlength="36"
+          placeholder="SL texture UUID for photo (optional)"
+          style="width:100%;padding:9px 12px;border-radius:var(--radius-sm);
+                 border:1px solid var(--bg4);background:var(--bg2);
+                 font-size:12px;color:var(--ink);font-family:inherit;box-sizing:border-box;">
+      </div>
+      <div id="image-preview" style="display:none;margin-top:6px;border-radius:var(--radius-sm);overflow:hidden;max-height:160px;">
+        <img id="image-preview-img" style="width:100%;object-fit:cover;max-height:160px;" alt="Preview">
+      </div>
+
+      <div class="compose-footer" style="margin-top:8px;">
         <span class="char-count" id="char-count">500</span>
         <button class="compose-submit" id="post-btn" onclick="submitPost()">Post</button>
       </div>
@@ -399,7 +482,19 @@
     <button onclick="openInterestsSheet()" style="margin-top:6px;margin-left:6px;background:none;border:0.5px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--ink4);cursor:pointer;">
       ✦ Edit interests
     </button>
+    <button onclick="openCreatorSheet()" style="margin-top:6px;margin-left:6px;background:none;border:0.5px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--ink4);cursor:pointer;">
+      {% if creator_profile and creator_profile.is_active %}✦ Creator settings{% else %}🌟 Become a creator{% endif %}
+    </button>
     </div>
+  </div>
+
+  <!-- Adult content toggle -->
+  <div style="margin:8px 18px;padding:12px 14px;background:var(--bg2);border-radius:var(--radius-sm);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);">18+ content</div>
+      <div style="font-size:11px;color:var(--ink4);margin-top:1px;">Show adult-tagged posts in your feeds</div>
+    </div>
+    <button class="sp-toggle {% if show_adult_content %}on{% endif %}" id="adult-toggle" onclick="toggleAdultContent(this)"></button>
   </div>
 
   {% if flare_stats.active_deal %}
@@ -1329,5 +1424,239 @@
 
   // Discover also needs /flare/discover to support category filter
   // We pass it via query param - update discover endpoint to accept it
+
+  // ── Creator setup sheet ───────────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2998;" id="creator-overlay" onclick="closeCreatorSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:2999;
+  max-height:85vh;overflow-y:auto;" id="creator-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="padding:12px 18px 8px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);">Creator profile ✦</div>
+    <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Let players subscribe to your exclusive content.</div>
+  </div>
+  <div style="padding:14px 18px 28px;display:flex;flex-direction:column;gap:12px;">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <button class="sp-toggle" id="creator-active-toggle" onclick="toggleCreatorActive(this)"></button>
+      <span style="font-size:13px;font-weight:600;color:var(--ink);" id="creator-active-label">Activate creator profile</span>
+    </label>
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Monthly subscription price (✦)</label>
+      <input type="number" id="creator-price" min="0" max="99999" value="0"
+        style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--bg4);background:var(--bg2);font-size:14px;color:var(--ink);font-family:inherit;box-sizing:border-box;">
+      <div style="font-size:11px;color:var(--ink4);margin-top:3px;">Set to 0 for a free/tip-only creator profile. You receive 80% of all payments.</div>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Creator bio</label>
+      <textarea id="creator-bio" placeholder="Tell subscribers what they get…" maxlength="400"
+        style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--bg4);background:var(--bg2);font-size:13px;color:var(--ink);font-family:inherit;resize:vertical;min-height:72px;box-sizing:border-box;"></textarea>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink4);margin-bottom:4px;">Banner image UUID</label>
+      <input type="text" id="creator-banner" maxlength="36" placeholder="SL texture UUID"
+        style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--bg4);background:var(--bg2);font-size:14px;color:var(--ink);font-family:inherit;box-sizing:border-box;">
+    </div>
+    <button onclick="saveCreatorProfile()"
+      style="padding:13px;background:var(--ink);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+      Save creator profile
+    </button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  let _creatorIsActive = {{ 'true' if (creator_profile and creator_profile.is_active) else 'false' }};
+
+  function openCreatorSheet() {
+    // Pre-fill
+    const price  = {{ creator_profile.subscription_price if creator_profile else 0 }};
+    const bio    = `{{ (creator_profile.bio or '') | replace('`','\\`') | replace('${','\\${') if creator_profile else '' }}`;
+    const banner = `{{ creator_profile.banner_uuid or '' if creator_profile else '' }}`;
+    document.getElementById('creator-price').value  = price;
+    document.getElementById('creator-bio').value    = bio;
+    document.getElementById('creator-banner').value = banner;
+    const toggle = document.getElementById('creator-active-toggle');
+    toggle.classList.toggle('on', _creatorIsActive);
+    document.getElementById('creator-active-label').textContent =
+      _creatorIsActive ? 'Creator profile active' : 'Creator profile inactive';
+    document.getElementById('creator-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('creator-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+  }
+  function closeCreatorSheet() {
+    document.getElementById('creator-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('creator-overlay').style.display = 'none';
+  }
+  function toggleCreatorActive(btn) {
+    _creatorIsActive = !_creatorIsActive;
+    btn.classList.toggle('on', _creatorIsActive);
+    document.getElementById('creator-active-label').textContent =
+      _creatorIsActive ? 'Creator profile active' : 'Creator profile inactive';
+  }
+  async function saveCreatorProfile() {
+    try {
+      const res = await fetch('/flare/creator/setup', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          token: TOKEN,
+          is_active:          _creatorIsActive,
+          subscription_price: parseInt(document.getElementById('creator-price').value) || 0,
+          bio:                document.getElementById('creator-bio').value.trim() || null,
+          banner_uuid:        document.getElementById('creator-banner').value.trim() || null,
+        })
+      });
+      if (res.ok) { closeCreatorSheet(); toast('Creator profile saved ✓'); setTimeout(() => location.reload(), 1200); }
+      else { const d = await res.json(); toast(d.detail || 'Could not save'); }
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Subscribe sheet ───────────────────────────────────────────────────────
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2998;" id="subscribe-overlay" onclick="closeSubscribeSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:2999;
+  max-height:70vh;overflow-y:auto;" id="subscribe-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 0;"></div>
+  <div style="padding:14px 18px 8px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:24px;color:var(--ink);" id="sub-creator-name">Subscribe</div>
+    <div style="font-size:12px;color:var(--ink4);margin-top:2px;" id="sub-price-label">Loading…</div>
+  </div>
+  <div style="padding:14px 18px 28px;" id="sub-body">
+    <div style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:16px;" id="sub-bio"></div>
+    <button onclick="confirmSubscribe()"
+      style="width:100%;padding:13px;background:var(--ink);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" id="sub-confirm-btn">
+      Subscribe
+    </button>
+    <button onclick="closeSubscribeSheet()"
+      style="width:100%;padding:10px;background:none;border:none;font-size:12px;color:var(--ink4);cursor:pointer;font-family:inherit;margin-top:6px;">
+      Not now
+    </button>
+  </div>
+</div>`;
+    while (el.firstChild) document.body.appendChild(el.firstChild);
+  })();
+
+  let _subCreatorId = null;
+
+  async function openSubscribeSheet(creatorPlayerId) {
+    _subCreatorId = creatorPlayerId;
+    document.getElementById('sub-price-label').textContent = 'Loading…';
+    document.getElementById('sub-bio').textContent = '';
+    document.getElementById('subscribe-overlay').style.display = 'block';
+    setTimeout(() => document.getElementById('subscribe-sheet').style.transform = 'translateX(-50%) translateY(0)', 10);
+    try {
+      const res  = await fetch(`/flare/creator/${creatorPlayerId}?token=${TOKEN}`);
+      const data = await res.json();
+      const cp   = data.creator;
+      if (!cp) { closeSubscribeSheet(); toast('Creator not found'); return; }
+      document.getElementById('sub-creator-name').textContent = 'Subscribe';
+      const price = cp.subscription_price;
+      document.getElementById('sub-price-label').textContent =
+        price > 0 ? `✦${price}/month · ${data.subscriber_count} subscribers` : `Free · ${data.subscriber_count} subscribers`;
+      document.getElementById('sub-bio').textContent = cp.bio || '';
+      document.getElementById('sub-confirm-btn').textContent =
+        price > 0 ? `Subscribe for ✦${price}/month` : 'Subscribe (free)';
+    } catch(e) { toast('Could not load creator'); closeSubscribeSheet(); }
+  }
+  function closeSubscribeSheet() {
+    document.getElementById('subscribe-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    document.getElementById('subscribe-overlay').style.display = 'none';
+    _subCreatorId = null;
+  }
+  async function confirmSubscribe() {
+    if (!_subCreatorId) return;
+    try {
+      const res = await fetch(`/flare/creator/${_subCreatorId}/subscribe`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      const d = await res.json();
+      if (res.ok) {
+        closeSubscribeSheet();
+        toast('Subscribed ✦');
+        setTimeout(() => location.reload(), 1200);
+      } else toast(d.detail || 'Could not subscribe');
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── PPV unlock ────────────────────────────────────────────────────────────
+  async function unlockPost(postId, price) {
+    if (!confirm(`Unlock this post for ✦${price}?`)) return;
+    try {
+      const res = await fetch(`/flare/post/${postId}/unlock`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN })
+      });
+      const d = await res.json();
+      if (res.ok) { toast(`Post unlocked ✦${price} spent`); setTimeout(() => location.reload(), 1000); }
+      else toast(d.detail || 'Could not unlock');
+    } catch(e) { toast('Connection error'); }
+  }
+
+  // ── Adult content toggle ──────────────────────────────────────────────────
+  let _showAdult = {{ 'true' if show_adult_content else 'false' }};
+  async function toggleAdultContent(btn) {
+    _showAdult = !_showAdult;
+    btn.classList.toggle('on', _showAdult);
+    try {
+      await fetch('/flare/settings/adult', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: TOKEN, show_adult_content: _showAdult })
+      });
+      toast(_showAdult ? '18+ content enabled' : '18+ content hidden');
+    } catch(e) { toast('Error'); _showAdult = !_showAdult; btn.classList.toggle('on', _showAdult); }
+  }
+
+  // ── Update submitPost to include creator fields ───────────────────────────
+  const _origSubmitPost = submitPost;
+  submitPost = async function() {
+    // Override to inject ppv/adult into the v2 call
+    const content   = document.getElementById('post-content').value.trim();
+    const cat       = document.getElementById('post-cat').value;
+    const imageUuid = document.getElementById('post-image-uuid')?.value.trim() || null;
+    const ppvPrice  = parseInt(document.getElementById('post-ppv')?.value || '0') || 0;
+    const isAdult   = document.getElementById('post-adult')?.checked || false;
+    const isLocked  = _postVisibility === 'locked';
+    const btn       = document.getElementById('post-btn');
+    if (!content) { toast('Write something first'); return; }
+    btn.disabled = true; btn.textContent = '···';
+    try {
+      const body = {
+        token: TOKEN, content_text: content, category: cat,
+        image_uuid:  imageUuid || null,
+        visibility:  isLocked ? 'public' : _postVisibility,
+        is_locked:   isLocked ? 1 : 0,
+        ppv_price:   ppvPrice,
+        is_adult:    isAdult ? 1 : 0,
+      };
+      const res  = await fetch('/flare/post/v2', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast('Posted ✓ — ' + (data.tier_label || 'Standard') + ' quality');
+        document.getElementById('post-content').value = '';
+        if (document.getElementById('post-image-uuid')) document.getElementById('post-image-uuid').value = '';
+        if (document.getElementById('image-preview')) document.getElementById('image-preview').style.display = 'none';
+        if (document.getElementById('post-ppv')) document.getElementById('post-ppv').value = '0';
+        if (document.getElementById('post-adult')) document.getElementById('post-adult').checked = false;
+        updateCharCount();
+        setTimeout(() => location.reload(), 1600);
+      } else {
+        toast(data.detail || 'Could not post');
+        btn.disabled = false; btn.textContent = 'Post';
+      }
+    } catch(e) {
+      toast('Connection error');
+      btn.disabled = false; btn.textContent = 'Post';
+    }
+  };
 </script>
 {% endblock %}

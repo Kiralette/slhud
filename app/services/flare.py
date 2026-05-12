@@ -327,3 +327,162 @@ async def _run_brand_deal_check(db):
     else:
         await db.execute("UPDATE flare_stats SET weekly_post_count = 0")
         await db.commit()
+
+
+# ── Creator Subscription Billing ──────────────────────────────────────────────
+
+async def run_creator_subscription_billing(db=None):
+    """
+    Runs Sunday midnight SLT alongside brand deal check.
+    Renews active subscriptions that are expiring, charges subscribers,
+    pays creators 80%, and expires subscriptions where renewal fails.
+    """
+    if db is None:
+        async with service_db() as db:
+            await _run_creator_billing(db)
+        return
+    await _run_creator_billing(db)
+
+
+async def _run_creator_billing(db):
+    from datetime import datetime, timezone, timedelta
+
+    now     = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    # Find subscriptions expiring in the next 24 hours that are still active
+    window  = (now + timedelta(hours=24)).isoformat()
+
+    if is_postgres():
+        subs = await db.fetch(
+            """SELECT cs.*, cp.subscription_price, cp.is_active AS creator_active,
+                      p.display_name AS subscriber_name
+               FROM creator_subscriptions cs
+               JOIN creator_profiles cp ON cp.player_id = cs.creator_id
+               JOIN players p ON p.id = cs.subscriber_id
+               WHERE cs.is_active = 1 AND cs.expires_at <= $1""",
+            window)
+    else:
+        async with db.execute(
+            """SELECT cs.*, cp.subscription_price, cp.is_active AS creator_active,
+                      p.display_name AS subscriber_name
+               FROM creator_subscriptions cs
+               JOIN creator_profiles cp ON cp.player_id = cs.creator_id
+               JOIN players p ON p.id = cs.subscriber_id
+               WHERE cs.is_active = 1 AND cs.expires_at <= ?""",
+            (window,)
+        ) as cur:
+            subs = await cur.fetchall()
+
+    for sub in subs:
+        subscriber_id = sub["subscriber_id"]
+        creator_id    = sub["creator_id"]
+        price         = int(sub["subscription_price"])
+        new_expires   = (now + timedelta(days=30)).isoformat()
+
+        # If creator deactivated, expire subscription
+        if not sub["creator_active"]:
+            if is_postgres():
+                await db.execute(
+                    "UPDATE creator_subscriptions SET is_active=0 WHERE subscriber_id=$1 AND creator_id=$2",
+                    subscriber_id, creator_id)
+            else:
+                await db.execute(
+                    "UPDATE creator_subscriptions SET is_active=0 WHERE subscriber_id=? AND creator_id=?",
+                    (subscriber_id, creator_id))
+            continue
+
+        # Free subscription — just renew
+        if price == 0:
+            if is_postgres():
+                await db.execute(
+                    "UPDATE creator_subscriptions SET expires_at=$1 WHERE subscriber_id=$2 AND creator_id=$3",
+                    new_expires, subscriber_id, creator_id)
+            else:
+                await db.execute(
+                    "UPDATE creator_subscriptions SET expires_at=? WHERE subscriber_id=? AND creator_id=?",
+                    (new_expires, subscriber_id, creator_id))
+            continue
+
+        # Paid — check wallet
+        if is_postgres():
+            wallet = await db.fetchrow(
+                "SELECT balance FROM wallets WHERE player_id = $1", subscriber_id)
+        else:
+            async with db.execute(
+                "SELECT balance FROM wallets WHERE player_id = ?", (subscriber_id,)
+            ) as cur:
+                wallet = await cur.fetchone()
+
+        balance = float(wallet["balance"]) if wallet else 0.0
+
+        if balance < price:
+            # Can't renew — expire
+            if is_postgres():
+                await db.execute(
+                    "UPDATE creator_subscriptions SET is_active=0 WHERE subscriber_id=$1 AND creator_id=$2",
+                    subscriber_id, creator_id)
+            else:
+                await db.execute(
+                    "UPDATE creator_subscriptions SET is_active=0 WHERE subscriber_id=? AND creator_id=?",
+                    (subscriber_id, creator_id))
+            await push_notification(
+                player_id=subscriber_id, app_source="flare",
+                title="Subscription expired 💔",
+                body="Insufficient Lumens to renew a creator subscription.",
+                priority="low", db=db)
+            continue
+
+        creator_cut = int(price * 0.8)
+
+        # Charge and renew
+        if is_postgres():
+            await db.execute(
+                """UPDATE wallets SET balance=balance-$1, total_spent=total_spent+$2,
+                   last_updated=$3 WHERE player_id=$4""",
+                price, price, now_iso, subscriber_id)
+            await db.execute(
+                """INSERT INTO transactions (player_id,amount,type,description,timestamp)
+                   VALUES ($1,$2,'purchase','Creator subscription renewal',$3)""",
+                subscriber_id, -price, now_iso)
+            await db.execute(
+                """UPDATE wallets SET balance=balance+$1, total_earned=total_earned+$2,
+                   last_updated=$3 WHERE player_id=$4""",
+                creator_cut, creator_cut, now_iso, creator_id)
+            await db.execute(
+                """INSERT INTO transactions (player_id,amount,type,description,timestamp)
+                   VALUES ($1,$2,'creator_sub','Subscription renewal revenue',$3)""",
+                creator_id, creator_cut, now_iso)
+            await db.execute(
+                """UPDATE creator_subscriptions SET expires_at=$1, price_paid=$2
+                   WHERE subscriber_id=$3 AND creator_id=$4""",
+                new_expires, price, subscriber_id, creator_id)
+        else:
+            await db.execute(
+                """UPDATE wallets SET balance=balance-?, total_spent=total_spent+?,
+                   last_updated=? WHERE player_id=?""",
+                (price, price, now_iso, subscriber_id))
+            await db.execute(
+                """INSERT INTO transactions (player_id,amount,type,description,timestamp)
+                   VALUES (?,?,'purchase','Creator subscription renewal',?)""",
+                (subscriber_id, -price, now_iso))
+            await db.execute(
+                """UPDATE wallets SET balance=balance+?, total_earned=total_earned+?,
+                   last_updated=? WHERE player_id=?""",
+                (creator_cut, creator_cut, now_iso, creator_id))
+            await db.execute(
+                """INSERT INTO transactions (player_id,amount,type,description,timestamp)
+                   VALUES (?,?,'creator_sub','Subscription renewal revenue',?)""",
+                (creator_id, creator_cut, now_iso))
+            await db.execute(
+                """UPDATE creator_subscriptions SET expires_at=?, price_paid=?
+                   WHERE subscriber_id=? AND creator_id=?""",
+                (new_expires, price, subscriber_id, creator_id))
+
+        await push_notification(
+            player_id=subscriber_id, app_source="flare",
+            title="Subscription renewed ✦",
+            body=f"✦{price} charged for your creator subscription.",
+            priority="low", db=db)
+
+    if not is_postgres():
+        await db.commit()

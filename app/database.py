@@ -506,6 +506,12 @@ async def _init_sqlite():
             "ALTER TABLE posts ADD COLUMN is_repost INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE posts ADD COLUMN original_post_id INTEGER DEFAULT NULL",
             "ALTER TABLE posts ADD COLUMN hashtags TEXT DEFAULT NULL",
+            # posts — phase 3 creator system
+            "ALTER TABLE posts ADD COLUMN is_locked INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE posts ADD COLUMN ppv_price INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE posts ADD COLUMN is_adult INTEGER NOT NULL DEFAULT 0",
+            # player_profiles — adult content preference
+            "ALTER TABLE player_profiles ADD COLUMN show_adult_content INTEGER NOT NULL DEFAULT 0",
         ]
         for sql in migrations_sqlite:
             try:
@@ -986,6 +992,42 @@ async def _init_sqlite():
                 weight      INTEGER NOT NULL DEFAULT 1,
                 updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
                 UNIQUE(player_id, category)
+            )
+        """)
+
+        # ── Flare Phase 3 Tables (SQLite) — Creator System ────────────────────
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS creator_profiles (
+                id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id            INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                is_active            INTEGER NOT NULL DEFAULT 0,
+                subscription_price   INTEGER NOT NULL DEFAULT 0,
+                banner_uuid          TEXT    DEFAULT NULL,
+                bio                  TEXT    DEFAULT NULL,
+                created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+                updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS creator_subscriptions (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                subscriber_id INTEGER NOT NULL REFERENCES players(id),
+                creator_id    INTEGER NOT NULL REFERENCES players(id),
+                started_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+                expires_at    TEXT    NOT NULL,
+                price_paid    INTEGER NOT NULL DEFAULT 0,
+                is_active     INTEGER NOT NULL DEFAULT 1,
+                UNIQUE(subscriber_id, creator_id)
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS post_unlocks (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                post_id     INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                unlocked_at TEXT    NOT NULL DEFAULT (datetime('now')),
+                price_paid  INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(player_id, post_id)
             )
         """)
         await db.commit()
@@ -1514,6 +1556,43 @@ async def _init_postgres():
             )
         """)
 
+        # ── Flare Phase 3 Tables (PostgreSQL) — Creator System ────────────────
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS creator_profiles (
+                id                   SERIAL  PRIMARY KEY,
+                player_id            INTEGER NOT NULL UNIQUE REFERENCES players(id),
+                is_active            INTEGER NOT NULL DEFAULT 0,
+                subscription_price   INTEGER NOT NULL DEFAULT 0,
+                banner_uuid          TEXT    DEFAULT NULL,
+                bio                  TEXT    DEFAULT NULL,
+                created_at           TEXT    NOT NULL DEFAULT (now()::text),
+                updated_at           TEXT    NOT NULL DEFAULT (now()::text)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS creator_subscriptions (
+                id            SERIAL  PRIMARY KEY,
+                subscriber_id INTEGER NOT NULL REFERENCES players(id),
+                creator_id    INTEGER NOT NULL REFERENCES players(id),
+                started_at    TEXT    NOT NULL DEFAULT (now()::text),
+                expires_at    TEXT    NOT NULL,
+                price_paid    INTEGER NOT NULL DEFAULT 0,
+                is_active     INTEGER NOT NULL DEFAULT 1,
+                UNIQUE(subscriber_id, creator_id)
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS post_unlocks (
+                id          SERIAL  PRIMARY KEY,
+                player_id   INTEGER NOT NULL REFERENCES players(id),
+                post_id     INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                unlocked_at TEXT    NOT NULL DEFAULT (now()::text),
+                price_paid  INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(player_id, post_id)
+            )
+        """)
+
+
         # ── Cycle & Reproductive Health Migrations (Postgres) ─────────────────
         migrations_pg = [
             "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS cycle_tracking_mode TEXT DEFAULT NULL",
@@ -1533,6 +1612,12 @@ async def _init_postgres():
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_repost INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS original_post_id INTEGER DEFAULT NULL",
             "ALTER TABLE posts ADD COLUMN IF NOT EXISTS hashtags TEXT DEFAULT NULL",
+            # posts — phase 3 creator system
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_locked INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS ppv_price INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_adult INTEGER NOT NULL DEFAULT 0",
+            # player_profiles — adult content preference
+            "ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS show_adult_content INTEGER NOT NULL DEFAULT 0",
         ]
         for sql in migrations_pg:
             try:

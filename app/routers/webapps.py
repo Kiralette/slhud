@@ -894,17 +894,76 @@ async def flare(
     except Exception:
         trending_hashtags = []  # table may not exist yet
 
+    # Fetch player's creator profile
+    if is_postgres():
+        creator_profile_row = await db.fetchrow(
+            "SELECT * FROM creator_profiles WHERE player_id = $1", player_id)
+        # Player's adult content setting
+        adult_row = await db.fetchrow(
+            "SELECT show_adult_content FROM player_profiles WHERE player_id = $1", player_id)
+        # PPV unlocked post IDs
+        unlock_rows = await db.fetch(
+            "SELECT post_id FROM post_unlocks WHERE player_id = $1", player_id)
+        # Subscribed creator IDs
+        sub_rows = await db.fetch(
+            """SELECT creator_id FROM creator_subscriptions
+               WHERE subscriber_id = $1 AND is_active = 1 AND expires_at > $2""",
+            player_id,
+            __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat())
+    else:
+        async with db.execute(
+            "SELECT * FROM creator_profiles WHERE player_id = ?", (player_id,)
+        ) as cur:
+            creator_profile_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT show_adult_content FROM player_profiles WHERE player_id = ?", (player_id,)
+        ) as cur:
+            adult_row = await cur.fetchone()
+        async with db.execute(
+            "SELECT post_id FROM post_unlocks WHERE player_id = ?", (player_id,)
+        ) as cur:
+            unlock_rows = await cur.fetchall()
+        now_iso = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+        async with db.execute(
+            """SELECT creator_id FROM creator_subscriptions
+               WHERE subscriber_id = ? AND is_active = 1 AND expires_at > ?""",
+            (player_id, now_iso)
+        ) as cur:
+            sub_rows = await cur.fetchall()
+
+    creator_profile    = dict(creator_profile_row) if creator_profile_row else {}
+    show_adult_content = bool(adult_row["show_adult_content"]) if adult_row else False
+    unlocked_post_ids  = {r["post_id"] for r in unlock_rows}
+    subscribed_creator_ids = {r["creator_id"] for r in sub_rows}
+
     def fmt_post(row):
         d = dict(row)
         d["content_text"] = d.get("content_text", "")
         d["player_uuid"]  = d.get("avatar_uuid", "")
-        post_id = d.get("id")
+        post_id   = d.get("id")
+        author_id = d.get("player_id")
         d["total_likes"]    = d.get("npc_likes", 0) + real_likes_map.get(post_id, 0)
         d["total_comments"] = real_comments_map.get(post_id, 0) + d.get("npc_comments", 0)
         d["viewer_has_liked"]    = post_id in liked_post_ids
-        d["viewer_is_following"] = d.get("player_id") in following_ids
+        d["viewer_is_following"] = author_id in following_ids
         image_uuid = d.get("image_uuid")
         d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
+        # Creator unlock logic
+        is_own      = author_id == player_id
+        is_sub      = author_id in subscribed_creator_ids
+        is_unlocked = post_id in unlocked_post_ids
+        d["viewer_can_see_locked"] = is_own or is_sub or is_unlocked
+        # Truncate locked post content for non-subscribers
+        if d.get("is_locked") and not d["viewer_can_see_locked"]:
+            full = d["content_text"]
+            d["content_text"] = full[:80] + "…" if len(full) > 80 else full
+            d["image_url"] = None  # hide image
+        # Adult content
+        d["is_adult"] = bool(d.get("is_adult", 0))
+        if d["is_adult"] and not show_adult_content and not is_own:
+            d["hidden_adult"] = True
+        else:
+            d["hidden_adult"] = False
         return d
 
     wallet_balance = float(wallet_row["balance"]) if wallet_row else 500.0
@@ -975,6 +1034,8 @@ async def flare(
         "player_interests":   player_interests,
         "has_set_interests":  has_set_interests,
         "dm_unread":          dm_unread,
+        "creator_profile":    creator_profile,
+        "show_adult_content": show_adult_content,
     })
 
 

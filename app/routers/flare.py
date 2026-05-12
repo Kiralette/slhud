@@ -520,6 +520,9 @@ class NewPostV2(BaseModel):
     category: str = "life"
     image_uuid: str | None = None
     visibility: str = "public"   # public | friends
+    is_locked: int = 0           # 1 = subscriber-only
+    ppv_price: int = 0           # Lumens to unlock, 0 = not PPV
+    is_adult: int = 0            # 1 = 18+ tag
 
 
 @router.post("/post/v2")
@@ -568,10 +571,13 @@ async def create_post_v2(body: NewPostV2, db=Depends(get_db)):
         post_id = await db.fetchval(
             """INSERT INTO posts
                (player_id, content_text, category, quality_tier, follower_count_at_post,
-                image_uuid, visibility, hashtags)
-               VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id""",
+                image_uuid, visibility, hashtags, is_locked, ppv_price, is_adult)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id""",
             player_id, content, category, quality_tier, follower_count,
-            image_uuid, visibility, hashtags_str)
+            image_uuid, visibility, hashtags_str,
+            min(1, max(0, int(body.is_locked))),
+            max(0, int(body.ppv_price)),
+            min(1, max(0, int(body.is_adult))))
 
         await db.execute(
             """UPDATE flare_stats SET weekly_post_count = weekly_post_count + 1,
@@ -615,10 +621,13 @@ async def create_post_v2(body: NewPostV2, db=Depends(get_db)):
         async with db.execute(
             """INSERT INTO posts
                (player_id, content_text, category, quality_tier, follower_count_at_post,
-                image_uuid, visibility, hashtags)
-               VALUES (?,?,?,?,?,?,?,?)""",
+                image_uuid, visibility, hashtags, is_locked, ppv_price, is_adult)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (player_id, content, category, quality_tier, follower_count,
-             image_uuid, visibility, hashtags_str)
+             image_uuid, visibility, hashtags_str,
+             min(1, max(0, int(body.is_locked))),
+             max(0, int(body.ppv_price)),
+             min(1, max(0, int(body.is_adult))))
         ) as cur:
             post_id = cur.lastrowid
 
@@ -1280,3 +1289,425 @@ async def for_you(token: str, sort: str = "top", db=Depends(get_db)):
     scored.sort(key=lambda x: x["algo_score"], reverse=True)
 
     return {"posts": scored[:40], "sort": sort}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHASE 3 — CREATOR SYSTEM
+# ══════════════════════════════════════════════════════════════════════════════
+
+class CreatorProfileBody(BaseModel):
+    token: str
+    is_active: bool | None = None
+    subscription_price: int | None = None   # Lumens/month, 0 = free
+    banner_uuid: str | None = None
+    bio: str | None = None
+
+
+class SubscribeBody(BaseModel):
+    token: str
+
+
+class UnlockPostBody(BaseModel):
+    token: str
+
+
+class AdultSettingBody(BaseModel):
+    token: str
+    show_adult_content: bool
+
+
+# ── GET /flare/creator/{player_id} ───────────────────────────────────────────
+
+@router.get("/creator/{creator_player_id}")
+async def get_creator_profile(creator_player_id: int, token: str, db=Depends(get_db)):
+    """Get a creator profile and subscription status for the viewer."""
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    viewer_id = player["id"]
+
+    if is_postgres():
+        cp = await db.fetchrow(
+            "SELECT * FROM creator_profiles WHERE player_id = $1 AND is_active = 1",
+            creator_player_id)
+        is_subscribed = bool(await db.fetchrow(
+            """SELECT id FROM creator_subscriptions
+               WHERE subscriber_id = $1 AND creator_id = $2
+               AND is_active = 1 AND expires_at > $3""",
+            viewer_id, creator_player_id,
+            __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()))
+        sub_count = await db.fetchval(
+            "SELECT COUNT(*) FROM creator_subscriptions WHERE creator_id = $1 AND is_active = 1",
+            creator_player_id) or 0
+    else:
+        async with db.execute(
+            "SELECT * FROM creator_profiles WHERE player_id = ? AND is_active = 1",
+            (creator_player_id,)
+        ) as cur:
+            cp = await cur.fetchone()
+        now_iso = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+        async with db.execute(
+            """SELECT id FROM creator_subscriptions
+               WHERE subscriber_id = ? AND creator_id = ?
+               AND is_active = 1 AND expires_at > ?""",
+            (viewer_id, creator_player_id, now_iso)
+        ) as cur:
+            sub_row = await cur.fetchone()
+        is_subscribed = bool(sub_row)
+        async with db.execute(
+            "SELECT COUNT(*) as cnt FROM creator_subscriptions WHERE creator_id = ? AND is_active = 1",
+            (creator_player_id,)
+        ) as cur:
+            sc = await cur.fetchone()
+        sub_count = sc["cnt"] if sc else 0
+
+    if not cp:
+        return {"creator": None, "is_subscribed": False, "subscriber_count": 0}
+
+    cp = dict(cp)
+    cp["banner_url"] = (
+        f"https://secondlife.com/app/image/{cp['banner_uuid']}/2"
+        if cp.get("banner_uuid") else None)
+
+    return {
+        "creator":          cp,
+        "is_subscribed":    is_subscribed,
+        "subscriber_count": sub_count,
+        "is_own":           viewer_id == creator_player_id,
+    }
+
+
+# ── POST /flare/creator/setup ─────────────────────────────────────────────────
+
+@router.post("/creator/setup")
+async def setup_creator_profile(body: CreatorProfileBody, db=Depends(get_db)):
+    """Create or update the player's creator profile."""
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    now = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+
+    # Upsert creator_profiles row
+    if is_postgres():
+        await db.execute(
+            """INSERT INTO creator_profiles (player_id, created_at, updated_at)
+               VALUES ($1, $2, $2) ON CONFLICT (player_id) DO NOTHING""",
+            player_id, now)
+    else:
+        await db.execute(
+            "INSERT OR IGNORE INTO creator_profiles (player_id, created_at, updated_at) VALUES (?,?,?)",
+            (player_id, now, now))
+        await db.commit()
+
+    fields = {"updated_at": now}
+    if body.is_active is not None:
+        fields["is_active"] = int(body.is_active)
+    if body.subscription_price is not None:
+        fields["subscription_price"] = max(0, int(body.subscription_price))
+    if body.banner_uuid is not None:
+        fields["banner_uuid"] = body.banner_uuid.strip()[:36] or None
+    if body.bio is not None:
+        fields["bio"] = body.bio.strip()[:400] or None
+
+    if is_postgres():
+        sets = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields))
+        await db.execute(
+            f"UPDATE creator_profiles SET {sets} WHERE player_id = $1",
+            player_id, *fields.values())
+    else:
+        sets = ", ".join(f"{k} = ?" for k in fields)
+        await db.execute(
+            f"UPDATE creator_profiles SET {sets} WHERE player_id = ?",
+            (*fields.values(), player_id))
+        await db.commit()
+
+    return {"status": "updated"}
+
+
+# ── POST /flare/creator/{creator_id}/subscribe ────────────────────────────────
+
+@router.post("/creator/{creator_player_id}/subscribe")
+async def subscribe_to_creator(creator_player_id: int, body: SubscribeBody, db=Depends(get_db)):
+    """Subscribe to a creator for one month."""
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    subscriber_id = player["id"]
+    if subscriber_id == creator_player_id:
+        raise HTTPException(status_code=400, detail="Cannot subscribe to yourself.")
+
+    # Get creator profile
+    if is_postgres():
+        cp = await db.fetchrow(
+            "SELECT * FROM creator_profiles WHERE player_id = $1 AND is_active = 1",
+            creator_player_id)
+    else:
+        async with db.execute(
+            "SELECT * FROM creator_profiles WHERE player_id = ? AND is_active = 1",
+            (creator_player_id,)
+        ) as cur:
+            cp = await cur.fetchone()
+
+    if not cp:
+        raise HTTPException(status_code=404, detail="Creator not found.")
+
+    price = int(cp["subscription_price"])
+    now   = __import__('datetime').datetime.now(__import__('datetime').timezone.utc)
+    from datetime import timedelta
+    expires_at = (now + timedelta(days=30)).isoformat()
+    now_iso    = now.isoformat()
+
+    # Check wallet if price > 0
+    if price > 0:
+        if is_postgres():
+            wallet = await db.fetchrow(
+                "SELECT balance FROM wallets WHERE player_id = $1", subscriber_id)
+        else:
+            async with db.execute(
+                "SELECT balance FROM wallets WHERE player_id = ?", (subscriber_id,)
+            ) as cur:
+                wallet = await cur.fetchone()
+
+        if not wallet or float(wallet["balance"]) < price:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient Lumens. Subscription costs ✦{price}/month.")
+
+        # Deduct from subscriber
+        creator_cut = int(price * 0.8)
+        if is_postgres():
+            await db.execute(
+                """UPDATE wallets SET balance = balance - $1,
+                   total_spent = total_spent + $2, last_updated = $3
+                   WHERE player_id = $4""",
+                price, price, now_iso, subscriber_id)
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES ($1, $2, 'purchase', $3, $4)""",
+                subscriber_id, -price,
+                f"Flare creator subscription", now_iso)
+            # Pay creator 80%
+            await db.execute(
+                """UPDATE wallets SET balance = balance + $1,
+                   total_earned = total_earned + $2, last_updated = $3
+                   WHERE player_id = $4""",
+                creator_cut, creator_cut, now_iso, creator_player_id)
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES ($1, $2, 'creator_sub', $3, $4)""",
+                creator_player_id, creator_cut,
+                f"Subscription from {player['display_name']}", now_iso)
+        else:
+            await db.execute(
+                """UPDATE wallets SET balance = balance - ?,
+                   total_spent = total_spent + ?, last_updated = ?
+                   WHERE player_id = ?""",
+                (price, price, now_iso, subscriber_id))
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES (?, ?, 'purchase', ?, ?)""",
+                (subscriber_id, -price, "Flare creator subscription", now_iso))
+            await db.execute(
+                """UPDATE wallets SET balance = balance + ?,
+                   total_earned = total_earned + ?, last_updated = ?
+                   WHERE player_id = ?""",
+                (creator_cut, creator_cut, now_iso, creator_player_id))
+            await db.execute(
+                """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+                   VALUES (?, ?, 'creator_sub', ?, ?)""",
+                (creator_player_id, creator_cut,
+                 f"Subscription from {player['display_name']}", now_iso))
+
+    # Upsert subscription row
+    if is_postgres():
+        await db.execute(
+            """INSERT INTO creator_subscriptions
+               (subscriber_id, creator_id, started_at, expires_at, price_paid, is_active)
+               VALUES ($1,$2,$3,$4,$5,1)
+               ON CONFLICT (subscriber_id, creator_id)
+               DO UPDATE SET expires_at=$4, price_paid=$5, is_active=1, started_at=$3""",
+            subscriber_id, creator_player_id, now_iso, expires_at, price)
+    else:
+        await db.execute(
+            """INSERT OR REPLACE INTO creator_subscriptions
+               (subscriber_id, creator_id, started_at, expires_at, price_paid, is_active)
+               VALUES (?,?,?,?,?,1)""",
+            (subscriber_id, creator_player_id, now_iso, expires_at, price))
+        await db.commit()
+
+    # Notify creator
+    await push_notification(
+        player_id=creator_player_id, app_source="flare",
+        title=f"{player['display_name']} subscribed to you ✦",
+        body=f"New subscriber! ✦{price}/month" if price else "New free subscriber!",
+        priority="normal", db=db)
+
+    return {"status": "subscribed", "expires_at": expires_at, "price_paid": price}
+
+
+# ── DELETE /flare/creator/{creator_id}/subscribe ──────────────────────────────
+
+@router.delete("/creator/{creator_player_id}/subscribe")
+async def unsubscribe(creator_player_id: int, token: str, db=Depends(get_db)):
+    player = await _get_player(token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    subscriber_id = player["id"]
+
+    if is_postgres():
+        await db.execute(
+            """UPDATE creator_subscriptions SET is_active = 0
+               WHERE subscriber_id = $1 AND creator_id = $2""",
+            subscriber_id, creator_player_id)
+    else:
+        await db.execute(
+            """UPDATE creator_subscriptions SET is_active = 0
+               WHERE subscriber_id = ? AND creator_id = ?""",
+            (subscriber_id, creator_player_id))
+        await db.commit()
+
+    return {"status": "unsubscribed"}
+
+
+# ── POST /flare/post/{id}/unlock ──────────────────────────────────────────────
+
+@router.post("/post/{post_id}/unlock")
+async def unlock_post(post_id: int, body: UnlockPostBody, db=Depends(get_db)):
+    """Pay-per-view unlock for a specific post."""
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+
+    if is_postgres():
+        post = await db.fetchrow(
+            "SELECT id, player_id, ppv_price, is_locked FROM posts WHERE id = $1", post_id)
+    else:
+        async with db.execute(
+            "SELECT id, player_id, ppv_price, is_locked FROM posts WHERE id = ?", (post_id,)
+        ) as cur:
+            post = await cur.fetchone()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found.")
+    if not post["ppv_price"]:
+        raise HTTPException(status_code=400, detail="Post is not PPV.")
+    if post["player_id"] == player_id:
+        raise HTTPException(status_code=400, detail="Cannot unlock your own post.")
+
+    price   = int(post["ppv_price"])
+    now_iso = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+
+    # Check already unlocked
+    if is_postgres():
+        existing = await db.fetchrow(
+            "SELECT id FROM post_unlocks WHERE player_id = $1 AND post_id = $2",
+            player_id, post_id)
+    else:
+        async with db.execute(
+            "SELECT id FROM post_unlocks WHERE player_id = ? AND post_id = ?",
+            (player_id, post_id)
+        ) as cur:
+            existing = await cur.fetchone()
+
+    if existing:
+        return {"status": "already_unlocked"}
+
+    # Check wallet
+    if is_postgres():
+        wallet = await db.fetchrow(
+            "SELECT balance FROM wallets WHERE player_id = $1", player_id)
+    else:
+        async with db.execute(
+            "SELECT balance FROM wallets WHERE player_id = ?", (player_id,)
+        ) as cur:
+            wallet = await cur.fetchone()
+
+    if not wallet or float(wallet["balance"]) < price:
+        raise HTTPException(status_code=400, detail=f"Insufficient Lumens. Costs ✦{price}.")
+
+    creator_cut = int(price * 0.8)
+
+    if is_postgres():
+        await db.execute(
+            """UPDATE wallets SET balance = balance - $1,
+               total_spent = total_spent + $2, last_updated = $3
+               WHERE player_id = $4""",
+            price, price, now_iso, player_id)
+        await db.execute(
+            """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+               VALUES ($1,$2,'purchase','PPV post unlock',$3)""",
+            player_id, -price, now_iso)
+        await db.execute(
+            """UPDATE wallets SET balance = balance + $1,
+               total_earned = total_earned + $2, last_updated = $3
+               WHERE player_id = $4""",
+            creator_cut, creator_cut, now_iso, post["player_id"])
+        await db.execute(
+            """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+               VALUES ($1,$2,'creator_ppv','PPV post unlock revenue',$3)""",
+            post["player_id"], creator_cut, now_iso)
+        await db.execute(
+            "INSERT INTO post_unlocks (player_id,post_id,unlocked_at,price_paid) VALUES ($1,$2,$3,$4)",
+            player_id, post_id, now_iso, price)
+    else:
+        await db.execute(
+            """UPDATE wallets SET balance = balance - ?,
+               total_spent = total_spent + ?, last_updated = ?
+               WHERE player_id = ?""",
+            (price, price, now_iso, player_id))
+        await db.execute(
+            """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+               VALUES (?,?,'purchase','PPV post unlock',?)""",
+            (player_id, -price, now_iso))
+        await db.execute(
+            """UPDATE wallets SET balance = balance + ?,
+               total_earned = total_earned + ?, last_updated = ?
+               WHERE player_id = ?""",
+            (creator_cut, creator_cut, now_iso, post["player_id"]))
+        await db.execute(
+            """INSERT INTO transactions (player_id, amount, type, description, timestamp)
+               VALUES (?,?,'creator_ppv','PPV post unlock revenue',?)""",
+            (post["player_id"], creator_cut, now_iso))
+        await db.execute(
+            "INSERT INTO post_unlocks (player_id,post_id,unlocked_at,price_paid) VALUES (?,?,?,?)",
+            (player_id, post_id, now_iso, price))
+        await db.commit()
+
+    return {"status": "unlocked", "price_paid": price}
+
+
+# ── POST /flare/settings/adult ────────────────────────────────────────────────
+
+@router.post("/settings/adult")
+async def set_adult_preference(body: AdultSettingBody, db=Depends(get_db)):
+    """Toggle 18+ content visibility."""
+    player = await _get_player(body.token, db)
+    if not player:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    player_id = player["id"]
+    val = int(body.show_adult_content)
+
+    if is_postgres():
+        await db.execute(
+            "INSERT INTO player_profiles (player_id) VALUES ($1) ON CONFLICT (player_id) DO NOTHING",
+            player_id)
+        await db.execute(
+            "UPDATE player_profiles SET show_adult_content = $1 WHERE player_id = $2",
+            val, player_id)
+    else:
+        await db.execute(
+            "INSERT OR IGNORE INTO player_profiles (player_id) VALUES (?)", (player_id,))
+        await db.execute(
+            "UPDATE player_profiles SET show_adult_content = ? WHERE player_id = ?",
+            (val, player_id))
+        await db.commit()
+
+    return {"status": "updated", "show_adult_content": bool(val)}

@@ -16,7 +16,7 @@ from app.admin import panel
 from app.services.decay import run_decay_tick
 from app.services.economy import rotate_weekly_specials, bill_subscriptions
 from app.services.career import midnight_reset, auto_clockout_sweep
-from app.services.flare import run_follower_engine, run_brand_deal_check
+from app.services.flare import run_follower_engine, run_brand_deal_check, run_creator_subscription_billing
 from app.services.ritual import (
     run_calendar_reminders, run_holiday_vibe_engine,
     run_cycle_prediction_update, run_pregnancy_progression, run_period_vibe_engine,
@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(auto_clockout_sweep, "interval", seconds=60, id="auto_clockout")
     scheduler.add_job(run_follower_engine, "interval", seconds=600, id="follower_engine")
     scheduler.add_job(run_brand_deal_check, "cron", day_of_week="sun", hour=0, minute=0, id="brand_deal_check")
+    scheduler.add_job(run_creator_subscription_billing, "cron", day_of_week="sun", hour=0, minute=10, id="creator_billing")
     scheduler.add_job(run_calendar_reminders, "interval", seconds=1800, id="calendar_reminders")
     scheduler.add_job(run_bedtime_reminders, "interval", seconds=300, id="bedtime_reminders")
     scheduler.add_job(run_holiday_vibe_engine, "cron", hour=0, minute=1, id="holiday_vibes")
