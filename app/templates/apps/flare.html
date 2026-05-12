@@ -809,7 +809,8 @@
           <button class="sp-toggle ${_showAdult?'on':''}" id="adult-toggle" onclick="toggleAdultContent(this)"></button>
         </div>
         <button class="at-sheet-save" onclick="saveSettingsInterests()">Save interests</button>
-      </div>\`;
+      </div>`;
+
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
   })();
@@ -847,6 +848,7 @@
     document.getElementById('sub-discover').classList.toggle('active', id === 'discover');
     _activeSubTab = id;
     if (id === 'for-you') loadForYou();
+    if (id === 'discover') loadDiscover(_discCatFilter);
   }
 
   // ── For You feed ──────────────────────────────────────────────────────────
@@ -1451,44 +1453,7 @@
     loadDiscover(cat);
   }
 
-  async function loadDiscover(cat) {
-    const container = document.getElementById('disc-posts-container');
-    if (!container) return;
-    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
-    let url = `/flare/discover?token=${TOKEN}`;
-    if (cat) url += `&category=${encodeURIComponent(cat)}`;
-    try {
-      const res  = await fetch(url);
-      const data = await res.json();
-      const posts = data.discover || [];
-      if (!posts.length) {
-        container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">No posts found.</div>';
-        return;
-      }
-      container.innerHTML = posts.map(p => `
-        <div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
-          <div class="post-header">
-            <div>
-              <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name || 'Unknown'}</span>
-              <div class="post-meta">${(p.created_at||'').slice(0,10)}</div>
-            </div>
-            ${p.quality_tier > 0 ? `<span class="post-quality q${p.quality_tier}">${['','Good','Great','✦ Exceptional'][p.quality_tier]||''}</span>` : ''}
-          </div>
-          <div class="post-cat">${(p.category||'').replace(/_/g,' ')}</div>
-          ${p.image_url ? `<div style="margin:8px 0;border-radius:var(--radius-sm);overflow:hidden;class="post-img-wrap"><img src="${p.image_url}" style="width:100%;display:block;max-height:400px;object-fit:contain;" onerror="this.parentElement.style.display='none'"></div>` : ''}
-          <div class="post-content">${p.content_text}</div>
-          <div class="post-actions" onclick="event.stopPropagation();">
-            <button class="post-action-btn${p.viewer_has_liked?' liked':''}" id="like-btn-${p.id}"
-              onclick="likePost(${p.id},'${TOKEN}',this)">${p.viewer_has_liked?'♥ Liked':'♡ Like'}</button>
-            <button class="post-action-btn" onclick="openPostDetail(${p.id})">💬 Comment</button>
-            <button class="post-action-btn" onclick="repostPost(${p.id})">🔁 Repost</button>
-            <span class="post-npc-count" id="counts-${p.id}">${p.total_likes} likes · ${p.total_comments} comments</span>
-          </div>
-        </div>`).join('');
-    } catch(e) {
-      container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
-    }
-  }
+
 
   // ── Hashtag feed ──────────────────────────────────────────────────────────
   async function openHashtagFeed(tag) {
@@ -1509,15 +1474,7 @@
           style="float:right;background:none;border:none;font-size:12px;color:var(--ink4);cursor:pointer;">✕ Clear</button>
       </div>`;
       container.innerHTML = header + (posts.length
-        ? posts.map(p => `
-          <div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
-            <div class="post-header">
-              <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name||'Unknown'}</span>
-            </div>
-            <div class="post-cat">${p.category||''}</div>
-            ${p.image_url ? `<img src="${p.image_url}" style="width:100%;border-radius:var(--radius-sm);max-height:180px;object-fit:cover;margin:6px 0;" onerror="this.style.display='none'">` : ''}
-            <div class="post-content">${p.content_text}</div>
-          </div>`).join('')
+        ? posts.map(p => renderPostCard(p)).join('')
         : '<div style="padding:40px;text-align:center;color:var(--ink4);">No posts with this hashtag yet.</div>');
     } catch(e) { container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>'; }
   }
