@@ -430,7 +430,10 @@
     <div class="topbar-eyebrow">SL HUD</div>
     <div class="topbar-title">Flare ✦</div>
   </div>
-
+  <button class="topbar-lumen" onclick="showTab('tab-dms')" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:flex-end;padding:0;">
+    <span style="font-size:18px;line-height:1;">✉</span>
+    <span style="font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-top:1px;color:var(--ink4);">Messages{% if dm_unread > 0 %} <span style="background:var(--rose);color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;">{{ dm_unread }}</span>{% endif %}</span>
+  </button>
 </div>
 
 <!-- TABS -->
@@ -439,9 +442,6 @@
   <button class="tab"        data-tab="tab-post"     onclick="showTab('tab-post')">Post</button>
   <button class="tab"        data-tab="tab-profile"  onclick="showTab('tab-profile')">Profile</button>
   <button class="tab"        data-tab="tab-discover" onclick="showTab('tab-discover')">Discover</button>
-  <button class="tab"        data-tab="tab-dms"      onclick="showTab('tab-dms')">
-    Messages{% if dm_unread > 0 %} <span style="background:var(--rose);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px;">{{ dm_unread }}</span>{% endif %}
-  </button>
 </div>
 
 <!-- ── FEED TAB ── -->
@@ -876,35 +876,44 @@
 
   function renderPostCard(p) {
     const imageHtml = (!p.is_repost && p.image_url)
-      ? `<div class="post-img-wrap"><img src="${p.image_url}" style="width:100%;display:block;max-height:400px;object-fit:contain;" onerror="this.parentElement.style.display='none'"></div>` : '';
-    const repostHtml = p.is_repost ? `
-      <div style="font-size:10px;color:var(--ink4);font-weight:500;margin-bottom:8px;">🔁 reposted</div>
-      <div class="repost-embed">
-        <div class="repost-embed-author">${p.original_display_name||'Unknown'}</div>
-        ${p.original_content ? `<div class="repost-embed-text">${linkifyContent(p.original_content)}</div>` : ''}
-        ${p.original_image_url ? `<div class="repost-embed-img"><img src="${p.original_image_url}" alt=""></div>` : ''}
-      </div>
-      ${p.content_text ? `<div class="post-content" style="margin-top:8px;font-size:12px;color:var(--ink3);">${linkifyContent(p.content_text)}</div>` : ''}` : '';
-    return `<div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
-      <div class="post-header">
-        <div>
-          <a class="post-author" href="/app/player/${p.player_uuid}?token=${TOKEN}" onclick="event.stopPropagation()" style="font-weight:600;color:var(--ink);text-decoration:none;cursor:pointer;">${p.display_name||'Unknown'}</a>
-          <div class="post-meta">${(p.created_at||'').slice(0,10)}</div>
-        </div>
-        ${p.quality_tier > 0 ? `<span class="post-quality q${p.quality_tier}">${['','Good','Great','✦ Exceptional'][p.quality_tier]||''}</span>` : ''}
-      </div>
-      <div class="post-cat">${(p.category||'').replace(/_/g,' ')}</div>
-      ${repostHtml}
-      ${imageHtml}
-      ${p.is_repost ? '' : `<div class="post-content">${linkifyContent(p.content_text)}</div>`}
-      <div class="post-actions" onclick="event.stopPropagation();">
-        <button class="post-action-btn${p.viewer_has_liked?' liked':''}" id="like-btn-${p.id}"
-          onclick="likePost(${p.id},'${TOKEN}',this)">${p.viewer_has_liked?'♥ Liked':'♡ Like'}</button>
-        <button class="post-action-btn" onclick="openPostDetail(${p.id})">💬 Comment</button>
-        <button class="post-action-btn" onclick="repostPost(${p.id})">🔁 Repost</button>
-        <span class="post-npc-count" id="counts-${p.id}">${p.total_likes} likes · ${p.total_comments} comments</span>
-      </div>
-    </div>`;
+      ? '<div class="post-img-wrap"><img src="' + p.image_url + '" style="width:100%;display:block;max-height:400px;object-fit:contain;" onerror="this.parentElement.style.display='none'"></div>'
+      : '';
+    let repostHtml = '';
+    if (p.is_repost) {
+      const embedImg = p.original_image_url
+        ? '<div class="repost-embed-img"><img src="' + p.original_image_url + '" alt=""></div>' : '';
+      const embedText = p.original_content
+        ? '<div class="repost-embed-text">' + linkifyContent(p.original_content) + '</div>' : '';
+      const repComment = p.content_text
+        ? '<div class="post-content" style="margin-top:8px;font-size:12px;color:var(--ink3);">' + linkifyContent(p.content_text) + '</div>' : '';
+      repostHtml = '<div style="font-size:10px;color:var(--ink4);font-weight:500;margin-bottom:8px;">🔁 reposted</div>'
+        + '<div class="repost-embed">'
+        + '<div class="repost-embed-author">' + (p.original_display_name || 'Unknown') + '</div>'
+        + embedText + embedImg
+        + '</div>' + repComment;
+    }
+    const contentHtml = p.is_repost ? '' : '<div class="post-content">' + linkifyContent(p.content_text) + '</div>';
+    const qualityHtml = p.quality_tier > 0
+      ? '<span class="post-quality q' + p.quality_tier + '">' + (['','Good','Great','✦ Exceptional'][p.quality_tier]||'') + '</span>' : '';
+    return '<div class="post-card" onclick="openPostDetail(' + p.id + ')" style="cursor:pointer;">'
+      + '<div class="post-header">'
+      +   '<div>'
+      +     '<a class="post-author" href="/app/player/' + p.player_uuid + '?token=' + TOKEN + '" onclick="event.stopPropagation()" style="font-weight:600;color:var(--ink);text-decoration:none;cursor:pointer;">' + (p.display_name||'Unknown') + '</a>'
+      +     '<div class="post-meta">' + (p.created_at||'').slice(0,10) + '</div>'
+      +   '</div>'
+      +   qualityHtml
+      + '</div>'
+      + '<div class="post-cat">' + (p.category||'').replace(/_/g,' ') + '</div>'
+      + repostHtml
+      + imageHtml
+      + contentHtml
+      + '<div class="post-actions" onclick="event.stopPropagation();">'
+      +   '<button class="post-action-btn' + (p.viewer_has_liked?' liked':'') + '" id="like-btn-' + p.id + '" onclick="likePost(' + p.id + ','' + TOKEN + '',this)">' + (p.viewer_has_liked?'♥ Liked':'♡ Like') + '</button>'
+      +   '<button class="post-action-btn" onclick="openPostDetail(' + p.id + ')">💬 Comment</button>'
+      +   '<button class="post-action-btn" onclick="repostPost(' + p.id + ')">🔁 Repost</button>'
+      +   '<span class="post-npc-count" id="counts-' + p.id + '">' + p.total_likes + ' likes · ' + p.total_comments + ' comments</span>'
+      + '</div>'
+      + '</div>';
   }
 
   // ── Content linkifier ───────────────────────────────────────────────────────
@@ -1208,6 +1217,9 @@
     const content   = document.getElementById('post-content').value.trim();
     const cat       = document.getElementById('post-cat').value;
     const imageUuid = document.getElementById('post-image-uuid')?.value.trim() || null;
+    const ppvPrice  = parseInt(document.getElementById('post-ppv')?.value || '0') || 0;
+    const isAdult   = document.getElementById('post-adult')?.checked || false;
+    const isLocked  = _postVisibility === 'locked';
     const btn       = document.getElementById('post-btn');
     if (!content) { toast('Write something first'); return; }
     btn.disabled = true; btn.textContent = '···';
@@ -1217,7 +1229,11 @@
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           token: TOKEN, content_text: content, category: cat,
-          image_uuid: imageUuid || null, visibility: _postVisibility
+          image_uuid:  imageUuid || null,
+          visibility:  isLocked ? 'public' : _postVisibility,
+          is_locked:   isLocked ? 1 : 0,
+          ppv_price:   ppvPrice,
+          is_adult:    isAdult ? 1 : 0,
         })
       });
       const data = await res.json();
@@ -1226,6 +1242,8 @@
         document.getElementById('post-content').value = '';
         if (document.getElementById('post-image-uuid')) document.getElementById('post-image-uuid').value = '';
         if (document.getElementById('image-preview')) document.getElementById('image-preview').style.display = 'none';
+        if (document.getElementById('post-ppv')) document.getElementById('post-ppv').value = '0';
+        if (document.getElementById('post-adult')) document.getElementById('post-adult').checked = false;
         updateCharCount();
         setTimeout(() => location.reload(), 1600);
       } else {
@@ -1771,50 +1789,6 @@
     } catch(e) { toast('Error'); _showAdult = !_showAdult; btn.classList.toggle('on', _showAdult); }
   }
 
-  // ── Update submitPost to include creator fields ───────────────────────────
-  const _origSubmitPost = submitPost;
-  submitPost = async function() {
-    // Override to inject ppv/adult into the v2 call
-    const content   = document.getElementById('post-content').value.trim();
-    const cat       = document.getElementById('post-cat').value;
-    const imageUuid = document.getElementById('post-image-uuid')?.value.trim() || null;
-    const ppvPrice  = parseInt(document.getElementById('post-ppv')?.value || '0') || 0;
-    const isAdult   = document.getElementById('post-adult')?.checked || false;
-    const isLocked  = _postVisibility === 'locked';
-    const btn       = document.getElementById('post-btn');
-    if (!content) { toast('Write something first'); return; }
-    btn.disabled = true; btn.textContent = '···';
-    try {
-      const body = {
-        token: TOKEN, content_text: content, category: cat,
-        image_uuid:  imageUuid || null,
-        visibility:  isLocked ? 'public' : _postVisibility,
-        is_locked:   isLocked ? 1 : 0,
-        ppv_price:   ppvPrice,
-        is_adult:    isAdult ? 1 : 0,
-      };
-      const res  = await fetch('/flare/post/v2', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast('Posted ✓ — ' + (data.tier_label || 'Standard') + ' quality');
-        document.getElementById('post-content').value = '';
-        if (document.getElementById('post-image-uuid')) document.getElementById('post-image-uuid').value = '';
-        if (document.getElementById('image-preview')) document.getElementById('image-preview').style.display = 'none';
-        if (document.getElementById('post-ppv')) document.getElementById('post-ppv').value = '0';
-        if (document.getElementById('post-adult')) document.getElementById('post-adult').checked = false;
-        updateCharCount();
-        setTimeout(() => location.reload(), 1600);
-      } else {
-        toast(data.detail || 'Could not post');
-        btn.disabled = false; btn.textContent = 'Post';
-      }
-    } catch(e) {
-      toast('Connection error');
-      btn.disabled = false; btn.textContent = 'Post';
-    }
-  };
+
 </script>
 {% endblock %}
