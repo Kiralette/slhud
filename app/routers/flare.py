@@ -1283,7 +1283,8 @@ async def for_you(token: str, sort: str = "top", db=Depends(get_db)):
         d["algo_score"]      = score
         d["total_likes"]     = real_likes + npc_likes
         d["total_comments"]  = real_comments + d.get("npc_comments", 0)
-        d["viewer_has_liked"] = False  # caller checks separately if needed
+        d["viewer_has_liked"] = False
+        d["player_uuid"]     = d.get("avatar_uuid", "")
         image_uuid = d.get("image_uuid")
         d["image_url"] = f"https://secondlife.com/app/image/{image_uuid}/2" if image_uuid else None
         scored.append(d)

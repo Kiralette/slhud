@@ -938,7 +938,8 @@
   }
 
   function setDiscFilter(btn, cat) {
-    document.querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
+    // Only toggle chips in the same parent container, not all disc-chips on page
+    btn.closest('div').querySelectorAll('.disc-chip').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     _discCatFilter = cat;
     if (_activeSubTab === 'for-you') loadForYou();
@@ -1456,7 +1457,8 @@
         <div class="post-card" onclick="openPostDetail(${p.id})" style="cursor:pointer;">
           <div class="post-header">
             <div>
-              <span class="post-author" style="font-weight:600;color:var(--ink);">${p.display_name || 'Unknown'}</span>
+              <a class="post-author" href="/app/player/${p.player_uuid || p.avatar_uuid}?token=${TOKEN}"
+                 onclick="event.stopPropagation();" style="text-decoration:none;color:inherit;">${p.display_name || 'Unknown'}</a>
               <div class="post-meta">${(p.created_at||'').slice(0,10)}</div>
             </div>
             ${p.quality_tier > 0 ? `<span class="post-quality q${p.quality_tier}">${['','Good','Great','✦ Exceptional'][p.quality_tier]||''}</span>` : ''}
