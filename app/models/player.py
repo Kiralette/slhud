@@ -12,6 +12,7 @@ class RegisterRequest(BaseModel):
     """What the HUD sends when an avatar attaches for the first time."""
     avatar_uuid: str
     display_name: str
+    sl_username: str | None = None
 
 
 class RegisterResponse(BaseModel):

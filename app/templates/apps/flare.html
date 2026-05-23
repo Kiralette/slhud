@@ -719,6 +719,7 @@
 {% block extra_script %}
 <script>
   const TOKEN = "{{ token }}";
+  const DISPLAY_NAME = "{{ player.display_name | e }}";
   const PLAYER_INTERESTS = {{ player_interests | tojson }};
   const HAS_INTERESTS    = {{ 'true' if has_set_interests else 'false' }};
   const ALL_CATEGORIES   = {{ categories | tojson }};
@@ -839,7 +840,7 @@
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ token: TOKEN, categories: [..._settingsInterests] })
       });
-      if (res.ok) { closeInterestsSheet(); toast('Interests saved ✓'); loadForYou(); }
+      if (res.ok) { closeInterestsSheet(); toast('Interests saved ✓'); _forYouLoaded = false; loadForYou(); }
     } catch(e) { toast('Error'); }
   }
   function openInterestsSheet() {
@@ -901,11 +902,13 @@
   // ── For You feed ──────────────────────────────────────────────────────────
   let _forYouSort  = 'top';
   let _discSort    = 'top';
+  let _forYouLoaded = false;
   // _discCatFilter declared below with filter sheet
 
-  async function loadForYou() {
+  async function loadForYou(force=false) {
     const container = document.getElementById('for-you-posts');
     if (!container) return;
+    if (_forYouLoaded && !force) return;  // skip if already loaded and not forced
     container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Loading…</div>';
     try {
       const res  = await fetch(`/flare/for-you?token=${TOKEN}&sort=${_forYouSort}`);
@@ -920,6 +923,7 @@
         ? posts.filter(p => _selectedFilters.has(p.category))
         : posts;
       container.innerHTML = (filtered.length ? filtered : posts).map(p => renderPostCard(p)).join('');
+      _forYouLoaded = true;
     } catch(e) {
       container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
     }
@@ -1045,7 +1049,7 @@
     }
     // For single category pass to API; for multiple, fetch all and filter client-side
     _discCatFilter = _selectedFilters.size === 1 ? [..._selectedFilters][0] : '';
-    if (_activeSubTab === 'for-you') loadForYou();
+    if (_activeSubTab === 'for-you') { _forYouLoaded = false; loadForYou(); }
     else loadDiscover(_discCatFilter);
   }
 
@@ -1100,6 +1104,10 @@
           </div>
           ${t.unread > 0 ? `<span class="dm-unread-badge">${t.unread}</span>` : ''}
         </div>`).join('');
+      // Update nav dot for unread DMs
+      const totalUnread = threads.reduce((sum, t) => sum + (t.unread || 0), 0);
+      const dot = document.getElementById('navdot-flare');
+      if (dot) dot.style.display = totalUnread > 0 ? 'block' : 'none';
     } catch(e) {
       list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--ink4);">Could not load.</div>';
     }
@@ -1228,6 +1236,7 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
   loadForYou();
+  loadDMThreads(); // silently sets navdot-flare unread indicator on load
 
   // ── Char count ────────────────────────────────────────────────────────────
   function updateCharCount() {
@@ -1380,14 +1389,82 @@
     } catch(e) {}
   }
 
-  // ── Repost ────────────────────────────────────────────────────────────────
-  async function repostPost(postId) {
+  // ── Repost / Quote-post sheet ─────────────────────────────────────────────
+  let _repostTargetId = null;
+
+  (function() {
+    const el = document.createElement('div');
+    el.innerHTML = `
+<div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:3098;" id="repost-backdrop" onclick="closeRepostSheet()"></div>
+<div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+  width:min(420px,100vw);background:var(--bg);border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.15);transition:transform .3s;z-index:3099;
+  padding-bottom:env(safe-area-inset-bottom);" id="repost-sheet">
+  <div style="width:36px;height:4px;background:var(--bg4);border-radius:2px;margin:12px auto 8px;"></div>
+  <div style="padding:12px 18px 6px;border-bottom:1px solid var(--bg3);">
+    <div style="font-family:var(--font-head);font-size:20px;color:var(--ink);">Share this post</div>
+  </div>
+  <div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
+    <button onclick="doRepost(false)"
+      style="width:100%;padding:14px;border-radius:var(--radius-sm);border:1px solid var(--bg4);
+        background:var(--bg2);font-family:inherit;font-size:14px;color:var(--ink);cursor:pointer;text-align:left;">
+      🔁 <strong>Repost</strong>
+      <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Share immediately to your profile</div>
+    </button>
+    <button onclick="openQuoteComposer()"
+      style="width:100%;padding:14px;border-radius:var(--radius-sm);border:1px solid var(--bg4);
+        background:var(--bg2);font-family:inherit;font-size:14px;color:var(--ink);cursor:pointer;text-align:left;">
+      💬 <strong>Quote post</strong>
+      <div style="font-size:12px;color:var(--ink4);margin-top:2px;">Add your thoughts</div>
+    </button>
+  </div>
+  <div id="quote-composer" style="display:none;padding:0 18px 18px;">
+    <textarea id="quote-text" rows="3"
+      placeholder="Add a comment…"
+      style="width:100%;box-sizing:border-box;border:1px solid var(--bg4);border-radius:var(--radius-sm);
+        padding:10px 12px;font-family:inherit;font-size:14px;color:var(--ink);
+        background:var(--bg3);resize:none;outline:none;"></textarea>
+    <button onclick="doRepost(true)"
+      style="margin-top:8px;width:100%;padding:12px;border-radius:var(--radius-sm);
+        border:none;background:var(--ink);color:var(--bg);font-family:inherit;
+        font-size:14px;font-weight:600;cursor:pointer;">Post quote</button>
+  </div>
+</div>`;
+    document.body.appendChild(el);
+  })();
+
+  function repostPost(postId) {
+    _repostTargetId = postId;
+    document.getElementById('repost-backdrop').style.display = 'block';
+    document.getElementById('quote-composer').style.display = 'none';
+    document.getElementById('quote-text').value = '';
+    const sheet = document.getElementById('repost-sheet');
+    sheet.style.transform = 'translateX(-50%) translateY(100%)';
+    requestAnimationFrame(() => { sheet.style.transform = 'translateX(-50%) translateY(0)'; });
+  }
+
+  function closeRepostSheet() {
+    document.getElementById('repost-backdrop').style.display = 'none';
+    document.getElementById('repost-sheet').style.transform = 'translateX(-50%) translateY(100%)';
+    _repostTargetId = null;
+  }
+
+  function openQuoteComposer() {
+    document.getElementById('quote-composer').style.display = 'block';
+    document.getElementById('quote-text').focus();
+  }
+
+  async function doRepost(isQuote) {
+    if (!_repostTargetId) return;
+    const comment = isQuote ? document.getElementById('quote-text').value.trim() : '';
+    if (isQuote && !comment) { toast('Add a comment first'); return; }
+    closeRepostSheet();
     try {
       const res = await fetch('/flare/repost', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token: TOKEN, post_id: postId })
+        body: JSON.stringify({ token: TOKEN, post_id: _repostTargetId, comment: comment || undefined })
       });
-      if (res.ok) { toast('Reposted 🔁'); }
+      if (res.ok) { toast(isQuote ? 'Quote posted ✓' : 'Reposted 🔁'); _forYouLoaded = false; }
       else { const d = await res.json(); toast(d.detail || 'Could not repost'); }
     } catch(e) { toast('Connection error'); }
   }
@@ -1518,9 +1595,9 @@
           row.style.cssText = 'display:flex;gap:10px;align-items:flex-start;padding:10px 16px;border-bottom:1px solid var(--bg3);';
           row.innerHTML = `
             <div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);flex-shrink:0;
-              display:flex;align-items:center;justify-content:center;font-size:12px;">?</div>
+              display:flex;align-items:center;justify-content:center;font-size:12px;">${DISPLAY_NAME[0]||'?'}</div>
             <div>
-              <div style="font-size:12px;font-weight:600;color:var(--ink);">You</div>
+              <div style="font-size:12px;font-weight:600;color:var(--ink);">${DISPLAY_NAME}</div>
               <div style="font-size:13px;color:var(--ink2);line-height:1.5;margin-top:2px;">${text}</div>
             </div>`;
           thread.appendChild(row);

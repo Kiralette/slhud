@@ -191,6 +191,9 @@ async def admin_home(request: Request, db=Depends(get_db)):
       <a href="/admin/atlas-locations?secret={secret}" style="display:inline-block;margin-top:10px;padding:8px 16px;background:#2a4a5a;color:#7ec8e3;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">
         🗺️ Atlas Locations
       </a>
+      <a href="/admin/flare?secret={secret}" style="display:inline-block;margin-top:10px;padding:8px 16px;background:#3a1a4a;color:#c8a0e8;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;">
+        ✦ Flare
+      </a>
     </div>
     <h2>Players</h2>
     <table>
@@ -1255,3 +1258,286 @@ async def admin_edit_atlas_location_save(location_id: int, request: Request, db=
     return RedirectResponse(
         f"/admin/atlas-location/{location_id}/edit?secret={secret}&saved=1",
         status_code=303)
+
+
+# ── FLARE ADMIN ────────────────────────────────────────────────────────────────
+
+_FLARE_STYLE = """
+<style>
+  body { font-family: system-ui, sans-serif; background: #faf9f7; color: #2a2420;
+         max-width: 1000px; margin: 0 auto; padding: 24px; }
+  h1  { font-size: 28px; margin-bottom: 4px; }
+  h2  { font-size: 18px; margin: 28px 0 8px; }
+  .nav { margin-bottom: 20px; font-size: 14px; }
+  .nav a { color: #9a7c4e; text-decoration: none; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btn { padding: 8px 18px; border-radius: 20px; border: 1px solid #e0dbd4;
+              background: #fff; color: #555; cursor: pointer; font-size: 13px;
+              font-weight: 600; text-decoration: none; }
+  .tab-btn.active { background: #3a1a4a; color: #c8a0e8; border-color: #3a1a4a; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1rem; }
+  th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e8e4dc;
+       font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #888; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f0ece4; vertical-align: top; }
+  tr:hover td { background: #f5f3ef; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+            font-weight: 600; }
+  .btn { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer;
+          font-size: 12px; font-weight: 600; }
+  .btn-red  { background: #d47070; color: #fff; }
+  .btn-grey { background: #e8e4dc; color: #555; }
+  .empty { padding: 40px; text-align: center; color: #aaa; font-size: 14px; }
+  a { color: #9a7c4e; }
+</style>
+"""
+
+def _flare_nav(secret: str, active: str) -> str:
+    tabs = [("posts", "Posts"), ("creators", "Creators"), ("subscriptions", "Subscriptions")]
+    links = "".join(
+        f'<a href="/admin/flare/{slug}?secret={secret}" class="tab-btn{"  active" if slug == active else ""}">{label}</a>'
+        for slug, label in tabs
+    )
+    return f"""
+<div class="nav"><a href="/admin?secret={secret}">← Admin home</a></div>
+<h1>✦ Flare</h1>
+<div class="tabs">{links}</div>
+"""
+
+
+@router.get("/flare", response_class=HTMLResponse)
+async def flare_admin_root(request: Request):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    return RedirectResponse(f"/admin/flare/posts?secret={secret}", status_code=302)
+
+
+@router.get("/flare/posts", response_class=HTMLResponse)
+async def flare_admin_posts(request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    page   = int(request.query_params.get("page", 1))
+    limit  = 50
+    offset = (page - 1) * limit
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT p.id, p.content_text, p.category, p.created_at,
+                      p.total_likes, p.total_comments, p.is_adult,
+                      pl.display_name AS author, pl.id AS player_id
+               FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               ORDER BY p.created_at DESC
+               LIMIT $1 OFFSET $2""",
+            limit, offset)
+        total = await db.fetchval("SELECT COUNT(*) FROM posts")
+    else:
+        async with db.execute(
+            """SELECT p.id, p.content_text, p.category, p.created_at,
+                      p.total_likes, p.total_comments, p.is_adult,
+                      pl.display_name AS author, pl.id AS player_id
+               FROM posts p
+               JOIN players pl ON pl.id = p.player_id
+               ORDER BY p.created_at DESC
+               LIMIT ? OFFSET ?""",
+            (limit, offset)
+        ) as cur:
+            rows = await cur.fetchall()
+        async with db.execute("SELECT COUNT(*) FROM posts") as cur:
+            total = (await cur.fetchone())[0]
+
+    posts = [dict(r) for r in rows]
+    pages = (total + limit - 1) // limit
+
+    rows_html = ""
+    for p in posts:
+        snippet = (p["content_text"] or "")[:80].replace("<", "&lt;")
+        adult_badge = '<span class="badge" style="background:#d47070;color:#fff;">18+</span>' if p["is_adult"] else ""
+        rows_html += f"""<tr>
+          <td>{p['id']}</td>
+          <td><a href="/admin/player/{p['player_id']}?secret={secret}">{p['author']}</a></td>
+          <td>{p['category'] or '—'}</td>
+          <td style="max-width:260px;color:#555;">{snippet}{'…' if len(p['content_text'] or '') > 80 else ''} {adult_badge}</td>
+          <td style="text-align:center;">{p['total_likes']}</td>
+          <td style="text-align:center;">{p['total_comments']}</td>
+          <td>{(p['created_at'] or '')[:10]}</td>
+          <td>
+            <form method="post" action="/admin/flare/post/{p['id']}/delete?secret={secret}"
+                  onsubmit="return confirm('Delete post {p['id']}? Cannot be undone.');" style="margin:0;">
+              <button class="btn btn-red">Delete</button>
+            </form>
+          </td>
+        </tr>"""
+
+    pagination = ""
+    if pages > 1:
+        if page > 1:
+            pagination += f'<a href="/admin/flare/posts?secret={secret}&page={page-1}" class="tab-btn">← Prev</a> '
+        pagination += f'<span style="font-size:13px;color:#888;">Page {page} of {pages}</span>'
+        if page < pages:
+            pagination += f' <a href="/admin/flare/posts?secret={secret}&page={page+1}" class="tab-btn">Next →</a>'
+
+    html = f"""<!DOCTYPE html><html><head><title>Flare Posts — Admin</title>{_FLARE_STYLE}</head><body>
+{_flare_nav(secret, 'posts')}
+<p style="color:#888;font-size:13px;">{total} total posts</p>
+<table>
+  <thead><tr><th>ID</th><th>Author</th><th>Category</th><th>Content</th><th>♥</th><th>💬</th><th>Date</th><th></th></tr></thead>
+  <tbody>{rows_html}</tbody>
+</table>
+<div style="display:flex;gap:8px;align-items:center;margin-top:12px;">{pagination}</div>
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/flare/post/{post_id}/delete")
+async def flare_admin_delete_post(post_id: int, request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    if is_postgres():
+        await db.execute("DELETE FROM posts WHERE id = $1", post_id)
+    else:
+        await db.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+        await db.commit()
+    return RedirectResponse(f"/admin/flare/posts?secret={secret}", status_code=303)
+
+
+@router.get("/flare/creators", response_class=HTMLResponse)
+async def flare_admin_creators(request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT cp.*, pl.display_name,
+                      (SELECT COUNT(*) FROM creator_subscriptions cs
+                       WHERE cs.creator_id = cp.player_id AND cs.is_active = 1) AS sub_count
+               FROM creator_profiles cp
+               JOIN players pl ON pl.id = cp.player_id
+               ORDER BY sub_count DESC, cp.player_id""")
+    else:
+        async with db.execute(
+            """SELECT cp.*, pl.display_name,
+                      (SELECT COUNT(*) FROM creator_subscriptions cs
+                       WHERE cs.creator_id = cp.player_id AND cs.is_active = 1) AS sub_count
+               FROM creator_profiles cp
+               JOIN players pl ON pl.id = cp.player_id
+               ORDER BY sub_count DESC, cp.player_id"""
+        ) as cur:
+            rows = await cur.fetchall()
+
+    creators = [dict(r) for r in rows]
+
+    rows_html = ""
+    for c in creators:
+        active_badge = (
+            '<span class="badge" style="background:#4a9a6a;color:#fff;">Active</span>'
+            if c["is_active"] else
+            '<span class="badge" style="background:#ccc;color:#555;">Inactive</span>'
+        )
+        toggle_label = "Deactivate" if c["is_active"] else "Activate"
+        rows_html += f"""<tr>
+          <td><a href="/admin/player/{c['player_id']}?secret={secret}">{c['display_name']}</a></td>
+          <td>{active_badge}</td>
+          <td>✦ {c['subscription_price'] or 0}</td>
+          <td style="text-align:center;">{c['sub_count']}</td>
+          <td style="max-width:200px;color:#555;font-size:12px;">{(c['bio'] or '—')[:80]}</td>
+          <td>
+            <form method="post" action="/admin/flare/creator/{c['player_id']}/toggle?secret={secret}" style="margin:0;">
+              <button class="btn btn-grey">{toggle_label}</button>
+            </form>
+          </td>
+        </tr>"""
+
+    html = f"""<!DOCTYPE html><html><head><title>Flare Creators — Admin</title>{_FLARE_STYLE}</head><body>
+{_flare_nav(secret, 'creators')}
+<p style="color:#888;font-size:13px;">{len(creators)} creator profiles</p>
+{"<table><thead><tr><th>Creator</th><th>Status</th><th>Sub Price</th><th>Active Subs</th><th>Bio</th><th></th></tr></thead><tbody>" + rows_html + "</tbody></table>" if creators else '<div class="empty">No creator profiles yet.</div>'}
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/flare/creator/{player_id}/toggle")
+async def flare_admin_toggle_creator(player_id: int, request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    if is_postgres():
+        await db.execute(
+            "UPDATE creator_profiles SET is_active = 1 - is_active WHERE player_id = $1", player_id)
+    else:
+        await db.execute(
+            "UPDATE creator_profiles SET is_active = 1 - is_active WHERE player_id = ?", (player_id,))
+        await db.commit()
+    return RedirectResponse(f"/admin/flare/creators?secret={secret}", status_code=303)
+
+
+@router.get("/flare/subscriptions", response_class=HTMLResponse)
+async def flare_admin_subscriptions(request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+
+    if is_postgres():
+        rows = await db.fetch(
+            """SELECT cs.id, cs.price_paid, cs.expires_at, cs.is_active,
+                      sub.display_name AS subscriber_name, sub.id AS subscriber_id,
+                      cre.display_name AS creator_name,   cre.id AS creator_id
+               FROM creator_subscriptions cs
+               JOIN players sub ON sub.id = cs.subscriber_id
+               JOIN players cre ON cre.id = cs.creator_id
+               ORDER BY cs.is_active DESC, cs.expires_at DESC
+               LIMIT 200""")
+    else:
+        async with db.execute(
+            """SELECT cs.id, cs.price_paid, cs.expires_at, cs.is_active,
+                      sub.display_name AS subscriber_name, sub.id AS subscriber_id,
+                      cre.display_name AS creator_name,   cre.id AS creator_id
+               FROM creator_subscriptions cs
+               JOIN players sub ON sub.id = cs.subscriber_id
+               JOIN players cre ON cre.id = cs.creator_id
+               ORDER BY cs.is_active DESC, cs.expires_at DESC
+               LIMIT 200"""
+        ) as cur:
+            rows = await cur.fetchall()
+
+    subs = [dict(r) for r in rows]
+    active_count = sum(1 for s in subs if s["is_active"])
+
+    rows_html = ""
+    for s in subs:
+        status_badge = (
+            '<span class="badge" style="background:#4a9a6a;color:#fff;">Active</span>'
+            if s["is_active"] else
+            '<span class="badge" style="background:#ccc;color:#555;">Inactive</span>'
+        )
+        cancel_btn = ""
+        if s["is_active"]:
+            cancel_btn = f"""<form method="post" action="/admin/flare/subscription/{s['id']}/cancel?secret={secret}" style="margin:0;">
+              <button class="btn btn-red">Cancel</button>
+            </form>"""
+        rows_html += f"""<tr>
+          <td><a href="/admin/player/{s['subscriber_id']}?secret={secret}">{s['subscriber_name']}</a></td>
+          <td><a href="/admin/player/{s['creator_id']}?secret={secret}">{s['creator_name']}</a></td>
+          <td>✦ {s['price_paid']}</td>
+          <td>{status_badge}</td>
+          <td>{(s['expires_at'] or '—')[:10]}</td>
+          <td>{cancel_btn}</td>
+        </tr>"""
+
+    html = f"""<!DOCTYPE html><html><head><title>Flare Subscriptions — Admin</title>{_FLARE_STYLE}</head><body>
+{_flare_nav(secret, 'subscriptions')}
+<p style="color:#888;font-size:13px;">{active_count} active · {len(subs)} total (last 200)</p>
+{"<table><thead><tr><th>Subscriber</th><th>Creator</th><th>Price Paid</th><th>Status</th><th>Expires</th><th></th></tr></thead><tbody>" + rows_html + "</tbody></table>" if subs else '<div class="empty">No subscriptions yet.</div>'}
+</body></html>"""
+    return HTMLResponse(html)
+
+
+@router.post("/flare/subscription/{sub_id}/cancel")
+async def flare_admin_cancel_sub(sub_id: int, request: Request, db=Depends(get_db)):
+    check_admin(request)
+    secret = request.query_params.get("secret", "")
+    if is_postgres():
+        await db.execute(
+            "UPDATE creator_subscriptions SET is_active = 0 WHERE id = $1", sub_id)
+    else:
+        await db.execute(
+            "UPDATE creator_subscriptions SET is_active = 0 WHERE id = ?", (sub_id,))
+        await db.commit()
+    return RedirectResponse(f"/admin/flare/subscriptions?secret={secret}", status_code=303)

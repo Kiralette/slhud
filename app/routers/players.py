@@ -27,8 +27,8 @@ async def _register_pg(body, conn):
     )
     if existing:
         await conn.execute(
-            "UPDATE players SET last_seen = now()::text, is_online = 1 WHERE avatar_uuid = $1",
-            body.avatar_uuid
+            "UPDATE players SET last_seen = now()::text, is_online = 1, sl_username = COALESCE($2, sl_username) WHERE avatar_uuid = $1",
+            body.avatar_uuid, body.sl_username
         )
         return RegisterResponse(
             success=True,
@@ -40,8 +40,8 @@ async def _register_pg(body, conn):
 
     token = generate_token()
     player_id = await conn.fetchval(
-        "INSERT INTO players (avatar_uuid, display_name, token, is_online) VALUES ($1, $2, $3, 1) RETURNING id",
-        body.avatar_uuid, body.display_name, token
+        "INSERT INTO players (avatar_uuid, display_name, token, is_online, sl_username) VALUES ($1, $2, $3, 1, $4) RETURNING id",
+        body.avatar_uuid, body.display_name, token, body.sl_username
     )
 
     for need_key in all_need_keys():
@@ -70,8 +70,8 @@ async def _register_sqlite(body, db):
 
     if existing:
         await db.execute(
-            "UPDATE players SET last_seen = datetime('now'), is_online = 1 WHERE avatar_uuid = ?",
-            (body.avatar_uuid,)
+            "UPDATE players SET last_seen = datetime('now'), is_online = 1, sl_username = COALESCE(?, sl_username) WHERE avatar_uuid = ?",
+            (body.sl_username, body.avatar_uuid,)
         )
         await db.commit()
         p = dict(existing)
@@ -79,8 +79,8 @@ async def _register_sqlite(body, db):
 
     token = generate_token()
     async with db.execute(
-        "INSERT INTO players (avatar_uuid, display_name, token, is_online) VALUES (?, ?, ?, 1)",
-        (body.avatar_uuid, body.display_name, token)
+        "INSERT INTO players (avatar_uuid, display_name, token, is_online, sl_username) VALUES (?, ?, ?, 1, ?)",
+        (body.avatar_uuid, body.display_name, token, body.sl_username)
     ) as cursor:
         player_id = cursor.lastrowid
 
