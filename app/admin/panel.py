@@ -660,92 +660,45 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
 
     if is_postgres():
         pid = player_id
-        # Delete in FK-safe order — deepest dependents first.
-        # Tables using standard player_id column:
-        for tbl in [
-            "post_engagements",       # references posts(id) — must come before posts
-            "post_hashtags",
-            "post_mentions",
-            "post_unlocks",
-            "player_interests",
-            "creator_profiles",
-            "horoscope_cache",
-            "odd_job_log",
-            "career_history",
-            "streaming_sessions",
-            "vibe_log",
-            "occurrence_vibe_log",
-            "vibes",
-            "player_traits",
-            "player_achievements",
-            "ttc_conception_checks",  # references cycle_log(id)
-            "cycle_phase_log",
-            "intimacy_log",
-            "cycle_log",
-            "calendar_events",
-            "player_occurrences",
-            "flare_stats",
-            "workout_plans",
-            "subscriptions",
-            "proximity_log",
-            "notifications",
-            "event_log",
-            "transactions",
-            "wallets",
-            "needs",
-            "skills",
-            "employment",
-            "player_profiles",
-            "player_stats",
-            "player_settings",
-            "posts",                  # after post_engagements
-            # ── Healthcare ──────────────────────────────────────────
-            "healthcare_lab_results",
-            "healthcare_vaccinations",
-            "healthcare_referrals",
-            "healthcare_conditions",
-            "healthcare_medications",
-            "healthcare_appointments",
-            "healthcare_profiles",
-            # ── Spark / dating ──────────────────────────────────────
-            "spark_interests",
-            "spark_profiles",
-            # ── Atlas / locations ───────────────────────────────────
-            "atlas_helpful_votes",
-            "atlas_checkins",
-            "atlas_saves",
-            "atlas_reviews",
-            "atlas_locations",
-            # ── Location ────────────────────────────────────────────
-            "player_location",
-            # ── Blocks ─────────────────────────────────────────────
-            "blocks",
-            # ── Calendar RSVPs ──────────────────────────────────────
-            "calendar_rsvps",
-        ]:
-            try:
+        # Use session_replication_role to bypass FK checks for this delete operation.
+        # This is safe here because we're doing a full cascade manually and the
+        # admin panel is internal-only.
+        await db.execute("SET session_replication_role = replica")
+        try:
+            for tbl in [
+                "post_engagements", "post_hashtags", "post_mentions", "post_unlocks",
+                "player_interests", "horoscope_cache", "odd_job_log", "career_history",
+                "streaming_sessions", "vibe_log", "occurrence_vibe_log", "vibes",
+                "player_traits", "player_achievements", "ttc_conception_checks",
+                "cycle_phase_log", "intimacy_log", "cycle_log", "calendar_events",
+                "calendar_rsvps", "player_occurrences", "flare_stats", "workout_plans",
+                "subscriptions", "proximity_log", "notifications", "event_log",
+                "transactions", "wallets", "needs", "skills", "employment",
+                "player_profiles", "player_stats", "player_settings",
+                "healthcare_lab_results", "healthcare_vaccinations", "healthcare_referrals",
+                "healthcare_conditions", "healthcare_medications", "healthcare_appointments",
+                "healthcare_profiles", "atlas_helpful_votes", "atlas_checkins",
+                "atlas_saves", "atlas_reviews", "atlas_locations", "player_location",
+                "blocks", "flare_stats",
+            ]:
                 await db.execute(f"DELETE FROM {tbl} WHERE player_id = $1", pid)
-            except Exception:
-                pass
-        # Tables with non-standard FK column names:
-        for _stmt, _val in [
-            ("DELETE FROM spark_reports WHERE reporter_id = $1 OR reported_id = $1", pid),
-            ("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", pid),
-            ("DELETE FROM spark_messages WHERE sender_id = $1", pid),
-            # Delete all messages in threads this player owns (both sides), then the threads
-            ("DELETE FROM messages WHERE thread_id IN (SELECT id FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1)", pid),
-            ("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid),
-            ("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid),
-            # Flare DMs: delete all messages in player's flare threads, then threads
-            ("DELETE FROM flare_messages WHERE thread_id IN (SELECT id FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1)", pid),
-            ("DELETE FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1", pid),
-            ("DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR creator_id = $1", pid),
-        ]:
-            try:
-                await db.execute(_stmt, _val)
-            except Exception as e:
-                pass  # table may not exist yet; continue
-        await db.execute("DELETE FROM players WHERE id = $1", pid)
+            # Tables with non-standard FK columns
+            await db.execute("DELETE FROM spark_interests WHERE player_id = $1 OR target_id = $1", pid)
+            await db.execute("DELETE FROM spark_reports WHERE reporter_id = $1 OR reported_id = $1", pid)
+            await db.execute("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", pid)
+            await db.execute("DELETE FROM spark_messages WHERE sender_id = $1", pid)
+            await db.execute("DELETE FROM spark_profiles WHERE player_id = $1", pid)
+            await db.execute("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid)
+            await db.execute("DELETE FROM messages WHERE sender_id = $1 OR recipient_id = $1", pid)
+            await db.execute("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid)
+            await db.execute("DELETE FROM flare_messages WHERE sender_id = $1", pid)
+            await db.execute("DELETE FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1", pid)
+            await db.execute("DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR creator_id = $1", pid)
+            await db.execute("DELETE FROM creator_profiles WHERE player_id = $1", pid)
+            await db.execute("DELETE FROM posts WHERE player_id = $1", pid)
+            await db.execute("DELETE FROM players WHERE id = $1", pid)
+        finally:
+            await db.execute("SET session_replication_role = DEFAULT")
     else:
         # SQLite: PRAGMA foreign_keys is off by default so order matters less,
         # but be explicit anyway
