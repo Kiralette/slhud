@@ -732,17 +732,19 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             ("DELETE FROM spark_reports WHERE reporter_id = $1 OR reported_id = $1", pid),
             ("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", pid),
             ("DELETE FROM spark_messages WHERE sender_id = $1", pid),
-            ("DELETE FROM messages WHERE sender_id = $1", pid),
-            ("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid),
-            ("DELETE FROM flare_messages WHERE sender_id = $1", pid),
-            ("DELETE FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1", pid),
+            # Delete all messages in threads this player owns (both sides), then the threads
+            ("DELETE FROM messages WHERE thread_id IN (SELECT id FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1)", pid),
             ("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid),
+            ("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid),
+            # Flare DMs: delete all messages in player's flare threads, then threads
+            ("DELETE FROM flare_messages WHERE thread_id IN (SELECT id FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1)", pid),
+            ("DELETE FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1", pid),
             ("DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR creator_id = $1", pid),
         ]:
             try:
                 await db.execute(_stmt, _val)
-            except Exception:
-                pass
+            except Exception as e:
+                pass  # table may not exist yet; continue
         await db.execute("DELETE FROM players WHERE id = $1", pid)
     else:
         # SQLite: PRAGMA foreign_keys is off by default so order matters less,
