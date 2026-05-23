@@ -1399,8 +1399,10 @@ async def flare_admin_delete_post(post_id: int, request: Request, db=Depends(get
     check_admin(request)
     secret = request.query_params.get("secret", "")
     if is_postgres():
+        await db.execute("DELETE FROM post_engagements WHERE post_id = $1", post_id)
         await db.execute("DELETE FROM posts WHERE id = $1", post_id)
     else:
+        await db.execute("DELETE FROM post_engagements WHERE post_id = ?", (post_id,))
         await db.execute("DELETE FROM posts WHERE id = ?", (post_id,))
         await db.commit()
     return RedirectResponse(f"/admin/flare/posts?secret={secret}", status_code=303)
