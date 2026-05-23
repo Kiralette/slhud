@@ -664,6 +664,12 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
         # Tables using standard player_id column:
         for tbl in [
             "post_engagements",       # references posts(id) — must come before posts
+            "post_hashtags",
+            "post_mentions",
+            "post_unlocks",
+            "player_interests",
+            "creator_profiles",
+            "horoscope_cache",
             "odd_job_log",
             "career_history",
             "streaming_sessions",
@@ -722,15 +728,19 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             except Exception:
                 pass
         # Tables with non-standard FK column names:
-        for _stmt, _args in [
-            ("DELETE FROM spark_reports WHERE reporter_id = $1 OR reported_id = $1", [pid]),
-            ("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", [pid]),
-            ("DELETE FROM messages WHERE sender_id = $1", [pid]),
-            ("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", [pid]),
-            ("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", [pid]),
+        for _stmt, _val in [
+            ("DELETE FROM spark_reports WHERE reporter_id = $1 OR reported_id = $1", pid),
+            ("DELETE FROM spark_matches WHERE player_a_id = $1 OR player_b_id = $1", pid),
+            ("DELETE FROM spark_messages WHERE sender_id = $1", pid),
+            ("DELETE FROM messages WHERE sender_id = $1", pid),
+            ("DELETE FROM follows WHERE follower_id = $1 OR following_id = $1", pid),
+            ("DELETE FROM flare_messages WHERE sender_id = $1", pid),
+            ("DELETE FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1", pid),
+            ("DELETE FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1", pid),
+            ("DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR creator_id = $1", pid),
         ]:
             try:
-                await db.execute(_stmt, *_args)
+                await db.execute(_stmt, _val)
             except Exception:
                 pass
         await db.execute("DELETE FROM players WHERE id = $1", pid)
@@ -738,8 +748,9 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
         # SQLite: PRAGMA foreign_keys is off by default so order matters less,
         # but be explicit anyway
         child_tables = [
-            "post_engagements", "messages", "message_threads",
-            "follows", "proximity_log", "odd_job_log", "career_history",
+            "post_engagements", "post_hashtags", "post_mentions", "post_unlocks",
+            "player_interests", "creator_profiles", "horoscope_cache",
+            "messages", "proximity_log", "odd_job_log", "career_history",
             "employment", "streaming_sessions", "transactions", "wallets",
             "needs", "skills", "vibes", "vibe_log", "occurrence_vibe_log",
             "player_traits", "player_achievements", "posts", "flare_stats",
@@ -747,17 +758,13 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "intimacy_log", "ttc_conception_checks", "player_occurrences",
             "notifications", "event_log", "player_profiles", "player_stats",
             "player_settings", "workout_plans", "subscriptions",
-            # Healthcare
             "healthcare_lab_results", "healthcare_vaccinations",
             "healthcare_referrals", "healthcare_conditions",
             "healthcare_medications", "healthcare_appointments",
             "healthcare_profiles",
-            # Spark
             "spark_interests", "spark_profiles",
-            # Atlas
             "atlas_helpful_votes", "atlas_checkins", "atlas_saves",
             "atlas_reviews", "atlas_locations",
-            # Blocks / calendar RSVPs
             "blocks", "calendar_rsvps",
         ]
         for table in child_tables:
@@ -765,13 +772,20 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
                 await db.execute(f"DELETE FROM {table} WHERE player_id = ?", (player_id,))
             except Exception:
                 pass
-        try:
-            await db.execute("DELETE FROM spark_matches WHERE player_a_id = ? OR player_b_id = ?", (pid, pid))
-            await db.execute("DELETE FROM spark_reports WHERE reporter_id = ? OR reported_id = ?", (pid, pid))
-            await db.execute("DELETE FROM follows WHERE follower_id = ? OR following_id = ?", (pid, pid))
-            await db.execute("DELETE FROM message_threads WHERE player_a_id = ? OR player_b_id = ?", (pid, pid))
-        except Exception:
-            pass
+        for _stmt, _args in [
+            ("DELETE FROM spark_matches WHERE player_a_id = ? OR player_b_id = ?", (player_id, player_id)),
+            ("DELETE FROM spark_reports WHERE reporter_id = ? OR reported_id = ?", (player_id, player_id)),
+            ("DELETE FROM spark_messages WHERE sender_id = ?", (player_id,)),
+            ("DELETE FROM follows WHERE follower_id = ? OR following_id = ?", (player_id, player_id)),
+            ("DELETE FROM flare_messages WHERE sender_id = ?", (player_id,)),
+            ("DELETE FROM flare_threads WHERE player_a_id = ? OR player_b_id = ?", (player_id, player_id)),
+            ("DELETE FROM message_threads WHERE player_a_id = ? OR player_b_id = ?", (player_id, player_id)),
+            ("DELETE FROM creator_subscriptions WHERE subscriber_id = ? OR creator_id = ?", (player_id, player_id)),
+        ]:
+            try:
+                await db.execute(_stmt, _args)
+            except Exception:
+                pass
         await db.execute("DELETE FROM players WHERE id = ?", (player_id,))
         await db.commit()
 
