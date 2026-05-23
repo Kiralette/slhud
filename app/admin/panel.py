@@ -1321,9 +1321,12 @@ async def flare_admin_posts(request: Request, db=Depends(get_db)):
 
     if is_postgres():
         rows = await db.fetch(
-            """SELECT p.id, p.content_text, p.category, p.created_at,
-                      p.total_likes, p.total_comments, p.is_adult,
-                      pl.display_name AS author, pl.id AS player_id
+            """SELECT p.id, p.content_text, p.category, p.created_at, p.is_adult,
+                      pl.display_name AS author, pl.id AS player_id,
+                      (COALESCE(p.npc_likes, 0) +
+                       (SELECT COUNT(*) FROM post_engagements e WHERE e.post_id = p.id AND e.type = 'like')) AS total_likes,
+                      (COALESCE(p.npc_comments, 0) +
+                       (SELECT COUNT(*) FROM post_engagements e WHERE e.post_id = p.id AND e.type = 'comment')) AS total_comments
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                ORDER BY p.created_at DESC
@@ -1332,9 +1335,12 @@ async def flare_admin_posts(request: Request, db=Depends(get_db)):
         total = await db.fetchval("SELECT COUNT(*) FROM posts")
     else:
         async with db.execute(
-            """SELECT p.id, p.content_text, p.category, p.created_at,
-                      p.total_likes, p.total_comments, p.is_adult,
-                      pl.display_name AS author, pl.id AS player_id
+            """SELECT p.id, p.content_text, p.category, p.created_at, p.is_adult,
+                      pl.display_name AS author, pl.id AS player_id,
+                      (COALESCE(p.npc_likes, 0) +
+                       (SELECT COUNT(*) FROM post_engagements e WHERE e.post_id = p.id AND e.type = 'like')) AS total_likes,
+                      (COALESCE(p.npc_comments, 0) +
+                       (SELECT COUNT(*) FROM post_engagements e WHERE e.post_id = p.id AND e.type = 'comment')) AS total_comments
                FROM posts p
                JOIN players pl ON pl.id = p.player_id
                ORDER BY p.created_at DESC
