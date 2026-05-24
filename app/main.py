@@ -12,6 +12,7 @@ from app.config import get_config
 from app.database import init_db, get_pg_pool, is_postgres
 from app.routers import players, actions, needs, webapps, notifications, shop, career, social, flare, messages, calendar, cycle, occurrences, questionnaire, profile as profile_router, healthcare, spark, atlas
 from app.routers import vault as vault_router
+from app.routers import wavelength as wavelength_router
 from app.admin import panel
 from app.services.decay import run_decay_tick
 from app.services.economy import rotate_weekly_specials, bill_subscriptions
@@ -118,6 +119,7 @@ app.include_router(healthcare.router)
 app.include_router(spark.router)
 app.include_router(atlas.router)
 app.include_router(vault_router.router)
+app.include_router(wavelength_router.router)
 
 
 @app.get("/debug/token", tags=["health"])
