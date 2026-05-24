@@ -711,8 +711,15 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             "DELETE FROM cycle_phase_log     WHERE player_id = $1",
             "DELETE FROM intimacy_log        WHERE player_id = $1",
             "DELETE FROM cycle_log           WHERE player_id = $1",
-            # misc
-            "DELETE FROM horoscope_cache     WHERE player_id = $1",
+            # vault — children before parent account
+            "DELETE FROM vault_orders           WHERE player_id = $1",
+            "DELETE FROM vault_pot_transactions WHERE player_id = $1",
+            "DELETE FROM vault_transfers        WHERE sender_id = $1 OR recipient_id = $1",
+            "DELETE FROM vault_holdings         WHERE player_id = $1",
+            "DELETE FROM vault_pots             WHERE player_id = $1",
+            "DELETE FROM vault_asset_prices     WHERE player_id = $1",
+            "DELETE FROM vault_assets           WHERE player_id = $1",
+            "DELETE FROM vault_accounts         WHERE player_id = $1",
             "DELETE FROM odd_job_log         WHERE player_id = $1",
             "DELETE FROM career_history      WHERE player_id = $1",
             "DELETE FROM streaming_sessions  WHERE player_id = $1",
