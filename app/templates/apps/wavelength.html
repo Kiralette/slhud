@@ -143,6 +143,30 @@
 {% block extra_script %}
 <script>
 let _audio = null;
+const _hudUrl = new URLSearchParams(window.location.search).get('hud_url');
+
+function _toast(msg) {
+  if (typeof showToast === 'function') { showToast(msg); return; }
+  // fallback: simple in-page toast
+  let t = document.getElementById('_wl_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_wl_toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+function _notifyHud(action, streamUrl) {
+    if (!_hudUrl) return;
+    const headers = {'x-wavelength-action': action};
+    if (streamUrl) headers['x-stream-url'] = streamUrl;
+    fetch(_hudUrl, {method: 'GET', headers}).catch(() => {});
+}
 
 function tuneIn(key, name, url) {
   fetch('/wavelength/start', {
@@ -150,8 +174,8 @@ function tuneIn(key, name, url) {
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({token: '{{ token }}', station_key: key})
   }).then(r => r.json()).then(d => {
-    if (d.error) { showToast('❌ ' + d.error); return; }
-    showToast('🎵 Tuning into ' + name);
+    if (d.error) { _toast('❌ ' + d.error); return; }
+    _toast('🎵 Tuning into ' + name);
     // Update UI
     document.querySelectorAll('.station-card').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.station-play-btn').forEach(b => b.textContent = 'Tune in');
@@ -162,19 +186,20 @@ function tuneIn(key, name, url) {
     const streamUrl = d.stream_url || url;
     if (streamUrl) {
       _audio = new Audio(streamUrl);
-      _audio.play().catch(() => showToast('⚠️ Could not play stream in browser.'));
+      _audio.play().catch(e => _toast('⚠️ Could not play stream: ' + e.message));
     }
-    // Also notify LSL HUD if running inside one
-    if (streamUrl && window.parent) { window.parent.postMessage({type:'play_station', url: streamUrl}, '*'); }
+    // In-world HUD audio
+    _notifyHud('play', streamUrl);
   });
 }
 function stopStation() {
   if (_audio) { _audio.pause(); _audio = null; }
+  _notifyHud('stop', null);
   fetch('/wavelength/stop', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({token: '{{ token }}'})
-  }).then(() => { showToast('Stopped.'); location.reload(); });
+  }).then(() => { _toast('Stopped.'); location.reload(); });
 }
 function goPremium() {
   window.location.href = '/app/haul?token={{ token }}&tab=subs';
