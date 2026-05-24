@@ -8,6 +8,7 @@ GET  /wavelength/status — current session info (used by LSL HUD to get stream 
 
 import ssl
 
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
