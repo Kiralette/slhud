@@ -660,92 +660,94 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
 
     if is_postgres():
         pid = player_id
-        # Run everything in one transaction. Order matters — children before parents.
-        # We use IGNORE errors per-table via individual statements so one missing
-        # table doesn't abort the whole delete.
-        async with db.transaction():
-            stmts = [
-                # ── Leaf tables (no children) ──────────────────────────────
-                ("DELETE FROM post_engagements   WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1)", pid),
-                ("DELETE FROM post_hashtags      WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1)", pid),
-                ("DELETE FROM post_mentions      WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1)", pid),
-                ("DELETE FROM post_unlocks       WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1) OR player_id = $1", pid),
-                ("DELETE FROM post_mentions      WHERE player_id = $1", pid),
-                # ── Messages before threads ────────────────────────────────
-                ("DELETE FROM messages           WHERE thread_id IN (SELECT id FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1)", pid),
-                ("DELETE FROM message_threads    WHERE player_a_id = $1 OR player_b_id = $1", pid),
-                ("DELETE FROM flare_messages     WHERE thread_id IN (SELECT id FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1)", pid),
-                ("DELETE FROM flare_threads      WHERE player_a_id = $1 OR player_b_id = $1", pid),
-                # ── Spark ──────────────────────────────────────────────────
-                ("DELETE FROM spark_messages     WHERE sender_id = $1", pid),
-                ("DELETE FROM spark_reports      WHERE reporter_id = $1 OR reported_id = $1", pid),
-                ("DELETE FROM spark_matches      WHERE player_a_id = $1 OR player_b_id = $1", pid),
-                ("DELETE FROM spark_interests    WHERE player_id = $1 OR target_id = $1", pid),
-                ("DELETE FROM spark_profiles     WHERE player_id = $1", pid),
-                # ── Creator ────────────────────────────────────────────────
-                ("DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR creator_id = $1", pid),
-                ("DELETE FROM creator_profiles   WHERE player_id = $1", pid),
-                # ── Posts (after engagements/hashtags/mentions cleared) ────
-                ("DELETE FROM posts              WHERE player_id = $1", pid),
-                # ── Social / follows ───────────────────────────────────────
-                ("DELETE FROM follows            WHERE follower_id = $1 OR following_id = $1", pid),
-                ("DELETE FROM player_interests   WHERE player_id = $1", pid),
-                ("DELETE FROM flare_stats        WHERE player_id = $1", pid),
-                # ── Healthcare ─────────────────────────────────────────────
-                ("DELETE FROM healthcare_lab_results  WHERE player_id = $1", pid),
-                ("DELETE FROM healthcare_vaccinations WHERE player_id = $1", pid),
-                ("DELETE FROM healthcare_referrals    WHERE player_id = $1", pid),
-                ("DELETE FROM healthcare_conditions   WHERE player_id = $1", pid),
-                ("DELETE FROM healthcare_medications  WHERE player_id = $1", pid),
-                ("DELETE FROM healthcare_appointments WHERE player_id = $1", pid),
-                ("DELETE FROM healthcare_profiles     WHERE player_id = $1", pid),
-                # ── Atlas ──────────────────────────────────────────────────
-                ("DELETE FROM atlas_helpful_votes WHERE player_id = $1", pid),
-                ("DELETE FROM atlas_checkins      WHERE player_id = $1", pid),
-                ("DELETE FROM atlas_saves         WHERE player_id = $1", pid),
-                ("DELETE FROM atlas_reviews       WHERE player_id = $1", pid),
-                ("DELETE FROM atlas_locations     WHERE player_id = $1", pid),
-                # ── Cycle / health ─────────────────────────────────────────
-                ("DELETE FROM ttc_conception_checks WHERE player_id = $1", pid),
-                ("DELETE FROM cycle_phase_log     WHERE player_id = $1", pid),
-                ("DELETE FROM intimacy_log        WHERE player_id = $1", pid),
-                ("DELETE FROM cycle_log           WHERE player_id = $1", pid),
-                # ── Misc player data ───────────────────────────────────────
-                ("DELETE FROM horoscope_cache     WHERE player_id = $1", pid),
-                ("DELETE FROM odd_job_log         WHERE player_id = $1", pid),
-                ("DELETE FROM career_history      WHERE player_id = $1", pid),
-                ("DELETE FROM streaming_sessions  WHERE player_id = $1", pid),
-                ("DELETE FROM vibe_log            WHERE player_id = $1", pid),
-                ("DELETE FROM occurrence_vibe_log WHERE player_id = $1", pid),
-                ("DELETE FROM vibes               WHERE player_id = $1", pid),
-                ("DELETE FROM player_traits       WHERE player_id = $1", pid),
-                ("DELETE FROM player_achievements WHERE player_id = $1", pid),
-                ("DELETE FROM calendar_rsvps      WHERE player_id = $1", pid),
-                ("DELETE FROM calendar_events     WHERE player_id = $1", pid),
-                ("DELETE FROM player_occurrences  WHERE player_id = $1", pid),
-                ("DELETE FROM workout_plans       WHERE player_id = $1", pid),
-                ("DELETE FROM subscriptions       WHERE player_id = $1", pid),
-                ("DELETE FROM proximity_log       WHERE player_id = $1", pid),
-                ("DELETE FROM notifications       WHERE player_id = $1", pid),
-                ("DELETE FROM event_log           WHERE player_id = $1", pid),
-                ("DELETE FROM transactions        WHERE player_id = $1", pid),
-                ("DELETE FROM wallets             WHERE player_id = $1", pid),
-                ("DELETE FROM needs               WHERE player_id = $1", pid),
-                ("DELETE FROM skills              WHERE player_id = $1", pid),
-                ("DELETE FROM employment          WHERE player_id = $1", pid),
-                ("DELETE FROM player_location     WHERE player_id = $1", pid),
-                ("DELETE FROM blocks              WHERE player_id = $1", pid),
-                ("DELETE FROM player_profiles     WHERE player_id = $1", pid),
-                ("DELETE FROM player_stats        WHERE player_id = $1", pid),
-                ("DELETE FROM player_settings     WHERE player_id = $1", pid),
-                # ── Finally, the player row itself ─────────────────────────
-                ("DELETE FROM players             WHERE id = $1", pid),
-            ]
-            for stmt, arg in stmts:
-                try:
-                    await db.execute(stmt, arg)
-                except Exception:
-                    pass  # table may not exist in this deployment version
+        # Clean up child rows first. Each statement is independent —
+        # failures (table doesn't exist yet) are silently ignored.
+        # We do NOT wrap in a transaction because catching exceptions
+        # inside asyncpg transactions puts the connection into an aborted state.
+        cleanup_stmts = [
+            # posts children first
+            "DELETE FROM post_engagements   WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1)",
+            "DELETE FROM post_hashtags      WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1)",
+            "DELETE FROM post_mentions      WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1)",
+            "DELETE FROM post_unlocks       WHERE post_id IN (SELECT id FROM posts WHERE player_id = $1)",
+            "DELETE FROM post_unlocks       WHERE player_id = $1",
+            "DELETE FROM post_mentions      WHERE player_id = $1",
+            # message children before threads
+            "DELETE FROM messages           WHERE thread_id IN (SELECT id FROM message_threads WHERE player_a_id = $1 OR player_b_id = $1)",
+            "DELETE FROM message_threads    WHERE player_a_id = $1 OR player_b_id = $1",
+            "DELETE FROM flare_messages     WHERE thread_id IN (SELECT id FROM flare_threads WHERE player_a_id = $1 OR player_b_id = $1)",
+            "DELETE FROM flare_threads      WHERE player_a_id = $1 OR player_b_id = $1",
+            # spark
+            "DELETE FROM spark_messages     WHERE sender_id = $1",
+            "DELETE FROM spark_reports      WHERE reporter_id = $1 OR reported_id = $1",
+            "DELETE FROM spark_matches      WHERE player_a_id = $1 OR player_b_id = $1",
+            "DELETE FROM spark_interests    WHERE player_id = $1 OR target_id = $1",
+            "DELETE FROM spark_profiles     WHERE player_id = $1",
+            # creator
+            "DELETE FROM creator_subscriptions WHERE subscriber_id = $1 OR creator_id = $1",
+            "DELETE FROM creator_profiles   WHERE player_id = $1",
+            # posts
+            "DELETE FROM posts              WHERE player_id = $1",
+            # social
+            "DELETE FROM follows            WHERE follower_id = $1 OR following_id = $1",
+            "DELETE FROM player_interests   WHERE player_id = $1",
+            "DELETE FROM flare_stats        WHERE player_id = $1",
+            # healthcare
+            "DELETE FROM healthcare_lab_results  WHERE player_id = $1",
+            "DELETE FROM healthcare_vaccinations WHERE player_id = $1",
+            "DELETE FROM healthcare_referrals    WHERE player_id = $1",
+            "DELETE FROM healthcare_conditions   WHERE player_id = $1",
+            "DELETE FROM healthcare_medications  WHERE player_id = $1",
+            "DELETE FROM healthcare_appointments WHERE player_id = $1",
+            "DELETE FROM healthcare_profiles     WHERE player_id = $1",
+            # atlas
+            "DELETE FROM atlas_helpful_votes WHERE player_id = $1",
+            "DELETE FROM atlas_checkins      WHERE player_id = $1",
+            "DELETE FROM atlas_saves         WHERE player_id = $1",
+            "DELETE FROM atlas_reviews       WHERE player_id = $1",
+            "DELETE FROM atlas_locations     WHERE player_id = $1",
+            # cycle / health
+            "DELETE FROM ttc_conception_checks WHERE player_id = $1",
+            "DELETE FROM cycle_phase_log     WHERE player_id = $1",
+            "DELETE FROM intimacy_log        WHERE player_id = $1",
+            "DELETE FROM cycle_log           WHERE player_id = $1",
+            # misc
+            "DELETE FROM horoscope_cache     WHERE player_id = $1",
+            "DELETE FROM odd_job_log         WHERE player_id = $1",
+            "DELETE FROM career_history      WHERE player_id = $1",
+            "DELETE FROM streaming_sessions  WHERE player_id = $1",
+            "DELETE FROM vibe_log            WHERE player_id = $1",
+            "DELETE FROM occurrence_vibe_log WHERE player_id = $1",
+            "DELETE FROM vibes               WHERE player_id = $1",
+            "DELETE FROM player_traits       WHERE player_id = $1",
+            "DELETE FROM player_achievements WHERE player_id = $1",
+            "DELETE FROM calendar_rsvps      WHERE player_id = $1",
+            "DELETE FROM calendar_events     WHERE player_id = $1",
+            "DELETE FROM player_occurrences  WHERE player_id = $1",
+            "DELETE FROM workout_plans       WHERE player_id = $1",
+            "DELETE FROM subscriptions       WHERE player_id = $1",
+            "DELETE FROM proximity_log       WHERE player_id = $1",
+            "DELETE FROM notifications       WHERE player_id = $1",
+            "DELETE FROM event_log           WHERE player_id = $1",
+            "DELETE FROM transactions        WHERE player_id = $1",
+            "DELETE FROM wallets             WHERE player_id = $1",
+            "DELETE FROM needs               WHERE player_id = $1",
+            "DELETE FROM skills              WHERE player_id = $1",
+            "DELETE FROM employment          WHERE player_id = $1",
+            "DELETE FROM player_location     WHERE player_id = $1",
+            "DELETE FROM blocks              WHERE player_id = $1",
+            "DELETE FROM player_profiles     WHERE player_id = $1",
+            "DELETE FROM player_stats        WHERE player_id = $1",
+            "DELETE FROM player_settings     WHERE player_id = $1",
+        ]
+        for stmt in cleanup_stmts:
+            try:
+                await db.execute(stmt, pid)
+            except Exception:
+                pass  # table may not exist in this deployment version
+
+        # Final delete — no try/except so errors surface clearly
+        await db.execute("DELETE FROM players WHERE id = $1", pid)
     else:
         # SQLite: PRAGMA foreign_keys is off by default so order matters less,
         # but be explicit anyway
