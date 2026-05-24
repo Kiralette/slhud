@@ -181,11 +181,12 @@ function tuneIn(key, name, url) {
     document.querySelectorAll('.station-play-btn').forEach(b => b.textContent = 'Tune in');
     const card = document.getElementById('station-' + key);
     if (card) { card.classList.add('active'); card.querySelector('.station-play-btn').textContent = 'Now playing'; }
-    // Browser audio playback
+    // Browser audio playback via proxy (avoids CORS)
     if (_audio) { _audio.pause(); _audio = null; }
     const streamUrl = d.stream_url || url;
     if (streamUrl) {
-      _audio = new Audio(streamUrl);
+      const proxyUrl = '/wavelength/stream?url=' + encodeURIComponent(streamUrl);
+      _audio = new Audio(proxyUrl);
       _audio.play().catch(e => _toast('⚠️ Could not play stream: ' + e.message));
     }
     // In-world HUD audio

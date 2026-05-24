@@ -7,9 +7,11 @@ GET  /wavelength/status — current session info (used by LSL HUD to get stream 
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
+import httpx
 
 from app.database import get_db, is_postgres
 from app.config import get_config
@@ -111,6 +113,27 @@ async def _close_active_session(player_id: int, db, now: str):
             "UPDATE streaming_sessions SET ended_at = ?, duration_minutes = ?, xp_earned = ? WHERE id = ?",
             (now, round(minutes, 2), round(xp_total, 3), session["id"]))
         await db.commit()
+
+
+# ── GET /wavelength/stream ────────────────────────────────────────────────────
+
+@router.get("/wavelength/stream")
+async def proxy_stream(url: str):
+    """Proxy an audio stream to avoid CORS issues in the browser."""
+    async def generator():
+        async with httpx.AsyncClient(timeout=None) as client:
+            async with client.stream("GET", url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Icy-MetaData": "1",
+            }) as r:
+                async for chunk in r.aiter_bytes(chunk_size=8192):
+                    yield chunk
+
+    return StreamingResponse(
+        generator(),
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*"},
+    )
 
 
 # ── Models ────────────────────────────────────────────────────────────────────
