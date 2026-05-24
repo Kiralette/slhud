@@ -753,8 +753,12 @@ async def admin_delete_player(player_id: int, request: Request, db=Depends(get_d
             except Exception:
                 pass  # table may not exist in this deployment version
 
-        # Final delete — no try/except so errors surface clearly
-        await db.execute("DELETE FROM players WHERE id = $1", pid)
+        # Final delete — surfaces any remaining FK violations clearly
+        try:
+            await db.execute("DELETE FROM players WHERE id = $1", pid)
+        except Exception as e:
+            # Log which table is still blocking so we can add it to the list
+            raise HTTPException(status_code=500, detail=f"Player delete blocked: {e}")
     else:
         # SQLite: PRAGMA foreign_keys is off by default so order matters less,
         # but be explicit anyway
