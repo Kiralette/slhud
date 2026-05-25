@@ -6,8 +6,6 @@ POST /wavelength/stop   — stop current session, log duration + XP
 GET  /wavelength/status — current session info (used by LSL HUD to get stream URL)
 """
 
-import ssl
-
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -122,15 +120,8 @@ async def _close_active_session(player_id: int, db, now: str):
 @router.get("/wavelength/stream")
 async def proxy_stream(url: str):
     """Proxy an audio stream to avoid CORS issues in the browser."""
-    # Some stream servers use older TLS configs that Python 3.14 rejects by default.
-    # We create a permissive SSL context to handle them.
-    ssl_ctx = ssl.create_default_context()
-    ssl_ctx.set_ciphers("DEFAULT@SECLEVEL=1")
-    ssl_ctx.check_hostname = False
-    ssl_ctx.verify_mode = ssl.CERT_NONE
-
     async def generator():
-        async with httpx.AsyncClient(timeout=None, verify=ssl_ctx) as client:
+        async with httpx.AsyncClient(timeout=None, verify=False) as client:
             async with client.stream("GET", url, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Icy-MetaData": "1",
