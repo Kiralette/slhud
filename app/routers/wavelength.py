@@ -121,9 +121,33 @@ async def _close_active_session(player_id: int, db, now: str):
 
 @router.get("/wavelength/stream")
 async def proxy_stream(url: str):
-    """Redirect directly to the stream URL — proxying through Cloudflare times out."""
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url=url, status_code=302)
+    """Proxy audio stream through the server to avoid CORS/mixed-content issues.
+    Auto-reconnect is handled client-side when Cloudflare cuts the connection."""
+    http_url = url.replace("https://", "http://", 1)
+
+    async def generator():
+        timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=60)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(http_url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.181fm.com/",
+                "Origin": "https://www.181fm.com",
+                "Icy-MetaData": "1",
+                "Connection": "keep-alive",
+            }) as r:
+                async for chunk in r.content.iter_chunked(4096):
+                    if chunk:
+                        yield chunk
+
+    return StreamingResponse(
+        generator(),
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "no-cache",
+            "Access-Control-Allow-Origin": "*",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Models ────────────────────────────────────────────────────────────────────

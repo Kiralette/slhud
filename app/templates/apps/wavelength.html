@@ -180,8 +180,9 @@ function tuneIn(key, name, url) {
     if (card) { card.classList.add('active'); card.querySelector('.station-play-btn').textContent = 'Now playing'; }
     var streamUrl = d.stream_url || url;
     if (streamUrl) {
+      var proxyUrl = '/wavelength/stream?url=' + encodeURIComponent(streamUrl);
       if (window._wlAudio) {
-        window._wlAudio.play(streamUrl);
+        window._wlAudio.play(proxyUrl);
       }
     }
     _notifyHud('play', streamUrl);

@@ -354,21 +354,49 @@
   <!-- Persistent Wavelength audio player -->
   <audio id="_wl_audio_el" style="display:none" preload="none"></audio>
   <script>
-    // Global Wavelength audio controller — persists across page navigations
     window._wlAudio = (function() {
       var el = document.getElementById('_wl_audio_el');
+      var _src = '';
+      var _reconnectTimer = null;
+
+      function _play(src) {
+        _src = src;
+        el.src = src;
+        el.load();
+        el.play().catch(function(){});
+      }
+
+      el.addEventListener('ended', function() {
+        if (_src) { setTimeout(function() { _play(_src); }, 500); }
+      });
+
+      el.addEventListener('error', function() {
+        if (_src) {
+          clearTimeout(_reconnectTimer);
+          _reconnectTimer = setTimeout(function() { _play(_src); }, 1000);
+        }
+      });
+
+      el.addEventListener('stalled', function() {
+        if (_src) {
+          clearTimeout(_reconnectTimer);
+          _reconnectTimer = setTimeout(function() { _play(_src); }, 1000);
+        }
+      });
+
       return {
-        play: function(proxyUrl) {
-          el.src = proxyUrl;
-          el.load();
-          el.play().catch(function(){});
+        play: function(src) {
+          clearTimeout(_reconnectTimer);
+          _play(src);
         },
         stop: function() {
+          clearTimeout(_reconnectTimer);
+          _src = '';
           el.pause();
           el.src = '';
         },
         playing: function() {
-          return !el.paused && el.src !== '';
+          return _src !== '' && !el.paused;
         }
       };
     })();
