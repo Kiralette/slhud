@@ -121,11 +121,9 @@ async def _close_active_session(player_id: int, db, now: str):
 
 @router.get("/wavelength/stream")
 async def proxy_stream(url: str):
-    """Redirect directly to the stream URL — proxying through Cloudflare times out
-    after ~100s. Audio elements follow redirects without enforcing CORS."""
+    """Redirect directly to the stream URL — proxying through Cloudflare times out."""
     from fastapi.responses import RedirectResponse
-    http_url = url.replace("https://", "http://", 1)
-    return RedirectResponse(url=http_url, status_code=302)
+    return RedirectResponse(url=url, status_code=302)
 
 
 # ── Models ────────────────────────────────────────────────────────────────────

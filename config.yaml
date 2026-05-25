@@ -937,14 +937,14 @@ wavelength:
     the_groove:
       display_name: "The Groove"
       genre: "R&B · soul · neo-soul"
-      stream_url: "https://listen.livestreamingservice.com/181-rnb_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-rnb_128k.mp3"
       social_gain_mult: 1.05
       is_premium: false
 
     rise_fm:
       display_name: "Rise FM"
       genre: "Pop · upbeat · mainstream"
-      stream_url: "https://listen.livestreamingservice.com/181-powerexplicit_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-powerexplicit_128k.mp3"
       tune_in_bonus: { fun: 3 }
       is_premium: false
 
@@ -959,7 +959,7 @@ wavelength:
     the_cypher:
       display_name: "The Cypher"
       genre: "Hip hop · rap · freestyle"
-      stream_url: "https://listen.livestreamingservice.com/181-thebox_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-thebox_128k.mp3"
       xp_effect: { charisma: 0.03, fitness: 0.03 }
       is_premium: true
 
@@ -980,7 +980,7 @@ wavelength:
     hardline:
       display_name: "Hardline"
       genre: "Rock · punk · metal"
-      stream_url: "https://listen.livestreamingservice.com/181-rock_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-rock_128k.mp3"
       xp_effect: { fitness: 0.05 }
       is_premium: false
 
@@ -994,42 +994,42 @@ wavelength:
     greenhouse:
       display_name: "Greenhouse"
       genre: "Classical · orchestral · piano"
-      stream_url: "https://listen.livestreamingservice.com/181-classical_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-classical_128k.mp3"
       xp_effect: { knowledge: 0.05 }
       is_premium: true
 
     highway_77:
       display_name: "Highway 77"
       genre: "Country · honky tonk · americana"
-      stream_url: "https://listen.livestreamingservice.com/181-kickincountry_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-kickincountry_128k.mp3"
       tune_in_bonus: { fun: 2 }
       is_premium: false
 
     throwback_jams:
       display_name: "Throwback Jams"
       genre: "Old school hip hop · 90s R&B"
-      stream_url: "https://listen.livestreamingservice.com/181-oldschool_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-oldschool_128k.mp3"
       xp_effect: { charisma: 0.02 }
       is_premium: false
 
     rewind:
       display_name: "Rewind"
       genre: "90s pop · 2000s throwbacks"
-      stream_url: "https://listen.livestreamingservice.com/181-themix_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-themix_128k.mp3"
       tune_in_bonus: { fun: 2 }
       is_premium: true
 
     static:
       display_name: "Static"
       genre: "Alt rock · indie rock · alternative"
-      stream_url: "https://listen.livestreamingservice.com/181-buzz_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-buzz_128k.mp3"
       xp_effect: { fitness: 0.03, creativity: 0.02 }
       is_premium: true
 
     club_54:
       display_name: "Club 54"
       genre: "Party · dance · club hits"
-      stream_url: "https://listen.livestreamingservice.com/181-vibe_128k.mp3"
+      stream_url: "http://listen.livestreamingservice.com/181-vibe_128k.mp3"
       need_effect: { fun_decay_mult: 0.90 }
       tune_in_bonus: { fun: 5 }
       is_premium: true
