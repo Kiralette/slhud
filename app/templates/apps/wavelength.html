@@ -142,13 +142,11 @@
 
 {% block extra_script %}
 <script>
-let _audio = null;
 const _hudUrl = new URLSearchParams(window.location.search).get('hud_url');
 
 function _toast(msg) {
-  if (typeof showToast === 'function') { showToast(msg); return; }
-  // fallback: simple in-page toast
-  let t = document.getElementById('_wl_toast');
+  if (typeof toast === 'function') { toast(msg); return; }
+  var t = document.getElementById('_wl_toast');
   if (!t) {
     t = document.createElement('div');
     t.id = '_wl_toast';
@@ -158,14 +156,14 @@ function _toast(msg) {
   t.textContent = msg;
   t.style.opacity = '1';
   clearTimeout(t._hide);
-  t._hide = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+  t._hide = setTimeout(function() { t.style.opacity = '0'; }, 2500);
 }
 
 function _notifyHud(action, streamUrl) {
-    if (!_hudUrl) return;
-    const headers = {'x-wavelength-action': action};
-    if (streamUrl) headers['x-stream-url'] = streamUrl;
-    fetch(_hudUrl, {method: 'GET', headers}).catch(() => {});
+  if (!_hudUrl) return;
+  var headers = {'x-wavelength-action': action};
+  if (streamUrl) headers['x-stream-url'] = streamUrl;
+  fetch(_hudUrl, {method: 'GET', headers: headers}).catch(function(){});
 }
 
 function tuneIn(key, name, url) {
@@ -173,35 +171,33 @@ function tuneIn(key, name, url) {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({token: '{{ token }}', station_key: key})
-  }).then(r => r.json()).then(d => {
+  }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.error) { _toast('❌ ' + d.error); return; }
     _toast('🎵 Tuning into ' + name);
-    // Update UI
-    document.querySelectorAll('.station-card').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.station-play-btn').forEach(b => b.textContent = 'Tune in');
-    const card = document.getElementById('station-' + key);
+    document.querySelectorAll('.station-card').forEach(function(c) { c.classList.remove('active'); });
+    document.querySelectorAll('.station-play-btn').forEach(function(b) { b.textContent = 'Tune in'; });
+    var card = document.getElementById('station-' + key);
     if (card) { card.classList.add('active'); card.querySelector('.station-play-btn').textContent = 'Now playing'; }
-    // Browser audio playback via proxy (avoids CORS)
-    if (_audio) { _audio.pause(); _audio = null; }
-    const streamUrl = d.stream_url || url;
+    var streamUrl = d.stream_url || url;
     if (streamUrl) {
-      const proxyUrl = '/wavelength/stream?url=' + encodeURIComponent(streamUrl);
-      _audio = new Audio(proxyUrl);
-      _audio.play().catch(e => _toast('⚠️ Could not play stream: ' + e.message));
+      if (window._wlAudio) {
+        window._wlAudio.play(streamUrl);
+      }
     }
-    // In-world HUD audio
     _notifyHud('play', streamUrl);
   });
 }
+
 function stopStation() {
-  if (_audio) { _audio.pause(); _audio = null; }
+  if (window._wlAudio) window._wlAudio.stop();
   _notifyHud('stop', null);
   fetch('/wavelength/stop', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({token: '{{ token }}'})
-  }).then(() => { _toast('Stopped.'); location.reload(); });
+  }).then(function() { _toast('Stopped.'); location.reload(); });
 }
+
 function goPremium() {
   window.location.href = '/app/haul?token={{ token }}&tab=subs';
 }
