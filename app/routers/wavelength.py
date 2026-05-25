@@ -128,7 +128,9 @@ async def proxy_stream(url: str):
         timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=30)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(http_url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.181fm.com/",
+                "Origin": "https://www.181fm.com",
                 "Icy-MetaData": "1",
                 "Connection": "keep-alive",
             }) as r:
