@@ -6,6 +6,9 @@ POST /wavelength/stop   — stop current session, log duration + XP
 GET  /wavelength/status — current session info (used by LSL HUD to get stream URL)
 """
 
+import ssl
+import aiohttp
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -120,13 +123,18 @@ async def _close_active_session(player_id: int, db, now: str):
 @router.get("/wavelength/stream")
 async def proxy_stream(url: str):
     """Proxy an audio stream to avoid CORS issues in the browser."""
+    ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+    ssl_ctx.set_ciphers("ALL:@SECLEVEL=0")
+
     async def generator():
-        async with httpx.AsyncClient(timeout=None, verify=False) as client:
-            async with client.stream("GET", url, headers={
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=ssl_ctx, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Icy-MetaData": "1",
             }) as r:
-                async for chunk in r.aiter_bytes(chunk_size=8192):
+                async for chunk in r.content.iter_chunked(8192):
                     yield chunk
 
     return StreamingResponse(
