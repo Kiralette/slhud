@@ -118,20 +118,50 @@ async def _close_active_session(player_id: int, db, now: str):
         await db.commit()
 
 
-# ── GET /wavelength/stream ────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+from urllib.parse import urljoin, urlparse, quote
+
+_PROXY_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Connection": "keep-alive",
+}
+
+def _is_hls(url: str) -> bool:
+    u = url.lower()
+    return ".m3u8" in u or "amperwave.net" in u or "ihrhls.com" in u
+
+def _proxy_url(url: str) -> str:
+    """Return a same-origin /wavelength/segment?url=... proxy URL for an absolute URL."""
+    return "/wavelength/segment?url=" + quote(url, safe="")
+
+def _rewrite_m3u8(body: str, playlist_url: str) -> str:
+    """
+    Rewrite an M3U8 playlist so every segment and child playlist URI
+    goes through our /wavelength/segment proxy.
+    Handles both absolute and relative URIs.
+    """
+    lines = body.splitlines()
+    out = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("#") or stripped == "":
+            out.append(line)
+        else:
+            # Resolve relative URLs against the playlist base
+            abs_url = urljoin(playlist_url, stripped)
+            out.append(_proxy_url(abs_url))
+    return "
+".join(out)
+
+
+# ── GET /wavelength/stream  (Icecast / direct MP3) ───────────────────────────
 
 @router.get("/wavelength/stream")
 async def proxy_stream(url: str, request: Request):
-    """Proxy Icecast audio stream. Reconnects automatically on drop."""
-    # Icecast servers prefer plain HTTP — avoid TLS negotiation overhead
+    """Proxy a plain Icecast/MP3 stream with auto-reconnect."""
     http_url = url.replace("https://", "http://", 1)
-
-    HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Icy-MetaData": "0",       # skip ICY metadata — reduces framing issues
-        "Accept": "*/*",
-        "Connection": "keep-alive",
-    }
 
     async def generator():
         timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=30)
@@ -140,7 +170,7 @@ async def proxy_stream(url: str, request: Request):
                 if await request.is_disconnected():
                     return
                 async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.get(http_url, headers=HEADERS) as r:
+                    async with session.get(http_url, headers=_PROXY_HEADERS) as r:
                         if r.status not in (200, 206):
                             await asyncio.sleep(2)
                             continue
@@ -164,8 +194,68 @@ async def proxy_stream(url: str, request: Request):
             "Access-Control-Allow-Origin": "*",
             "X-Accel-Buffering": "no",
             "X-Content-Type-Options": "nosniff",
-            "Transfer-Encoding": "chunked",
         },
+    )
+
+
+# ── GET /wavelength/hls  (M3U8 playlist proxy + segment rewrite) ─────────────
+
+@router.get("/wavelength/hls")
+async def proxy_hls_playlist(url: str):
+    """
+    Fetch an HLS master or media playlist, rewrite all segment/child-playlist
+    URIs to go through /wavelength/segment, and return it to HLS.js.
+    """
+    timeout = aiohttp.ClientTimeout(total=15, connect=10)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, headers=_PROXY_HEADERS) as r:
+            if r.status != 200:
+                from fastapi import Response
+                return Response(status_code=r.status)
+            body = await r.text()
+
+    rewritten = _rewrite_m3u8(body, url)
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(
+        rewritten,
+        media_type="application/vnd.apple.mpegurl",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache, no-store",
+        },
+    )
+
+
+# ── GET /wavelength/segment  (TS segment / child playlist pass-through) ───────
+
+@router.get("/wavelength/segment")
+async def proxy_segment(url: str, request: Request):
+    """
+    Pass-through proxy for HLS .ts segments and child playlists.
+    Child playlists (.m3u8) are rewritten recursively so their segments
+    also route through here.
+    """
+    timeout = aiohttp.ClientTimeout(total=30, connect=10)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url, headers=_PROXY_HEADERS) as r:
+            content_type = r.headers.get("Content-Type", "application/octet-stream")
+            body = await r.read()
+
+    # If this segment is itself a playlist (variant/rendition), rewrite it too
+    if "mpegurl" in content_type.lower() or url.lower().endswith(".m3u8"):
+        from fastapi.responses import PlainTextResponse
+        rewritten = _rewrite_m3u8(body.decode("utf-8", errors="replace"), url)
+        return PlainTextResponse(
+            rewritten,
+            media_type="application/vnd.apple.mpegurl",
+            headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+        )
+
+    from fastapi.responses import Response
+    return Response(
+        content=body,
+        media_type=content_type,
+        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
     )
 
 

@@ -194,15 +194,19 @@ window._wlAudio = (function () {
   }
 
   function _buildHls(url) {
-    // HLS stream — fetch directly (no proxy needed, CORS is open on these CDNs)
+    // Route HLS through our server-side playlist proxy so CORS is never an issue
+    var proxyUrl = '/wavelength/hls?url=' + encodeURIComponent(url);
     audio = new Audio();
     if (typeof Hls !== 'undefined' && Hls.isSupported()) {
       hls = new Hls({
         liveSyncDurationCount: 3,
         liveMaxLatencyDurationCount: 6,
         maxBufferLength: 30,
+        xhrSetup: function (xhr) {
+          // All segment requests are already rewritten to same-origin — no extra headers needed
+        },
       });
-      hls.loadSource(url);
+      hls.loadSource(proxyUrl);
       hls.attachMedia(audio);
       hls.on(Hls.Events.MANIFEST_PARSED, function () {
         audio.play().catch(function (e) { console.warn('[Wavelength] HLS autoplay blocked:', e); });
@@ -216,8 +220,8 @@ window._wlAudio = (function () {
         }
       });
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
-      audio.src = url;
+      // Safari native HLS — also proxy so CORS headers are set
+      audio.src = proxyUrl;
       audio.play().catch(function (e) { console.warn('[Wavelength] Safari HLS autoplay blocked:', e); });
     } else {
       console.warn('[Wavelength] HLS not supported in this browser');
