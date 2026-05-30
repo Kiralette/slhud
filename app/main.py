@@ -98,6 +98,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+class CSPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = "media-src * blob: data:;"
+        return response
+
+app.add_middleware(CSPMiddleware)
+
 app.include_router(players.router)
 app.include_router(actions.router)
 app.include_router(needs.router)
