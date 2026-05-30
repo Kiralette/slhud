@@ -922,7 +922,7 @@ wavelength:
     lumen_lofi:
       display_name: "Lumen Lofi"
       genre: "Lofi hip hop · study beats"
-      stream_url: "https://ice1.somafm.com/lofi-128-mp3"
+      stream_url: "https://stream.zeno.fm/0r0xa792kwzuv"
       xp_effect: { knowledge: 0.03 }
       vibe_possible: "hyperfocused"
       is_premium: false
@@ -930,28 +930,28 @@ wavelength:
     neon_pulse:
       display_name: "Neon Pulse"
       genre: "Electronic · synthwave · hyperpop"
-      stream_url: "https://ice1.somafm.com/cliqhop-128-mp3"
+      stream_url: "https://naxos.cdnstream.com/1373_128"
       need_effect: { fun_decay_mult: 0.95 }
       is_premium: true
 
     the_groove:
       display_name: "The Groove"
       genre: "R&B · soul · neo-soul"
-      stream_url: "http://listen.livestreamingservice.com/181-rnb_128k.mp3"
+      stream_url: "https://ice64.securenetsystems.net/WVAI"
       social_gain_mult: 1.05
       is_premium: false
 
     rise_fm:
       display_name: "Rise FM"
       genre: "Pop · upbeat · mainstream"
-      stream_url: "http://listen.livestreamingservice.com/181-powerexplicit_128k.mp3"
+      stream_url: "https://n1bb-e2.revma.ihrhls.com/zc1601/hls.m3u8?rj-ttl=5&rj-tok=AAABnnrt8uYAuG5BX6lWn6a7Lw"
       tune_in_bonus: { fun: 3 }
       is_premium: false
 
     stillwater:
       display_name: "Stillwater"
       genre: "Ambient · meditation · nature"
-      stream_url: "https://ice1.somafm.com/dronezone-128-mp3"
+      stream_url: "https://ice5.somafm.com/deepspaceone-32-aac"
       need_effect: { energy_decay_mult: 0.92 }
       xp_effect: { purpose_passive_bonus: 0.05 }
       is_premium: true
@@ -959,77 +959,77 @@ wavelength:
     the_cypher:
       display_name: "The Cypher"
       genre: "Hip hop · rap · freestyle"
-      stream_url: "http://listen.livestreamingservice.com/181-thebox_128k.mp3"
+      stream_url: "https://prod-52-55-242-202.amperwave.net/townsquare-kzbtfmaac-hlsc3.m3u8?"
       xp_effect: { charisma: 0.03, fitness: 0.03 }
       is_premium: true
 
     velvet_hour:
       display_name: "Velvet Hour"
       genre: "Jazz · blues · late night"
-      stream_url: "https://streaming.live365.com/a49833"
+      stream_url: "https://ice5.securenetsystems.net/KCSM"
       tune_in_bonus: { purpose: 2 }
       is_premium: true
 
     solstice:
       display_name: "Solstice"
       genre: "Indie · folk · alternative"
-      stream_url: "https://streams.pinguinradio.com/PinguinRadio320.mp3"
+      stream_url: "https://n21b-e2.revma.ihrhls.com/zc1597/hls.m3u8?rj-ttl=5&rj-tok=AAABnnrq7wMA_-zSgV689skiHg"
       xp_effect: { creativity: 0.03 }
       is_premium: true
 
     hardline:
       display_name: "Hardline"
       genre: "Rock · punk · metal"
-      stream_url: "http://listen.livestreamingservice.com/181-rock_128k.mp3"
+      stream_url: "https://ice23.securenetsystems.net/WIMK"
       xp_effect: { fitness: 0.05 }
       is_premium: false
 
     carnaval:
       display_name: "Carnaval"
       genre: "Latin · Afrobeats · dancehall"
-      stream_url: "https://sensidancehall.radioca.st/stream"
+      stream_url: "https://das-edge14-live365-dal02.cdnstream.com/a58108"
       social_gain_mult: 1.08
       is_premium: true
 
     greenhouse:
       display_name: "Greenhouse"
       genre: "Classical · orchestral · piano"
-      stream_url: "http://listen.livestreamingservice.com/181-classical_128k.mp3"
+      stream_url: "https://cms.stream.publicradio.org/cms.aac"
       xp_effect: { knowledge: 0.05 }
       is_premium: true
 
     highway_77:
       display_name: "Highway 77"
       genre: "Country · honky tonk · americana"
-      stream_url: "http://listen.livestreamingservice.com/181-kickincountry_128k.mp3"
+      stream_url: "https://ice64.securenetsystems.net/WCFT"
       tune_in_bonus: { fun: 2 }
       is_premium: false
 
     throwback_jams:
       display_name: "Throwback Jams"
       genre: "Old school hip hop · 90s R&B"
-      stream_url: "http://listen.livestreamingservice.com/181-oldschool_128k.mp3"
+      stream_url: "https://n03-us.rcs.revma.com/6ek4hebgz7uvv?rj-ttl=5&rj-tok=AAABnnri-5oAeu2eZOQEBYnJrQ"
       xp_effect: { charisma: 0.02 }
       is_premium: false
 
     rewind:
       display_name: "Rewind"
       genre: "90s pop · 2000s throwbacks"
-      stream_url: "http://listen.livestreamingservice.com/181-themix_128k.mp3"
+      stream_url: "http://ice1.amtstreaming.com:8000/kiftic"
       tune_in_bonus: { fun: 2 }
       is_premium: true
 
     static:
       display_name: "Static"
       genre: "Alt rock · indie rock · alternative"
-      stream_url: "http://listen.livestreamingservice.com/181-buzz_128k.mp3"
+      stream_url: "https://n2eb-e2.revma.ihrhls.com/zc2281/hls.m3u8?rj-ttl=5&rj-tok=AAABnnrhDTIAUPR37UAB6LTKLw"
       xp_effect: { fitness: 0.03, creativity: 0.02 }
       is_premium: true
 
     club_54:
       display_name: "Club 54"
       genre: "Party · dance · club hits"
-      stream_url: "http://listen.livestreamingservice.com/181-vibe_128k.mp3"
+      stream_url: "https://prod-184-73-114-128.amperwave.net/townsquare-kzbtfmaac-hlsc3.m3u8"
       need_effect: { fun_decay_mult: 0.90 }
       tune_in_bonus: { fun: 5 }
       is_premium: true
