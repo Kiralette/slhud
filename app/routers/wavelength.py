@@ -152,8 +152,7 @@ def _rewrite_m3u8(body: str, playlist_url: str) -> str:
             # Resolve relative URLs against the playlist base
             abs_url = urljoin(playlist_url, stripped)
             out.append(_proxy_url(abs_url))
-    return "
-".join(out)
+    return "\n".join(out)
 
 
 # ── GET /wavelength/stream  (Icecast / direct MP3) ───────────────────────────
