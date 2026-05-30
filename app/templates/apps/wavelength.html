@@ -141,69 +141,102 @@
 {% endblock %}
 
 {% block extra_script %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
 <script>
 const _hudUrl = new URLSearchParams(window.location.search).get('hud_url');
 
-// ── Audio player ──────────────────────────────────────────────────────────────
+// ── Audio player (Icecast + HLS via HLS.js) ──────────────────────────────────
 window._wlAudio = (function () {
   let audio = null;
-  let currentUrl = null;
+  let hls = null;
   let reconnectTimer = null;
   let stopped = false;
 
-  function _build(url) {
+  function _isHls(url) {
+    // m3u8 extension, or known HLS CDN hostnames
+    return /\.m3u8/i.test(url) ||
+           /amperwave\.net/i.test(url) ||
+           /revma\.ihrhls\.com/i.test(url) ||
+           /ihrhls\.com/i.test(url);
+  }
+
+  function _destroy() {
+    clearTimeout(reconnectTimer);
+    if (hls) { hls.destroy(); hls = null; }
     if (audio) {
       audio.onended = null;
       audio.onerror = null;
       audio.pause();
       audio.src = '';
+      audio = null;
     }
+  }
+
+  function _buildDirect(url) {
+    // Plain Icecast/MP3 — proxy through our backend
+    var proxyUrl = '/wavelength/stream?url=' + encodeURIComponent(url);
     audio = new Audio();
     audio.preload = 'none';
-    audio.src = url;
-
+    audio.src = proxyUrl;
     audio.onerror = function () {
       if (stopped) return;
-      console.warn('[Wavelength] stream error, reconnecting in 2s...');
+      console.warn('[Wavelength] direct stream error, reconnecting in 2s...');
       clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(function () {
-        if (!stopped) _build(url);
-      }, 2000);
+      reconnectTimer = setTimeout(function () { if (!stopped) _buildDirect(url); }, 2000);
     };
-
     audio.onended = function () {
-      // Icecast streams should never end — reconnect if they do
       if (!stopped) {
         clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(function () {
-          if (!stopped) _build(url);
-        }, 1000);
+        reconnectTimer = setTimeout(function () { if (!stopped) _buildDirect(url); }, 1000);
       }
     };
+    audio.play().catch(function (e) { console.warn('[Wavelength] autoplay blocked:', e); });
+  }
 
-    audio.play().catch(function (e) {
-      console.warn('[Wavelength] autoplay blocked:', e);
-    });
+  function _buildHls(url) {
+    // HLS stream — fetch directly (no proxy needed, CORS is open on these CDNs)
+    audio = new Audio();
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+      hls = new Hls({
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 6,
+        maxBufferLength: 30,
+      });
+      hls.loadSource(url);
+      hls.attachMedia(audio);
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        audio.play().catch(function (e) { console.warn('[Wavelength] HLS autoplay blocked:', e); });
+      });
+      hls.on(Hls.Events.ERROR, function (event, data) {
+        if (stopped) return;
+        if (data.fatal) {
+          console.warn('[Wavelength] HLS fatal error, reconnecting in 2s...', data);
+          _destroy();
+          reconnectTimer = setTimeout(function () { if (!stopped) _buildHls(url); }, 2000);
+        }
+      });
+    } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS
+      audio.src = url;
+      audio.play().catch(function (e) { console.warn('[Wavelength] Safari HLS autoplay blocked:', e); });
+    } else {
+      console.warn('[Wavelength] HLS not supported in this browser');
+    }
   }
 
   return {
     play: function (url) {
       stopped = false;
-      currentUrl = url;
-      clearTimeout(reconnectTimer);
-      _build(url);
+      _destroy();
+      if (_isHls(url)) {
+        _buildHls(url);
+      } else {
+        _buildDirect(url);
+      }
     },
     stop: function () {
       stopped = true;
-      clearTimeout(reconnectTimer);
-      if (audio) {
-        audio.onended = null;
-        audio.onerror = null;
-        audio.pause();
-        audio.src = '';
-        audio = null;
-      }
-      currentUrl = null;
+      _destroy();
     }
   };
 })();
@@ -257,8 +290,7 @@ function tuneIn(key, name, url) {
   try {
     var s = JSON.parse(resume);
     if (s.url) {
-      var proxyUrl = '/wavelength/stream?url=' + encodeURIComponent(s.url);
-      window._wlAudio.play(proxyUrl);
+      window._wlAudio.play(s.url);
       _notifyHud('play', s.url);
     }
   } catch (e) {}
