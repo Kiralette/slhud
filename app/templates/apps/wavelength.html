@@ -107,12 +107,11 @@
 </div>
 {% endif %}
 
-<div class="section-head">
+<div class="section-head" style="padding-bottom:4px;">
   <div class="section-head-title">Stations</div>
-  <div class="section-head-sub">Music plays via your HUD prim — you hear it IRL.</div>
 </div>
 
-<div id="station-list">
+<div id="station-list" style="margin-top:0;">
   {% for station in stations %}
   <div class="station-card {% if station.is_active %}active{% endif %} {% if station.locked %}locked{% endif %}" id="station-{{ station.key }}">
     <div class="station-dot"></div>
