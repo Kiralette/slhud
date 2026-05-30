@@ -4,19 +4,23 @@
 {% block extra_style %}
 <style>
   .station-card {
-    margin: 6px 0;
-    background: var(--bg2);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
+    margin: 0;
+    background: var(--bg);
+    border: none;
+    border-bottom: 0.5px solid var(--border);
+    border-radius: 0;
+    padding: 14px 0;
     display: flex;
     align-items: center;
     gap: 12px;
-    transition: border-color .15s;
+    transition: background .15s;
+  }
+  .station-card:last-child {
+    border-bottom: none;
   }
   .station-card.active {
-    border-color: var(--gold);
     background: var(--gold-light);
+    border-bottom-color: var(--gold);
   }
   .station-card.locked { opacity: .55; }
   .station-dot {
@@ -108,7 +112,8 @@
 {% endif %}
 
 <div style="padding: 0 18px;">
-  <div class="section-head-title" style="font-family:var(--font-head);font-size:26px;font-weight:400;font-style:italic;color:var(--ink);line-height:1;padding:8px 0 6px;">Stations</div>
+  <div class="section-head-title" style="font-family:var(--font-head);font-size:26px;font-weight:400;font-style:italic;color:var(--ink);line-height:1;padding:8px 0 10px;">Stations</div>
+  <div style="border-top:0.5px solid var(--border);margin-bottom:0;"></div>
   <div id="station-list" style="margin-top:0;">
   {% for station in stations %}
   <div class="station-card {% if station.is_active %}active{% endif %} {% if station.locked %}locked{% endif %}" id="station-{{ station.key }}">
