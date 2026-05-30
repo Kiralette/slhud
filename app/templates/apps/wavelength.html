@@ -4,7 +4,7 @@
 {% block extra_style %}
 <style>
   .station-card {
-    margin: 6px 18px 6px 24px;
+    margin: 6px 0;
     background: var(--bg2);
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
@@ -107,11 +107,9 @@
 </div>
 {% endif %}
 
-<div class="section-head" style="padding:4px 18px 4px 18px;">
-  <div class="section-head-title">Stations</div>
-</div>
-
-<div id="station-list" style="margin-top:0;">
+<div style="padding: 0 18px;">
+  <div class="section-head-title" style="font-family:var(--font-head);font-size:23px;font-weight:400;font-style:italic;color:var(--ink);line-height:1;padding:8px 0 6px;">Stations</div>
+  <div id="station-list" style="margin-top:0;">
   {% for station in stations %}
   <div class="station-card {% if station.is_active %}active{% endif %} {% if station.locked %}locked{% endif %}" id="station-{{ station.key }}">
     <div class="station-dot"></div>
@@ -133,6 +131,7 @@
     {% endif %}
   </div>
   {% endfor %}
+  </div>
 </div>
 
 <div class="scroll-pad"></div>
