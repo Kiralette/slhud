@@ -126,7 +126,7 @@ async def proxy_stream(url: str):
     http_url = url.replace("https://", "http://", 1)
 
     async def generator():
-        timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=60)
+        timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=None)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(http_url, headers={
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
