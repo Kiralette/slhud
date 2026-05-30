@@ -286,18 +286,31 @@ function tuneIn(key, name, url) {
   });
 }
 
-// ── Auto-resume after reload ──────────────────────────────────────────────────
+// ── Auto-resume: check server session on every page load ─────────────────────
 (function () {
+  // First try sessionStorage (set by tuneIn before reload)
   var resume = sessionStorage.getItem('wl_resume');
-  if (!resume) return;
-  sessionStorage.removeItem('wl_resume');
-  try {
-    var s = JSON.parse(resume);
-    if (s.url) {
-      window._wlAudio.play(s.url);
-      _notifyHud('play', s.url);
-    }
-  } catch (e) {}
+  if (resume) {
+    sessionStorage.removeItem('wl_resume');
+    try {
+      var s = JSON.parse(resume);
+      if (s.url) {
+        window._wlAudio.play(s.url);
+        _notifyHud('play', s.url);
+        return;
+      }
+    } catch (e) {}
+  }
+
+  // Fallback: ask the server if there's an active session (covers manual refresh)
+  fetch('/wavelength/status?token={{ token }}')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.active && d.stream_url) {
+        window._wlAudio.play(d.stream_url);
+      }
+    })
+    .catch(function () {});
 })();
 
 // ── stopStation ───────────────────────────────────────────────────────────────
