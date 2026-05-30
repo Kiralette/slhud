@@ -7,8 +7,9 @@ GET  /wavelength/status — current session info (used by LSL HUD to get stream 
 """
 
 import aiohttp
+import asyncio
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -120,32 +121,50 @@ async def _close_active_session(player_id: int, db, now: str):
 # ── GET /wavelength/stream ────────────────────────────────────────────────────
 
 @router.get("/wavelength/stream")
-async def proxy_stream(url: str):
-    """Proxy audio stream through the server to avoid CORS/mixed-content issues.
-    Auto-reconnect is handled client-side when Cloudflare cuts the connection."""
+async def proxy_stream(url: str, request: Request):
+    """Proxy Icecast audio stream. Reconnects automatically on drop."""
+    # Icecast servers prefer plain HTTP — avoid TLS negotiation overhead
     http_url = url.replace("https://", "http://", 1)
 
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Icy-MetaData": "0",       # skip ICY metadata — reduces framing issues
+        "Accept": "*/*",
+        "Connection": "keep-alive",
+    }
+
     async def generator():
-        timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=None)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(http_url, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Referer": "https://www.181fm.com/",
-                "Origin": "https://www.181fm.com",
-                "Icy-MetaData": "1",
-                "Connection": "keep-alive",
-            }) as r:
-                async for chunk in r.content.iter_chunked(4096):
-                    if chunk:
-                        yield chunk
+        timeout = aiohttp.ClientTimeout(total=None, connect=10, sock_read=30)
+        while True:
+            try:
+                if await request.is_disconnected():
+                    return
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.get(http_url, headers=HEADERS) as r:
+                        if r.status not in (200, 206):
+                            await asyncio.sleep(2)
+                            continue
+                        async for chunk in r.content.iter_chunked(8192):
+                            if await request.is_disconnected():
+                                return
+                            if chunk:
+                                yield chunk
+            except (aiohttp.ClientError, asyncio.TimeoutError, ConnectionResetError):
+                if await request.is_disconnected():
+                    return
+                await asyncio.sleep(1)
+            except GeneratorExit:
+                return
 
     return StreamingResponse(
         generator(),
         media_type="audio/mpeg",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-store",
             "Access-Control-Allow-Origin": "*",
             "X-Accel-Buffering": "no",
+            "X-Content-Type-Options": "nosniff",
+            "Transfer-Encoding": "chunked",
         },
     )
 
