@@ -144,6 +144,71 @@
 <script>
 const _hudUrl = new URLSearchParams(window.location.search).get('hud_url');
 
+// ── Audio player ──────────────────────────────────────────────────────────────
+window._wlAudio = (function () {
+  let audio = null;
+  let currentUrl = null;
+  let reconnectTimer = null;
+  let stopped = false;
+
+  function _build(url) {
+    if (audio) {
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.src = '';
+    }
+    audio = new Audio();
+    audio.preload = 'none';
+    audio.src = url;
+
+    audio.onerror = function () {
+      if (stopped) return;
+      console.warn('[Wavelength] stream error, reconnecting in 2s...');
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(function () {
+        if (!stopped) _build(url);
+      }, 2000);
+    };
+
+    audio.onended = function () {
+      // Icecast streams should never end — reconnect if they do
+      if (!stopped) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(function () {
+          if (!stopped) _build(url);
+        }, 1000);
+      }
+    };
+
+    audio.play().catch(function (e) {
+      console.warn('[Wavelength] autoplay blocked:', e);
+    });
+  }
+
+  return {
+    play: function (url) {
+      stopped = false;
+      currentUrl = url;
+      clearTimeout(reconnectTimer);
+      _build(url);
+    },
+    stop: function () {
+      stopped = true;
+      clearTimeout(reconnectTimer);
+      if (audio) {
+        audio.onended = null;
+        audio.onerror = null;
+        audio.pause();
+        audio.src = '';
+        audio = null;
+      }
+      currentUrl = null;
+    }
+  };
+})();
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
 function _toast(msg) {
   if (typeof toast === 'function') { toast(msg); return; }
   var t = document.getElementById('_wl_toast');
@@ -156,47 +221,59 @@ function _toast(msg) {
   t.textContent = msg;
   t.style.opacity = '1';
   clearTimeout(t._hide);
-  t._hide = setTimeout(function() { t.style.opacity = '0'; }, 2500);
+  t._hide = setTimeout(function () { t.style.opacity = '0'; }, 2500);
 }
 
+// ── HUD notify ────────────────────────────────────────────────────────────────
 function _notifyHud(action, streamUrl) {
   if (!_hudUrl) return;
-  var headers = {'x-wavelength-action': action};
+  var headers = { 'x-wavelength-action': action };
   if (streamUrl) headers['x-stream-url'] = streamUrl;
-  fetch(_hudUrl, {method: 'GET', headers: headers}).catch(function(){});
+  fetch(_hudUrl, { method: 'GET', headers: headers }).catch(function () {});
 }
 
+// ── tuneIn ────────────────────────────────────────────────────────────────────
 function tuneIn(key, name, url) {
   fetch('/wavelength/start', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({token: '{{ token }}', station_key: key})
-  }).then(function(r) { return r.json(); }).then(function(d) {
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: '{{ token }}', station_key: key })
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (d) {
     if (d.error) { _toast('❌ ' + d.error); return; }
+
     _toast('🎵 Tuning into ' + name);
-    document.querySelectorAll('.station-card').forEach(function(c) { c.classList.remove('active'); });
-    document.querySelectorAll('.station-play-btn').forEach(function(b) { b.textContent = 'Tune in'; });
+
+    document.querySelectorAll('.station-card').forEach(function (c) { c.classList.remove('active'); });
+    document.querySelectorAll('.station-play-btn').forEach(function (b) { b.textContent = 'Tune in'; });
+
     var card = document.getElementById('station-' + key);
-    if (card) { card.classList.add('active'); card.querySelector('.station-play-btn').textContent = 'Now playing'; }
+    if (card) {
+      card.classList.add('active');
+      card.querySelector('.station-play-btn').textContent = 'Now playing';
+    }
+
     var streamUrl = d.stream_url || url;
     if (streamUrl) {
-      var proxyUrl = 'https://stream-proxy-production-af88.up.railway.app/stream?url=' + encodeURIComponent(streamUrl);
-      if (window._wlAudio) {
-        window._wlAudio.play(proxyUrl);
-      }
+      // Same-origin proxy: no CORS, no Railway timeout, reconnect loop in FastAPI handles drops
+      var proxyUrl = '/wavelength/stream?url=' + encodeURIComponent(streamUrl);
+      window._wlAudio.play(proxyUrl);
     }
+
     _notifyHud('play', streamUrl);
   });
 }
 
+// ── stopStation ───────────────────────────────────────────────────────────────
 function stopStation() {
-  if (window._wlAudio) window._wlAudio.stop();
+  window._wlAudio.stop();
   _notifyHud('stop', null);
   fetch('/wavelength/stop', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({token: '{{ token }}'})
-  }).then(function() { _toast('Stopped.'); location.reload(); });
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: '{{ token }}' })
+  }).then(function () { _toast('Stopped.'); location.reload(); });
 }
 
 function goPremium() {
