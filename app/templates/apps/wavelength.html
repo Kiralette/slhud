@@ -27,10 +27,10 @@
   .station-card.active .station-dot { background: var(--gold); animation: pulse 1.5s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   .station-info { flex: 1; min-width: 0; }
-  .station-name { font-size: 13px; font-weight: 500; color: var(--ink); }
-  .station-genre { font-size: 11px; color: var(--ink3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .station-name { font-size: 16px; font-weight: 500; color: var(--ink); }
+  .station-genre { font-size: 14px; color: var(--ink3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .station-badge {
-    font-size: 9px; padding: 2px 7px; border-radius: 20px;
+    font-size: 12px; padding: 2px 7px; border-radius: 20px;
     font-weight: 600; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0;
   }
   .station-badge.free { background: var(--green-light); color: var(--green); }
@@ -41,7 +41,7 @@
     border-radius: 20px;
     border: 0.5px solid var(--border2);
     background: var(--bg);
-    font-family: var(--font); font-size: 11px; font-weight: 500;
+    font-family: var(--font); font-size: 14px; font-weight: 500;
     color: var(--ink); cursor: pointer; flex-shrink: 0;
     transition: background .15s;
   }
@@ -57,14 +57,14 @@
     padding: 14px 16px;
     display: flex; gap: 12px; align-items: center;
   }
-  .premium-banner .icon { font-size: 24px; flex-shrink: 0; }
+  .premium-banner .icon { font-size: 27px; flex-shrink: 0; }
   .premium-banner .text { flex: 1; }
-  .premium-banner .text strong { font-size: 13px; font-weight: 600; color: var(--ink); }
-  .premium-banner .text p { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .premium-banner .text strong { font-size: 16px; font-weight: 600; color: var(--ink); }
+  .premium-banner .text p { font-size: 14px; color: var(--ink3); margin-top: 2px; }
   .premium-banner .btn {
     padding: 8px 14px; background: var(--ink); color: var(--bg);
     border: none; border-radius: var(--radius-sm);
-    font-family: var(--font); font-size: 11px; font-weight: 500; cursor: pointer; flex-shrink: 0;
+    font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; flex-shrink: 0;
   }
 </style>
 {% endblock %}
@@ -85,10 +85,10 @@
 {% if current_station %}
 <div style="padding:10px 18px;background:var(--bg2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;">
   <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 1.5s infinite;flex-shrink:0;"></div>
-  <div style="font-size:12px;color:var(--ink2);">Now playing: <strong style="color:var(--ink);">
+  <div style="font-size:15px;color:var(--ink2);">Now playing: <strong style="color:var(--ink);">
     {% for s in stations %}{% if s.key == current_station %}{{ s.display_name }}{% endif %}{% endfor %}
   </strong></div>
-  <button onclick="stopStation()" style="margin-left:auto;padding:5px 12px;border:0.5px solid var(--border2);border-radius:20px;background:transparent;font-family:var(--font);font-size:11px;cursor:pointer;color:var(--ink2);">Stop</button>
+  <button onclick="stopStation()" style="margin-left:auto;padding:5px 12px;border:0.5px solid var(--border2);border-radius:20px;background:transparent;font-family:var(--font);font-size:14px;cursor:pointer;color:var(--ink2);">Stop</button>
 </div>
 {% endif %}
 
@@ -102,13 +102,13 @@
   <button class="btn" onclick="goPremium()">Subscribe</button>
 </div>
 {% else %}
-<div style="margin:10px 18px;padding:9px 14px;background:var(--green-light);border-radius:var(--radius-sm);font-size:11px;color:var(--green);font-weight:500;">
+<div style="margin:10px 18px;padding:9px 14px;background:var(--green-light);border-radius:var(--radius-sm);font-size:14px;color:var(--green);font-weight:500;">
   ✓ Premium active — all stations unlocked · 2× Music XP
 </div>
 {% endif %}
 
 <div style="padding: 0 18px;">
-  <div class="section-head-title" style="font-family:var(--font-head);font-size:23px;font-weight:400;font-style:italic;color:var(--ink);line-height:1;padding:8px 0 6px;">Stations</div>
+  <div class="section-head-title" style="font-family:var(--font-head);font-size:26px;font-weight:400;font-style:italic;color:var(--ink);line-height:1;padding:8px 0 6px;">Stations</div>
   <div id="station-list" style="margin-top:0;">
   {% for station in stations %}
   <div class="station-card {% if station.is_active %}active{% endif %} {% if station.locked %}locked{% endif %}" id="station-{{ station.key }}">
