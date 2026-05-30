@@ -104,7 +104,10 @@ from starlette.requests import Request
 class CSPMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        response.headers["Content-Security-Policy"] = "media-src * blob: data:;"
+        response.headers["Content-Security-Policy"] = (
+            "media-src * blob: data: mediastream:; "
+            "worker-src blob: 'self';"
+        )
         return response
 
 app.add_middleware(CSPMiddleware)
