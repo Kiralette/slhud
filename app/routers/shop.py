@@ -571,8 +571,12 @@ async def subscribe(body: SubscribeRequest, db=Depends(get_db)):
             return {"ok": True, "status": "already_active"}
         new_balance = balance - sub_cost
         await db.execute("UPDATE wallets SET balance = $1 WHERE player_id = $2", new_balance, player_id)
+        # Upsert: re-activates cancelled subscriptions, inserts new ones
         await db.execute(
-            "INSERT INTO subscriptions (player_id, subscription_key, started_at, next_billing_at, is_active) VALUES ($1, $2, $3, $3, 1)",
+            """INSERT INTO subscriptions (player_id, subscription_key, started_at, next_billing_at, is_active)
+               VALUES ($1, $2, $3, $3, 1)
+               ON CONFLICT (player_id, subscription_key)
+               DO UPDATE SET is_active = 1, started_at = $3, next_billing_at = $3, cancelled_at = NULL""",
             player_id, body.subscription_key, now)
     else:
         async with db.execute(
@@ -583,8 +587,13 @@ async def subscribe(body: SubscribeRequest, db=Depends(get_db)):
             return {"ok": True, "status": "already_active"}
         new_balance = balance - sub_cost
         await db.execute("UPDATE wallets SET balance = ? WHERE player_id = ?", (new_balance, player_id))
+        # Upsert: re-activates cancelled subscriptions, inserts new ones
         await db.execute(
-            "INSERT OR IGNORE INTO subscriptions (player_id, subscription_key, started_at, next_billing_at, is_active) VALUES (?, ?, ?, ?, 1)",
+            """INSERT INTO subscriptions (player_id, subscription_key, started_at, next_billing_at, is_active)
+               VALUES (?, ?, ?, ?, 1)
+               ON CONFLICT (player_id, subscription_key)
+               DO UPDATE SET is_active = 1, started_at = excluded.started_at,
+                             next_billing_at = excluded.next_billing_at, cancelled_at = NULL""",
             (player_id, body.subscription_key, now, now))
         await db.commit()
 
