@@ -126,6 +126,16 @@
 
 {% block extra_script %}
 <script>
+// Auto-activate tab from ?tab= URL param
+(function() {
+  var tab = new URLSearchParams(window.location.search).get('tab');
+  if (tab) {
+    // showTab is defined in base.html, so wait for DOM
+    document.addEventListener('DOMContentLoaded', function() {
+      showTab('tab-' + tab);
+    });
+  }
+})();
 function filterItems(cat, btn) {
   document.querySelectorAll('.category-chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -135,7 +145,6 @@ function filterItems(cat, btn) {
   });
 }
 function subscribeTo(key, name, cost) {
-  if (!confirm(`Subscribe to ${name} for ✦${cost}/week?`)) return;
   fetch('/subscribe', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
